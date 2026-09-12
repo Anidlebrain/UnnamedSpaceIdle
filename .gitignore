@@ -13,6 +13,8 @@ backup/*
 !backup/.gitkeep
 
 fleet_simulation/work/*
+
+fleet_simulation/map/*
 !fleet_simulation/work/.gitkeep
 
 fleet_simulation/map/**/*.result.json

@@ -2,6 +2,8 @@
 
 ## Daily Usage（日常使用）
 
+map/ 是本机输入目录，已加入 Git 忽略；从远端克隆后需在本机自行准备 Galaxy/Node JSON 和 common.json。
+
 1. 编辑 `map/<galaxy>/<node>.json` 和同目录的 `common.json`。
 2. 运行 `run_optimizer.bat g6 B21`。
 3. 等待本机搜索完成。
