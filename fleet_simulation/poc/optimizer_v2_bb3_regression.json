@@ -1,0 +1,60 @@
+{
+  "objective": "boss",
+  "mode": "realistic",
+  "ship_types": ["Fighter", "Corvette", "Frigate", "Cruiser"],
+  "group_ranges": {
+    "Fighter": {"min": 0, "max": 0},
+    "Corvette": {"min": 0, "max": 0},
+    "Frigate": {"min": 0, "max": 0},
+    "Cruiser": {"min": 5, "max": 5}
+  },
+  "allowed_mod_slots": {
+    "Fighter": {
+      "primary": [null, "FighterMiniRailgunMod"],
+      "secondary": [null]
+    },
+    "Corvette": {
+      "primary": [null, "CorvetteChargeLaserMod"],
+      "secondary": [null, "ShieldMod"]
+    },
+    "Frigate": {
+      "primary": [null, "FrigateMissileMod"],
+      "secondary": [null, "ArmorMod"]
+    },
+    "Cruiser": {
+      "primary": [null],
+      "secondary": [null, "CruiserSingleArmorTank"]
+    }
+  },
+  "player_state": {
+    "fleet_resources": 2627.3,
+    "ships": {
+      "Fighter": {"enabled": true, "available": 1},
+      "Corvette": {"enabled": true, "available": 1},
+      "Frigate": {"enabled": true, "available": 1},
+      "Cruiser": {"enabled": true, "available": 1}
+    }
+  },
+  "max_total_groups": 10,
+  "max_groups_per_ship": {
+    "Fighter": 10,
+    "Corvette": 10,
+    "Frigate": 10,
+    "Cruiser": 10
+  },
+  "max_simulations": 1000,
+  "max_wall_seconds": 1800,
+  "estimated_seconds_per_battle": 1.493,
+  "representative_formations_per_fleet": 6,
+  "beam_width_fleet": 20,
+  "beam_width_position": 20,
+  "beam_depth": 4,
+  "final_fleet_candidates": 5,
+  "local_exact_threshold": 500,
+  "local_exact_radius": 1,
+  "top_n": 10,
+  "run_overdeploy_tests": true,
+  "overdeploy_test_ship": "Cruiser",
+  "v1_regression": true,
+  "v1_loadout_id": "CruiserSingleArmorTank"
+}

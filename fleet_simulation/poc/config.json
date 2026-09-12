@@ -1,0 +1,25 @@
+{
+  "galaxy": 5,
+  "node": "B35",
+
+  "boss": {
+    "alive": true,
+    "remaining_hp": 3500,
+    "priority": "kill_cost"
+  },
+
+  "hazards": [],
+
+  "player_state": {
+    "fleet_resources": 2627.3,
+    "damage_scale": 3.25,
+    "health_scale": 3.25,
+
+    "ships": {
+      "Fighter": 1,
+      "Corvette": 1,
+      "Frigate": 1,
+      "Cruiser": 1
+    }
+  }
+}

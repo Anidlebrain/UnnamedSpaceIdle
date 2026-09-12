@@ -1,0 +1,9 @@
+{
+  "game_exe": "",
+  "game_pck": "",
+  "steam_game_dir": "",
+  "gdretools_path": "",
+  "backup_dir": "backup",
+  "work_dir": "translation\\work",
+  "output_dir": "translation\\output"
+}

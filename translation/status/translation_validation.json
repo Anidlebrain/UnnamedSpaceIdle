@@ -1,0 +1,19 @@
+{
+  "status": "passed",
+  "checked_at": "2026-09-13T00:58:08.8344343+08:00",
+  "inventory_entries": 5734,
+  "custom_entries": 251,
+  "review_entries": 4778,
+  "completed_batches": 5,
+  "checks": [
+    "key_and_count",
+    "printf_and_brace_placeholders",
+    "bbcode_and_html_tags",
+    "literal_and_actual_newlines",
+    "escape_sequences",
+    "numbers",
+    "formula_operators",
+    "batch_hashes"
+  ],
+  "issues": []
+}

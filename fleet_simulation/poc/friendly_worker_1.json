@@ -1,0 +1,13 @@
+{
+  "galaxy": 1,
+  "node": "B1",
+  "boss": {"alive": false, "remaining_hp": 0, "priority": "efficiency"},
+  "hazards": [],
+  "search": {"profile": "fast", "goal": "best", "max_wall_seconds": 180, "max_simulations": 5, "workers": 1},
+  "player_state": {
+    "fleet_resources": 246.05,
+    "damage_scale": 2.05,
+    "health_scale": 2.05,
+    "ships": {"Fighter": 1, "Corvette": 1, "Frigate": 1, "Cruiser": 1}
+  }
+}

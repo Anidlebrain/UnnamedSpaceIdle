@@ -1,0 +1,720 @@
+{
+  "battle_config": {
+    "battle_id": "galaxy1_battle1",
+    "boss_health": null,
+    "enemy_fleet": [
+      {
+        "difficulty_override": 1.0,
+        "grid_position": [
+          0.0,
+          2.0
+        ],
+        "mods": [],
+        "ship": "EnemyBasic"
+      }
+    ],
+    "fight_enemy_command_ship": false,
+    "fleet_event_id": "g1_1_b1",
+    "fleet_resources": 100.0,
+    "fleet_resources_retention": 50.0,
+    "formation": [
+      {
+        "grid_position": [
+          0.0,
+          2.0
+        ],
+        "primary_mod": null,
+        "secondary_mod": null,
+        "ship": "Corvette",
+        "tertiary_mods": []
+      }
+    ],
+    "galaxy_id": "galaxy1",
+    "grid_size": [
+      2.0,
+      5.0
+    ],
+    "hazards": [],
+    "player_damage_scale": 1.0,
+    "player_health_scale": 1.0,
+    "ships_available": {
+      "Corvette": 1.0
+    },
+    "supports": [],
+    "temporary_events": []
+  },
+  "boss_damage": 0.0,
+  "copy_battle_log_text": "nemy(A,3|1) 造成了 6 伤害对 Corvette(A,3|3)\nEnemy(A,3|2) 造成了 6 伤害对 Corvette(A,3|4)\nEnemy(A,3|3) 造成了 6 伤害对 Corvette(A,3|4)\nCorvette(A,3|3) 造成了 10 伤害对 Enemy(A,3|1)\nCorvette(A,3|4) 造成了 10 伤害对 Enemy(A,3|2)\nEnemy(A,3|4) 造成了 6 伤害对 Corvette(A,3|3)\nEnemy(A,3|5) 造成了 6 伤害对 Corvette(A,3|3)\nEnemy(A,3|6) 造成了 6 伤害对 Corvette(A,3|4)\nCorvette(A,3|1) 造成了 10 伤害对 Enemy(A,3|1)\nCorvette(A,3|1) 击毁了 Enemy(A,3|1)\nCorvette(A,3|2) 造成了 10 伤害对 Enemy(A,3|2)\nCorvette(A,3|2) 击毁了 Enemy(A,3|2)\nEnemy(A,3|3) 造成了 6 伤害对 Corvette(A,3|4)\nCorvette(A,3|4) 造成了 10 伤害对 Enemy(A,3|3)\nCorvette(A,3|3) 造成了 10 伤害对 Enemy(A,3|4)\nEnemy(A,3|5) 造成了 6 伤害对 Corvette(A,3|3)\nEnemy(A,3|4) 造成了 6 伤害对 Corvette(A,3|3)\nEnemy(A,3|4) 击毁了 Corvette(A,3|3)\nEnemy(A,3|6) 造成了 6 伤害对 Corvette(A,3|4)\nEnemy(A,3|6) 击毁了 Corvette(A,3|4)\nCorvette(A,3|1) 造成了 10 伤害对 Enemy(A,3|4)\nCorvette(A,3|1) 击毁了 Enemy(A,3|4)\nCorvette(A,3|2) 造成了 10 伤害对 Enemy(A,3|3)\nCorvette(A,3|2) 击毁了 Enemy(A,3|3)\nEnemy(A,3|5) 造成了 6 伤害对 Corvette(A,3|1)\nEnemy(A,3|6) 造成了 6 伤害对 Corvette(A,3|2)\nCorvette(A,3|1) 造成了 10 伤害对 Enemy(A,3|5)\nCorvette(A,3|2) 造成了 10 伤害对 Enemy(A,3|5)\nCorvette(A,3|2) 击毁了 Enemy(A,3|5)\nEnemy(A,3|6) 造成了 6 伤害对 Corvette(A,3|2)\nCorvette(A,3|1) 造成了 10 伤害对 Enemy(A,3|6)\nCorvette(A,3|2) 造成了 10 伤害对 Enemy(A,3|6)\nCorvette(A,3|2) 击毁了 Enemy(A,3|6)",
+  "enemy_ships": [
+    {
+      "alive": false,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 0.0,
+      "id": "EnemyBasic",
+      "max_barrier": 0.0,
+      "max_hull": 20.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Enemy(A,3|1)",
+      "shields": 0.0,
+      "team": 1
+    },
+    {
+      "alive": false,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 0.0,
+      "id": "EnemyBasic",
+      "max_barrier": 0.0,
+      "max_hull": 20.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Enemy(A,3|2)",
+      "shields": 0.0,
+      "team": 1
+    },
+    {
+      "alive": false,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 0.0,
+      "id": "EnemyBasic",
+      "max_barrier": 0.0,
+      "max_hull": 20.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Enemy(A,3|3)",
+      "shields": 0.0,
+      "team": 1
+    },
+    {
+      "alive": false,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 0.0,
+      "id": "EnemyBasic",
+      "max_barrier": 0.0,
+      "max_hull": 20.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Enemy(A,3|4)",
+      "shields": 0.0,
+      "team": 1
+    },
+    {
+      "alive": false,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 0.0,
+      "id": "EnemyBasic",
+      "max_barrier": 0.0,
+      "max_hull": 20.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Enemy(A,3|5)",
+      "shields": 0.0,
+      "team": 1
+    },
+    {
+      "alive": false,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 0.0,
+      "id": "EnemyBasic",
+      "max_barrier": 0.0,
+      "max_hull": 20.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Enemy(A,3|6)",
+      "shields": 0.0,
+      "team": 1
+    }
+  ],
+  "fleet_resources_committed": 10.0,
+  "fleet_resources_used": 7.87,
+  "outcome": "victory",
+  "player_ships": [
+    {
+      "alive": true,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 24.0,
+      "id": "Corvette",
+      "max_barrier": 0.0,
+      "max_hull": 30.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Corvette(A,3|1)",
+      "shields": 0,
+      "team": 0
+    },
+    {
+      "alive": true,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 18.0,
+      "id": "Corvette",
+      "max_barrier": 0.0,
+      "max_hull": 30.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Corvette(A,3|2)",
+      "shields": 0,
+      "team": 0
+    },
+    {
+      "alive": false,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 0.0,
+      "id": "Corvette",
+      "max_barrier": 0.0,
+      "max_hull": 30.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Corvette(A,3|3)",
+      "shields": 0.0,
+      "team": 0
+    },
+    {
+      "alive": false,
+      "barrier": 0.0,
+      "grid_position": [
+        0.0,
+        2.0
+      ],
+      "hull": 0.0,
+      "id": "Corvette",
+      "max_barrier": 0.0,
+      "max_hull": 30.0,
+      "max_shields": 0.0,
+      "mods": [
+        "",
+        ""
+      ],
+      "name": "Corvette(A,3|4)",
+      "shields": 0.0,
+      "team": 0
+    }
+  ],
+  "raw_battle_log": [
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 3",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 1",
+      "time": 167
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 1",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 3",
+      "time": 167
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 4",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 2",
+      "time": 167
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 2",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 4",
+      "time": 167
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 4",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 3",
+      "time": 168
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 3",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 4",
+      "time": 168
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 1",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 3",
+      "time": 169
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 3",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 1",
+      "time": 169
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 2",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 4",
+      "time": 170
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 4",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 2",
+      "time": 170
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 3",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 4",
+      "time": 190
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 4",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 3",
+      "time": 190
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 3",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 5",
+      "time": 190
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 5",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 3",
+      "time": 190
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 4",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 6",
+      "time": 190
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 6",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 4",
+      "time": 190
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 1",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 1",
+      "time": 222
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 1",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 1",
+      "time": 222
+    },
+    {
+      "action": 3,
+      "actor": "1:EnemyBasic A,3 1",
+      "amount": 0.0,
+      "target": "0:Corvette A,3 1",
+      "time": 222
+    },
+    {
+      "action": 2,
+      "actor": "0:Corvette A,3 1",
+      "amount": 0.0,
+      "target": "1:EnemyBasic A,3 1",
+      "time": 222
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 2",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 2",
+      "time": 232
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 2",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 2",
+      "time": 232
+    },
+    {
+      "action": 3,
+      "actor": "1:EnemyBasic A,3 2",
+      "amount": 0.0,
+      "target": "0:Corvette A,3 2",
+      "time": 232
+    },
+    {
+      "action": 2,
+      "actor": "0:Corvette A,3 2",
+      "amount": 0.0,
+      "target": "1:EnemyBasic A,3 2",
+      "time": 232
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 4",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 3",
+      "time": 266
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 3",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 4",
+      "time": 266
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 3",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 4",
+      "time": 267
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 4",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 3",
+      "time": 267
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 4",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 3",
+      "time": 270
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 3",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 4",
+      "time": 270
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 3",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 5",
+      "time": 286
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 5",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 3",
+      "time": 286
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 3",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 4",
+      "time": 286
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 4",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 3",
+      "time": 286
+    },
+    {
+      "action": 3,
+      "actor": "0:Corvette A,3 3",
+      "amount": 0.0,
+      "target": "1:EnemyBasic A,3 4",
+      "time": 286
+    },
+    {
+      "action": 2,
+      "actor": "1:EnemyBasic A,3 4",
+      "amount": 0.0,
+      "target": "0:Corvette A,3 3",
+      "time": 286
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 4",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 6",
+      "time": 289
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 6",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 4",
+      "time": 289
+    },
+    {
+      "action": 3,
+      "actor": "0:Corvette A,3 4",
+      "amount": 0.0,
+      "target": "1:EnemyBasic A,3 6",
+      "time": 289
+    },
+    {
+      "action": 2,
+      "actor": "1:EnemyBasic A,3 6",
+      "amount": 0.0,
+      "target": "0:Corvette A,3 4",
+      "time": 289
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 4",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 1",
+      "time": 317
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 1",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 4",
+      "time": 317
+    },
+    {
+      "action": 3,
+      "actor": "1:EnemyBasic A,3 4",
+      "amount": 0.0,
+      "target": "0:Corvette A,3 1",
+      "time": 317
+    },
+    {
+      "action": 2,
+      "actor": "0:Corvette A,3 1",
+      "amount": 0.0,
+      "target": "1:EnemyBasic A,3 4",
+      "time": 317
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 3",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 2",
+      "time": 328
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 2",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 3",
+      "time": 328
+    },
+    {
+      "action": 3,
+      "actor": "1:EnemyBasic A,3 3",
+      "amount": 0.0,
+      "target": "0:Corvette A,3 2",
+      "time": 328
+    },
+    {
+      "action": 2,
+      "actor": "0:Corvette A,3 2",
+      "amount": 0.0,
+      "target": "1:EnemyBasic A,3 3",
+      "time": 328
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 1",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 5",
+      "time": 386
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 5",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 1",
+      "time": 386
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 2",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 6",
+      "time": 388
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 6",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 2",
+      "time": 388
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 5",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 1",
+      "time": 437
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 1",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 5",
+      "time": 437
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 5",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 2",
+      "time": 449
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 2",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 5",
+      "time": 449
+    },
+    {
+      "action": 3,
+      "actor": "1:EnemyBasic A,3 5",
+      "amount": 0.0,
+      "target": "0:Corvette A,3 2",
+      "time": 450
+    },
+    {
+      "action": 2,
+      "actor": "0:Corvette A,3 2",
+      "amount": 0.0,
+      "target": "1:EnemyBasic A,3 5",
+      "time": 450
+    },
+    {
+      "action": 1,
+      "actor": "0:Corvette A,3 2",
+      "amount": 6.0,
+      "target": "1:EnemyBasic A,3 6",
+      "time": 515
+    },
+    {
+      "action": 0,
+      "actor": "1:EnemyBasic A,3 6",
+      "amount": 6.0,
+      "target": "0:Corvette A,3 2",
+      "time": 515
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 6",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 1",
+      "time": 534
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 1",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 6",
+      "time": 534
+    },
+    {
+      "action": 1,
+      "actor": "1:EnemyBasic A,3 6",
+      "amount": 10.0,
+      "target": "0:Corvette A,3 2",
+      "time": 543
+    },
+    {
+      "action": 0,
+      "actor": "0:Corvette A,3 2",
+      "amount": 10.0,
+      "target": "1:EnemyBasic A,3 6",
+      "time": 543
+    },
+    {
+      "action": 3,
+      "actor": "1:EnemyBasic A,3 6",
+      "amount": 0.0,
+      "target": "0:Corvette A,3 2",
+      "time": 543
+    },
+    {
+      "action": 2,
+      "actor": "0:Corvette A,3 2",
+      "amount": 0.0,
+      "target": "1:EnemyBasic A,3 6",
+      "time": 543
+    }
+  ],
+  "simulation_time": 4.94999999999999
+}

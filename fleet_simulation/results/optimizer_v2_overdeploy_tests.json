@@ -1,0 +1,76 @@
+{
+  "game_version": "0.85.1.0",
+  "all_passed": true,
+  "cost_source": "FleetBattle.calc_total_deployment",
+  "battle_formula_reimplemented": false,
+  "tests": {
+    "A_normal_deployment": {
+      "available": 1,
+      "deployed": 1,
+      "normal_groups": 1,
+      "overdeployed_groups": 0,
+      "fleet_resources_committed": 20.0,
+      "passed": true
+    },
+    "B_second_group_overdeploy": {
+      "available": 1,
+      "deployed": 2,
+      "normal_groups": 1,
+      "overdeployed_groups": 1,
+      "fleet_resources_committed": 60.0,
+      "passed": true
+    },
+    "C_multiple_group_original_cost": {
+      "available": 1,
+      "deployed": 5,
+      "normal_groups": 1,
+      "overdeployed_groups": 4,
+      "fleet_resources_committed": 300.0,
+      "passed": true
+    },
+    "D_fr_pruned_before_battle": {
+      "available": 1,
+      "deployed": 2,
+      "fleet_resources": 59.99,
+      "fleet_resources_committed": 60.0,
+      "would_prune_before_battle": true,
+      "passed": true
+    },
+    "E_zero_available_disabled": {
+      "enabled": false,
+      "available": 0,
+      "deployable": false,
+      "reason": "ship_disabled_or_zero_available",
+      "passed": true
+    },
+    "F_bb3_cruiser_x5_regression": {
+      "positions": ["A1", "A2", "A3", "A4", "A5"],
+      "loadout": {
+        "primary": null,
+        "secondary": "CruiserSingleArmorTank"
+      },
+      "available": 1,
+      "deployed": 5,
+      "overdeployed_groups": 4,
+      "formations_tested": 252,
+      "outcome": "lose",
+      "boss_damage": 1365.0,
+      "fleet_resources_used": 300.0,
+      "boss_damage_per_fr": 4.55,
+      "passed": true
+    }
+  },
+  "slot_loadout_counts": {
+    "Fighter": 2,
+    "Corvette": 4,
+    "Frigate": 4,
+    "Cruiser": 2
+  },
+  "full_bb3_run": {
+    "fleet_candidates": 2,
+    "unique_battles": 504,
+    "errors": 0,
+    "cache_hits": 1044,
+    "wall_time_seconds": 677.593
+  }
+}

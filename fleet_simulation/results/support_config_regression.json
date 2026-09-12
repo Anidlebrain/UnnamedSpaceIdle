@@ -1,0 +1,1261 @@
+{
+  "b30_resolver": {
+    "passed": true,
+    "result": {
+      "config": {
+        "battle_id": "galaxy5_battle30",
+        "boss_health": null,
+        "enemy_difficulty": 2.7,
+        "enemy_fleet": [
+          {
+            "difficulty_override": 13.0,
+            "grid_position": [
+              0.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyGatlingArmor"
+          },
+          {
+            "difficulty_override": 13.0,
+            "grid_position": [
+              1.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyGatlingArmor"
+          }
+        ],
+        "fight_enemy_command_ship": false,
+        "fleet_event_id": "g5_b30",
+        "fleet_resources": 2627.3,
+        "fleet_resources_retention": 0.5,
+        "formation": [],
+        "galaxy_id": "galaxy5",
+        "grid_size": [
+          2.0,
+          5.0
+        ],
+        "hazards": [
+          "g5_b30"
+        ],
+        "optimizer": {
+          "baseline": {},
+          "boss_priority": null,
+          "boss_remaining_hp": null,
+          "objective": "normal",
+          "search": {
+            "goal": "best",
+            "max_simulations": 300,
+            "max_wall_seconds": 300.0,
+            "profile": "fast",
+            "simulation_clock": "offline_fixed_step",
+            "workers": 4
+          }
+        },
+        "player_damage_scale": 3.25,
+        "player_health_scale": 3.25,
+        "resolver": {
+          "boss": {
+            "alive": false,
+            "command_ship_id": "",
+            "command_ship_name": "",
+            "max_hp": null,
+            "priority": null,
+            "remaining_hp": null
+          },
+          "friendly_input": {
+            "boss": {
+              "alive": false,
+              "remaining_hp": 0
+            },
+            "galaxy": 5,
+            "hazards": [
+              "B30"
+            ],
+            "node": "B30",
+            "player_state": {
+              "damage_scale": 3.25,
+              "fleet_resources": 2627.3,
+              "health_scale": 3.25,
+              "ships": {
+                "Corvette": 1,
+                "Cruiser": 1,
+                "Fighter": 1,
+                "Frigate": 1
+              }
+            },
+            "supports": []
+          },
+          "game_version": "0.85.1.0",
+          "hazard_details": [
+            {
+              "definition": [
+                {
+                  "damage_details": [
+                    {
+                      "damage": 25.0,
+                      "interval": 0.125,
+                      "volley_size": 1.0
+                    }
+                  ],
+                  "nodes_effected": [
+                    {
+                      "fleet_event": "g5_b30"
+                    }
+                  ],
+                  "originator_node": "g5_b30",
+                  "repeat": true,
+                  "team": 1,
+                  "type": "damage_per_second"
+                }
+              ],
+              "fleet_event_id": "g5_b30",
+              "node": "B30",
+              "type": [
+                "damage_per_second"
+              ]
+            }
+          ],
+          "node": "B30",
+          "source": "original runtime DB / FleetEvent / Fleet.fleet_battles",
+          "support_details": []
+        },
+        "ships_available": {
+          "Corvette": {
+            "available": 1,
+            "enabled": true
+          },
+          "Cruiser": {
+            "available": 1,
+            "enabled": true
+          },
+          "Fighter": {
+            "available": 1,
+            "enabled": true
+          },
+          "Frigate": {
+            "available": 1,
+            "enabled": true
+          }
+        },
+        "simulation_clock": "offline_fixed_step",
+        "supports": [],
+        "temporary_events": []
+      },
+      "ok": true
+    }
+  },
+  "bb3_cruiser_baseline": {
+    "boss_damage": 1365.0,
+    "boss_damage_per_fr": 4.55,
+    "fleet_resources_used": 300.0,
+    "outcome": "lose",
+    "passed": true
+  },
+  "bb3_resolver": {
+    "efficiency": {
+      "config": {
+        "battle_id": "galaxy5_basebattle3",
+        "boss_health": 3500.0,
+        "enemy_difficulty": 2.6,
+        "enemy_fleet": [
+          {
+            "difficulty_override": 7.0,
+            "grid_position": [
+              1.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyCommandShip"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              1.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              3.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          }
+        ],
+        "fight_enemy_command_ship": false,
+        "fleet_event_id": "g5_bb3",
+        "fleet_resources": 2627.3,
+        "fleet_resources_retention": 0.5,
+        "formation": [],
+        "galaxy_id": "galaxy5",
+        "grid_size": [
+          2.0,
+          5.0
+        ],
+        "hazards": [
+          "g5_bb3"
+        ],
+        "optimizer": {
+          "baseline": {},
+          "boss_priority": "efficiency",
+          "boss_remaining_hp": 3500.0,
+          "objective": "boss",
+          "search": {
+            "goal": "best",
+            "max_simulations": 300,
+            "max_wall_seconds": 300.0,
+            "profile": "fast",
+            "simulation_clock": "offline_fixed_step",
+            "workers": 4
+          }
+        },
+        "player_damage_scale": 3.25,
+        "player_health_scale": 3.25,
+        "resolver": {
+          "boss": {
+            "alive": true,
+            "command_ship_id": "EnemyCommandShip",
+            "command_ship_name": "Enemy Base",
+            "max_hp": 3500.0,
+            "priority": "efficiency",
+            "remaining_hp": 3500.0
+          },
+          "friendly_input": {
+            "boss": {
+              "alive": true,
+              "priority": "efficiency",
+              "remaining_hp": 3500
+            },
+            "galaxy": 5,
+            "hazards": [
+              "BB3"
+            ],
+            "node": "BB3",
+            "player_state": {
+              "damage_scale": 3.25,
+              "fleet_resources": 2627.3,
+              "health_scale": 3.25,
+              "ships": {
+                "Corvette": 1,
+                "Cruiser": 1,
+                "Fighter": 1,
+                "Frigate": 1
+              }
+            },
+            "supports": []
+          },
+          "game_version": "0.85.1.0",
+          "hazard_details": [
+            {
+              "definition": [
+                {
+                  "damage_details": [
+                    {
+                      "damage": 15.0,
+                      "interval": 0.125,
+                      "volley_size": 1.0
+                    }
+                  ],
+                  "nodes_effected": [
+                    {
+                      "fleet_event": "g5_bb3"
+                    }
+                  ],
+                  "originator_node": "g5_bb3",
+                  "repeat": true,
+                  "team": 1,
+                  "type": "damage_per_second"
+                }
+              ],
+              "fleet_event_id": "g5_bb3",
+              "node": "BB3",
+              "type": [
+                "damage_per_second"
+              ]
+            }
+          ],
+          "node": "BB3",
+          "source": "original runtime DB / FleetEvent / Fleet.fleet_battles",
+          "support_details": []
+        },
+        "ships_available": {
+          "Corvette": {
+            "available": 1,
+            "enabled": true
+          },
+          "Cruiser": {
+            "available": 1,
+            "enabled": true
+          },
+          "Fighter": {
+            "available": 1,
+            "enabled": true
+          },
+          "Frigate": {
+            "available": 1,
+            "enabled": true
+          }
+        },
+        "simulation_clock": "offline_fixed_step",
+        "supports": [],
+        "temporary_events": []
+      },
+      "ok": true
+    },
+    "kill_cost": {
+      "config": {
+        "battle_id": "galaxy5_basebattle3",
+        "boss_health": 3500.0,
+        "enemy_difficulty": 2.6,
+        "enemy_fleet": [
+          {
+            "difficulty_override": 7.0,
+            "grid_position": [
+              1.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyCommandShip"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              1.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              3.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          }
+        ],
+        "fight_enemy_command_ship": false,
+        "fleet_event_id": "g5_bb3",
+        "fleet_resources": 2627.3,
+        "fleet_resources_retention": 0.5,
+        "formation": [],
+        "galaxy_id": "galaxy5",
+        "grid_size": [
+          2.0,
+          5.0
+        ],
+        "hazards": [
+          "g5_bb3"
+        ],
+        "optimizer": {
+          "baseline": {},
+          "boss_priority": "kill_cost",
+          "boss_remaining_hp": 3500.0,
+          "objective": "boss",
+          "search": {
+            "goal": "best",
+            "max_simulations": 300,
+            "max_wall_seconds": 300.0,
+            "profile": "fast",
+            "simulation_clock": "offline_fixed_step",
+            "workers": 4
+          }
+        },
+        "player_damage_scale": 3.25,
+        "player_health_scale": 3.25,
+        "resolver": {
+          "boss": {
+            "alive": true,
+            "command_ship_id": "EnemyCommandShip",
+            "command_ship_name": "Enemy Base",
+            "max_hp": 3500.0,
+            "priority": "kill_cost",
+            "remaining_hp": 3500.0
+          },
+          "friendly_input": {
+            "boss": {
+              "alive": true,
+              "priority": "kill_cost",
+              "remaining_hp": 3500
+            },
+            "galaxy": 5,
+            "hazards": [
+              "BB3"
+            ],
+            "node": "BB3",
+            "player_state": {
+              "damage_scale": 3.25,
+              "fleet_resources": 2627.3,
+              "health_scale": 3.25,
+              "ships": {
+                "Corvette": 1,
+                "Cruiser": 1,
+                "Fighter": 1,
+                "Frigate": 1
+              }
+            },
+            "supports": []
+          },
+          "game_version": "0.85.1.0",
+          "hazard_details": [
+            {
+              "definition": [
+                {
+                  "damage_details": [
+                    {
+                      "damage": 15.0,
+                      "interval": 0.125,
+                      "volley_size": 1.0
+                    }
+                  ],
+                  "nodes_effected": [
+                    {
+                      "fleet_event": "g5_bb3"
+                    }
+                  ],
+                  "originator_node": "g5_bb3",
+                  "repeat": true,
+                  "team": 1,
+                  "type": "damage_per_second"
+                }
+              ],
+              "fleet_event_id": "g5_bb3",
+              "node": "BB3",
+              "type": [
+                "damage_per_second"
+              ]
+            }
+          ],
+          "node": "BB3",
+          "source": "original runtime DB / FleetEvent / Fleet.fleet_battles",
+          "support_details": []
+        },
+        "ships_available": {
+          "Corvette": {
+            "available": 1,
+            "enabled": true
+          },
+          "Cruiser": {
+            "available": 1,
+            "enabled": true
+          },
+          "Fighter": {
+            "available": 1,
+            "enabled": true
+          },
+          "Frigate": {
+            "available": 1,
+            "enabled": true
+          }
+        },
+        "simulation_clock": "offline_fixed_step",
+        "supports": [],
+        "temporary_events": []
+      },
+      "ok": true
+    },
+    "passed": true
+  },
+  "boss_hp_validation": {
+    "above_max": {
+      "error": "Boss remaining_hp 3501.0 exceeds max_hp 3500.0",
+      "ok": false
+    },
+    "passed": true,
+    "zero": {
+      "error": "Boss remaining_hp must be greater than 0 (max_hp 3500.0, input 0.0)",
+      "ok": false
+    }
+  },
+  "engine_time_scale": 1.0,
+  "engine_version": "4.7.2-stable (official)",
+  "http_nodes_proxied": 18,
+  "network_protection": "HTTP/HTTPS proxied to 127.0.0.1:9; Steam singleton unavailable",
+  "passed": true,
+  "physics_ticks_per_second": 60,
+  "ranking_unit_test": {
+    "candidate_a": {
+      "battles_to_kill": null,
+      "boss_damage": 650.0,
+      "boss_damage_per_battle": 650.0,
+      "boss_damage_per_fr": 13.0,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_final_hp": null,
+      "boss_starting_hp": 2000.0,
+      "error": "",
+      "failed_before_battle": null,
+      "fleet_resources_committed": 50.0,
+      "fleet_resources_used": 50.0,
+      "fleet_resources_used_per_battle": 50.0,
+      "formation_key": "A",
+      "kill_refined": false,
+      "kill_sequence": [],
+      "killable_with_current_fr": null,
+      "outcome": "lose",
+      "projected_battles_to_kill": 4,
+      "projected_kill_fr": 200.0,
+      "refined_battles_to_kill": null,
+      "refined_fr_spent": null,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null,
+      "total_kill_fr": null
+    },
+    "candidate_b": {
+      "battles_to_kill": null,
+      "boss_damage": 670.0,
+      "boss_damage_per_battle": 670.0,
+      "boss_damage_per_fr": 11.1666666666667,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_final_hp": null,
+      "boss_starting_hp": 2000.0,
+      "error": "",
+      "failed_before_battle": null,
+      "fleet_resources_committed": 60.0,
+      "fleet_resources_used": 60.0,
+      "fleet_resources_used_per_battle": 60.0,
+      "formation_key": "B",
+      "kill_refined": false,
+      "kill_sequence": [],
+      "killable_with_current_fr": null,
+      "outcome": "lose",
+      "projected_battles_to_kill": 3,
+      "projected_kill_fr": 180.0,
+      "refined_battles_to_kill": null,
+      "refined_fr_spent": null,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null,
+      "total_kill_fr": null
+    },
+    "efficiency_first": "A",
+    "kill_cost_first": "B",
+    "passed": true
+  },
+  "scene_tree_paused": false,
+  "support_resolver_and_battle": {
+    "analyzer": {
+      "active_hazard_types": [
+        "laser_volley"
+      ],
+      "armor_enemies": 2,
+      "boss": false,
+      "defense_totals": {
+        "armor": 780.0,
+        "hull": 489.32,
+        "shield": 542.88
+      },
+      "enemy_count": 24,
+      "enemy_deployment_groups": 6,
+      "enemy_details": [
+        {
+          "armor": 0.0,
+          "command_ship": false,
+          "count": 6,
+          "difficulty": 1.3,
+          "hull": 26.0,
+          "mods": [
+            "LaserWeapon"
+          ],
+          "name": "Enemy",
+          "position": [
+            0.0,
+            0.0
+          ],
+          "shield": 0.0,
+          "ship_id": "EnemyBasic",
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 7.8,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 2.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "armor": 0.0,
+          "command_ship": false,
+          "count": 4,
+          "difficulty": 1.3,
+          "hull": 7.53999999999999,
+          "mods": [],
+          "name": "Shielded Shotgun",
+          "position": [
+            0.0,
+            1.0
+          ],
+          "shield": 67.86,
+          "ship_id": "EnemyShotgunShield",
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 26.0,
+              "fire_rate": 0.7,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 300.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 26.0,
+              "fire_rate": 0.7,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 300.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "armor": 390.0,
+          "command_ship": false,
+          "count": 2,
+          "difficulty": 1.3,
+          "hull": 0.0,
+          "mods": [],
+          "name": "Medium Armored",
+          "position": [
+            0.0,
+            2.0
+          ],
+          "shield": 0.0,
+          "ship_id": "EnemyMediumArmor",
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 29.25,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 29.25,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "armor": 0.0,
+          "command_ship": false,
+          "count": 4,
+          "difficulty": 1.3,
+          "hull": 7.53999999999999,
+          "mods": [],
+          "name": "Shielded Shotgun",
+          "position": [
+            0.0,
+            3.0
+          ],
+          "shield": 67.86,
+          "ship_id": "EnemyShotgunShield",
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 26.0,
+              "fire_rate": 0.7,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 300.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 26.0,
+              "fire_rate": 0.7,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 300.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "armor": 0.0,
+          "command_ship": false,
+          "count": 2,
+          "difficulty": 1.3,
+          "hull": 58.5,
+          "mods": [],
+          "name": "Missiles",
+          "position": [
+            1.0,
+            2.0
+          ],
+          "shield": 0.0,
+          "ship_id": "EnemyMissiles",
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 3.25,
+              "fire_rate": 0.6,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 8.0,
+              "num_ticks": 0.0,
+              "range": 1000.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "armor": 0.0,
+          "command_ship": false,
+          "count": 6,
+          "difficulty": 1.3,
+          "hull": 26.0,
+          "mods": [
+            "LaserWeapon"
+          ],
+          "name": "Enemy",
+          "position": [
+            0.0,
+            4.0
+          ],
+          "shield": 0.0,
+          "ship_id": "EnemyBasic",
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 7.8,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 2.0,
+              "tick_rate": 0.0
+            }
+          ]
+        }
+      ],
+      "enemy_ship_types": [
+        "EnemyBasic",
+        "EnemyShotgunShield",
+        "EnemyMediumArmor",
+        "EnemyShotgunShield",
+        "EnemyMissiles",
+        "EnemyBasic"
+      ],
+      "enemy_weapon_characteristics": {
+        "armor": 505.7,
+        "hull": 505.7,
+        "shield": 599.3
+      },
+      "grid": [
+        2.0,
+        5.0
+      ],
+      "hazard_mechanics": [
+        {
+          "definition": {
+            "damage_details": [
+              {
+                "damage": 100.0,
+                "interval": 2.5,
+                "volley_size": 27.0
+              }
+            ],
+            "nodes_effected": [
+              {
+                "fleet_event": "g6_b8"
+              }
+            ],
+            "originator_node": "g6_b10",
+            "repeat": false,
+            "team": 1,
+            "type": "laser_volley"
+          },
+          "tags": [
+            "periodic",
+            "projectile",
+            "positional_targeting",
+            "nearest_targets"
+          ],
+          "type": "laser_volley"
+        }
+      ],
+      "hazard_tags": [
+        "periodic",
+        "projectile",
+        "positional_targeting",
+        "nearest_targets"
+      ],
+      "loadout_counter_analysis": {},
+      "preferred_defense_tags": [
+        "shield",
+        "armor",
+        "hull"
+      ],
+      "preferred_offense_tags": [
+        "armor",
+        "shield",
+        "hull"
+      ],
+      "reinforcement": true,
+      "shield_enemies": 8,
+      "source": "original runtime DB via Fleet.get_fleet_ship/apply_ship_mods/get_ship_stats_based_on_galaxy",
+      "support_details": [
+        {
+          "definition": [
+            {
+              "nodes_effected": [
+                {
+                  "fleet_event": "g6_b8"
+                }
+              ],
+              "originator_node": "g6_bu_reinforce1",
+              "reinforcement_details": [
+                {
+                  "difficulty_mod": 0.0,
+                  "difficulty_type": "",
+                  "grid_x": 0.0,
+                  "grid_y": 0.0,
+                  "ship": "Fighter",
+                  "time_spawning": 1.0,
+                  "total_time_to_spawn": 2.0
+                },
+                {
+                  "difficulty_mod": 0.0,
+                  "difficulty_type": "",
+                  "grid_x": 0.0,
+                  "grid_y": 1.0,
+                  "ship": "Fighter",
+                  "time_spawning": 1.0,
+                  "total_time_to_spawn": 2.0
+                }
+              ],
+              "repeat": false,
+              "team": 0,
+              "type": "reinforcements"
+            }
+          ],
+          "fleet_event_id": "g6_bu_reinforce1",
+          "node": "F2",
+          "type": [
+            "reinforcements"
+          ]
+        }
+      ],
+      "support_mechanics": [
+        {
+          "definition": {
+            "nodes_effected": [
+              {
+                "fleet_event": "g6_b8"
+              }
+            ],
+            "originator_node": "g6_bu_reinforce1",
+            "reinforcement_details": [
+              {
+                "difficulty_mod": 0.0,
+                "difficulty_type": "",
+                "grid_x": 0.0,
+                "grid_y": 0.0,
+                "ship": "Fighter",
+                "time_spawning": 1.0,
+                "total_time_to_spawn": 2.0
+              },
+              {
+                "difficulty_mod": 0.0,
+                "difficulty_type": "",
+                "grid_x": 0.0,
+                "grid_y": 1.0,
+                "ship": "Fighter",
+                "time_spawning": 1.0,
+                "total_time_to_spawn": 2.0
+              }
+            ],
+            "repeat": false,
+            "team": 0,
+            "type": "reinforcements"
+          },
+          "fleet_event_id": "g6_bu_reinforce1",
+          "node": "F2",
+          "tags": [
+            "timed_event",
+            "reinforcement"
+          ],
+          "type": "reinforcements"
+        }
+      ],
+      "support_tags": [
+        "timed_event",
+        "reinforcement"
+      ]
+    },
+    "behavior_absent_without_support": true,
+    "passed": true,
+    "resolver": {
+      "config": {
+        "battle_id": "galaxy6_battle8",
+        "boss_health": null,
+        "enemy_difficulty": 1.3,
+        "enemy_fleet": [
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              0.0
+            ],
+            "mods": [
+              "LaserWeapon"
+            ],
+            "ship": "EnemyBasic"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              1.0
+            ],
+            "mods": [],
+            "ship": "EnemyShotgunShield"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyMediumArmor"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              3.0
+            ],
+            "mods": [],
+            "ship": "EnemyShotgunShield"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              1.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyMissiles"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              4.0
+            ],
+            "mods": [
+              "LaserWeapon"
+            ],
+            "ship": "EnemyBasic"
+          }
+        ],
+        "fight_enemy_command_ship": false,
+        "fleet_event_id": "g6_b8",
+        "fleet_resources": 2627.3,
+        "fleet_resources_retention": 0.5,
+        "formation": [],
+        "galaxy_id": "galaxy6",
+        "grid_size": [
+          2.0,
+          5.0
+        ],
+        "hazards": [
+          "g6_b10"
+        ],
+        "optimizer": {
+          "baseline": {},
+          "boss_priority": null,
+          "boss_remaining_hp": null,
+          "objective": "normal",
+          "search": {
+            "goal": "best",
+            "max_simulations": 300,
+            "max_wall_seconds": 300.0,
+            "profile": "fast",
+            "simulation_clock": "offline_fixed_step",
+            "workers": 4
+          }
+        },
+        "player_damage_scale": 3.25,
+        "player_health_scale": 3.25,
+        "resolver": {
+          "boss": {
+            "alive": false,
+            "command_ship_id": "",
+            "command_ship_name": "",
+            "max_hp": null,
+            "priority": null,
+            "remaining_hp": null
+          },
+          "friendly_input": {
+            "boss": {
+              "alive": false,
+              "remaining_hp": 0
+            },
+            "galaxy": 6,
+            "hazards": [
+              "B10"
+            ],
+            "node": "B8",
+            "player_state": {
+              "damage_scale": 3.25,
+              "fleet_resources": 2627.3,
+              "health_scale": 3.25,
+              "ships": {
+                "Corvette": 1,
+                "Cruiser": 1,
+                "Fighter": 1,
+                "Frigate": 1
+              }
+            },
+            "supports": [
+              "F2"
+            ]
+          },
+          "game_version": "0.85.1.0",
+          "hazard_details": [
+            {
+              "definition": [
+                {
+                  "damage_details": [
+                    {
+                      "damage": 100.0,
+                      "interval": 2.5,
+                      "volley_size": 27.0
+                    }
+                  ],
+                  "nodes_effected": [
+                    {
+                      "fleet_event": "g6_b8"
+                    }
+                  ],
+                  "originator_node": "g6_b10",
+                  "repeat": false,
+                  "team": 1,
+                  "type": "laser_volley"
+                }
+              ],
+              "fleet_event_id": "g6_b10",
+              "node": "B10",
+              "type": [
+                "laser_volley"
+              ]
+            }
+          ],
+          "node": "B8",
+          "source": "original runtime DB / FleetEvent / Fleet.fleet_battles",
+          "support_details": [
+            {
+              "definition": [
+                {
+                  "nodes_effected": [
+                    {
+                      "fleet_event": "g6_b8"
+                    }
+                  ],
+                  "originator_node": "g6_bu_reinforce1",
+                  "reinforcement_details": [
+                    {
+                      "difficulty_mod": 0.0,
+                      "difficulty_type": "",
+                      "grid_x": 0.0,
+                      "grid_y": 0.0,
+                      "ship": "Fighter",
+                      "time_spawning": 1.0,
+                      "total_time_to_spawn": 2.0
+                    },
+                    {
+                      "difficulty_mod": 0.0,
+                      "difficulty_type": "",
+                      "grid_x": 0.0,
+                      "grid_y": 1.0,
+                      "ship": "Fighter",
+                      "time_spawning": 1.0,
+                      "total_time_to_spawn": 2.0
+                    }
+                  ],
+                  "repeat": false,
+                  "team": 0,
+                  "type": "reinforcements"
+                }
+              ],
+              "fleet_event_id": "g6_bu_reinforce1",
+              "node": "F2",
+              "type": [
+                "reinforcements"
+              ]
+            }
+          ]
+        },
+        "ships_available": {
+          "Corvette": {
+            "available": 1,
+            "enabled": true
+          },
+          "Cruiser": {
+            "available": 1,
+            "enabled": true
+          },
+          "Fighter": {
+            "available": 1,
+            "enabled": true
+          },
+          "Frigate": {
+            "available": 1,
+            "enabled": true
+          }
+        },
+        "simulation_clock": "offline_fixed_step",
+        "supports": [
+          "g6_bu_reinforce1"
+        ],
+        "temporary_events": []
+      },
+      "ok": true
+    },
+    "run_battle_received_support": [
+      "g6_bu_reinforce1"
+    ],
+    "runtime_behavior_triggered": true,
+    "spawned_fighters_without_support": 0,
+    "spawned_support_fighters": 18,
+    "support_runtime_events": [
+      {
+        "enabled": true,
+        "event": "active",
+        "index": 0,
+        "originator_node": "g6_b10",
+        "simulated_seconds": 0.0,
+        "team": 1,
+        "type": "laser_volley"
+      },
+      {
+        "enabled": true,
+        "event": "active",
+        "index": 1,
+        "originator_node": "g6_bu_reinforce1",
+        "simulated_seconds": 0.0,
+        "team": 0,
+        "type": "reinforcements"
+      },
+      {
+        "enabled": true,
+        "event": "active",
+        "index": 2,
+        "originator_node": "g6_bu_reinforce1",
+        "simulated_seconds": 0.0,
+        "team": 0,
+        "type": "reinforcements"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g6_bu_reinforce1",
+        "simulated_seconds": 1.0,
+        "team": 0,
+        "type": "reinforcements"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g6_bu_reinforce1",
+        "simulated_seconds": 1.0,
+        "team": 0,
+        "type": "reinforcements"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g6_b10",
+        "simulated_seconds": 2.5,
+        "team": 1,
+        "type": "laser_volley"
+      }
+    ],
+    "without_support_runtime_events": [
+      {
+        "enabled": true,
+        "event": "active",
+        "index": 0,
+        "originator_node": "g6_b10",
+        "simulated_seconds": 0.0,
+        "team": 1,
+        "type": "laser_volley"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g6_b10",
+        "simulated_seconds": 2.5,
+        "team": 1,
+        "type": "laser_volley"
+      }
+    ]
+  },
+  "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Test"
+}

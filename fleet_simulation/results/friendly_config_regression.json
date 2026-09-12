@@ -1,0 +1,508 @@
+{
+  "b30_resolver": {
+    "passed": true,
+    "result": {
+      "config": {
+        "battle_id": "galaxy5_battle30",
+        "boss_health": null,
+        "enemy_difficulty": 2.7,
+        "enemy_fleet": [
+          {
+            "difficulty_override": 13.0,
+            "grid_position": [
+              0.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyGatlingArmor"
+          },
+          {
+            "difficulty_override": 13.0,
+            "grid_position": [
+              1.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyGatlingArmor"
+          }
+        ],
+        "fight_enemy_command_ship": false,
+        "fleet_event_id": "g5_b30",
+        "fleet_resources": 2627.3,
+        "fleet_resources_retention": 0.5,
+        "formation": [],
+        "galaxy_id": "galaxy5",
+        "grid_size": [
+          2.0,
+          5.0
+        ],
+        "hazards": [
+          "g5_b30"
+        ],
+        "optimizer": {
+          "boss_priority": null,
+          "boss_remaining_hp": null,
+          "objective": "normal"
+        },
+        "player_damage_scale": 3.25,
+        "player_health_scale": 3.25,
+        "resolver": {
+          "boss": {
+            "alive": false,
+            "command_ship_id": "",
+            "command_ship_name": "",
+            "max_hp": null,
+            "priority": null,
+            "remaining_hp": null
+          },
+          "friendly_input": {
+            "boss": {
+              "alive": false,
+              "remaining_hp": 0
+            },
+            "galaxy": 5,
+            "hazards": [
+              "B30"
+            ],
+            "node": "B30",
+            "player_state": {
+              "damage_scale": 3.25,
+              "fleet_resources": 2627.3,
+              "health_scale": 3.25,
+              "ships": {
+                "Corvette": 1,
+                "Cruiser": 1,
+                "Fighter": 1,
+                "Frigate": 1
+              }
+            }
+          },
+          "game_version": "0.85.1.0",
+          "hazard_details": [
+            {
+              "definition": [
+                {
+                  "damage_details": [
+                    {
+                      "damage": 25.0,
+                      "interval": 0.125,
+                      "volley_size": 1.0
+                    }
+                  ],
+                  "nodes_effected": [
+                    {
+                      "fleet_event": "g5_b30"
+                    }
+                  ],
+                  "originator_node": "g5_b30",
+                  "repeat": true,
+                  "team": 1,
+                  "type": "damage_per_second"
+                }
+              ],
+              "fleet_event_id": "g5_b30",
+              "node": "B30"
+            }
+          ],
+          "node": "B30",
+          "source": "original runtime DB / FleetEvent / Fleet.fleet_battles"
+        },
+        "ships_available": {
+          "Corvette": {
+            "available": 1,
+            "enabled": true
+          },
+          "Cruiser": {
+            "available": 1,
+            "enabled": true
+          },
+          "Fighter": {
+            "available": 1,
+            "enabled": true
+          },
+          "Frigate": {
+            "available": 1,
+            "enabled": true
+          }
+        },
+        "supports": [],
+        "temporary_events": []
+      },
+      "ok": true
+    }
+  },
+  "bb3_cruiser_baseline": {
+    "boss_damage": 1365.0,
+    "boss_damage_per_fr": 4.55,
+    "fleet_resources_used": 300.0,
+    "outcome": "lose",
+    "passed": true
+  },
+  "bb3_resolver": {
+    "efficiency": {
+      "config": {
+        "battle_id": "galaxy5_basebattle3",
+        "boss_health": 3500.0,
+        "enemy_difficulty": 2.6,
+        "enemy_fleet": [
+          {
+            "difficulty_override": 7.0,
+            "grid_position": [
+              1.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyCommandShip"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              1.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              3.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          }
+        ],
+        "fight_enemy_command_ship": false,
+        "fleet_event_id": "g5_bb3",
+        "fleet_resources": 2627.3,
+        "fleet_resources_retention": 0.5,
+        "formation": [],
+        "galaxy_id": "galaxy5",
+        "grid_size": [
+          2.0,
+          5.0
+        ],
+        "hazards": [
+          "g5_bb3"
+        ],
+        "optimizer": {
+          "boss_priority": "efficiency",
+          "boss_remaining_hp": 3500.0,
+          "objective": "boss"
+        },
+        "player_damage_scale": 3.25,
+        "player_health_scale": 3.25,
+        "resolver": {
+          "boss": {
+            "alive": true,
+            "command_ship_id": "EnemyCommandShip",
+            "command_ship_name": "Enemy Base",
+            "max_hp": 3500.0,
+            "priority": "efficiency",
+            "remaining_hp": 3500.0
+          },
+          "friendly_input": {
+            "boss": {
+              "alive": true,
+              "priority": "efficiency",
+              "remaining_hp": 3500
+            },
+            "galaxy": 5,
+            "hazards": [
+              "BB3"
+            ],
+            "node": "BB3",
+            "player_state": {
+              "damage_scale": 3.25,
+              "fleet_resources": 2627.3,
+              "health_scale": 3.25,
+              "ships": {
+                "Corvette": 1,
+                "Cruiser": 1,
+                "Fighter": 1,
+                "Frigate": 1
+              }
+            }
+          },
+          "game_version": "0.85.1.0",
+          "hazard_details": [
+            {
+              "definition": [
+                {
+                  "damage_details": [
+                    {
+                      "damage": 15.0,
+                      "interval": 0.125,
+                      "volley_size": 1.0
+                    }
+                  ],
+                  "nodes_effected": [
+                    {
+                      "fleet_event": "g5_bb3"
+                    }
+                  ],
+                  "originator_node": "g5_bb3",
+                  "repeat": true,
+                  "team": 1,
+                  "type": "damage_per_second"
+                }
+              ],
+              "fleet_event_id": "g5_bb3",
+              "node": "BB3"
+            }
+          ],
+          "node": "BB3",
+          "source": "original runtime DB / FleetEvent / Fleet.fleet_battles"
+        },
+        "ships_available": {
+          "Corvette": {
+            "available": 1,
+            "enabled": true
+          },
+          "Cruiser": {
+            "available": 1,
+            "enabled": true
+          },
+          "Fighter": {
+            "available": 1,
+            "enabled": true
+          },
+          "Frigate": {
+            "available": 1,
+            "enabled": true
+          }
+        },
+        "supports": [],
+        "temporary_events": []
+      },
+      "ok": true
+    },
+    "kill_cost": {
+      "config": {
+        "battle_id": "galaxy5_basebattle3",
+        "boss_health": 3500.0,
+        "enemy_difficulty": 2.6,
+        "enemy_fleet": [
+          {
+            "difficulty_override": 7.0,
+            "grid_position": [
+              1.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyCommandShip"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              1.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              2.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          },
+          {
+            "difficulty_override": -1.0,
+            "grid_position": [
+              0.0,
+              3.0
+            ],
+            "mods": [],
+            "ship": "EnemyMedium"
+          }
+        ],
+        "fight_enemy_command_ship": false,
+        "fleet_event_id": "g5_bb3",
+        "fleet_resources": 2627.3,
+        "fleet_resources_retention": 0.5,
+        "formation": [],
+        "galaxy_id": "galaxy5",
+        "grid_size": [
+          2.0,
+          5.0
+        ],
+        "hazards": [
+          "g5_bb3"
+        ],
+        "optimizer": {
+          "boss_priority": "kill_cost",
+          "boss_remaining_hp": 3500.0,
+          "objective": "boss"
+        },
+        "player_damage_scale": 3.25,
+        "player_health_scale": 3.25,
+        "resolver": {
+          "boss": {
+            "alive": true,
+            "command_ship_id": "EnemyCommandShip",
+            "command_ship_name": "Enemy Base",
+            "max_hp": 3500.0,
+            "priority": "kill_cost",
+            "remaining_hp": 3500.0
+          },
+          "friendly_input": {
+            "boss": {
+              "alive": true,
+              "priority": "kill_cost",
+              "remaining_hp": 3500
+            },
+            "galaxy": 5,
+            "hazards": [
+              "BB3"
+            ],
+            "node": "BB3",
+            "player_state": {
+              "damage_scale": 3.25,
+              "fleet_resources": 2627.3,
+              "health_scale": 3.25,
+              "ships": {
+                "Corvette": 1,
+                "Cruiser": 1,
+                "Fighter": 1,
+                "Frigate": 1
+              }
+            }
+          },
+          "game_version": "0.85.1.0",
+          "hazard_details": [
+            {
+              "definition": [
+                {
+                  "damage_details": [
+                    {
+                      "damage": 15.0,
+                      "interval": 0.125,
+                      "volley_size": 1.0
+                    }
+                  ],
+                  "nodes_effected": [
+                    {
+                      "fleet_event": "g5_bb3"
+                    }
+                  ],
+                  "originator_node": "g5_bb3",
+                  "repeat": true,
+                  "team": 1,
+                  "type": "damage_per_second"
+                }
+              ],
+              "fleet_event_id": "g5_bb3",
+              "node": "BB3"
+            }
+          ],
+          "node": "BB3",
+          "source": "original runtime DB / FleetEvent / Fleet.fleet_battles"
+        },
+        "ships_available": {
+          "Corvette": {
+            "available": 1,
+            "enabled": true
+          },
+          "Cruiser": {
+            "available": 1,
+            "enabled": true
+          },
+          "Fighter": {
+            "available": 1,
+            "enabled": true
+          },
+          "Frigate": {
+            "available": 1,
+            "enabled": true
+          }
+        },
+        "supports": [],
+        "temporary_events": []
+      },
+      "ok": true
+    },
+    "passed": true
+  },
+  "boss_hp_validation": {
+    "above_max": {
+      "error": "Boss remaining_hp 3501.0 exceeds max_hp 3500.0",
+      "ok": false
+    },
+    "passed": true,
+    "zero": {
+      "error": "Boss remaining_hp must be greater than 0 (max_hp 3500.0, input 0.0)",
+      "ok": false
+    }
+  },
+  "engine_time_scale": 1.0,
+  "engine_version": "4.7.2-stable (official)",
+  "http_nodes_proxied": 16,
+  "network_protection": "HTTP/HTTPS proxied to 127.0.0.1:9; Steam singleton unavailable",
+  "passed": true,
+  "physics_ticks_per_second": 60,
+  "ranking_unit_test": {
+    "candidate_a": {
+      "boss_damage": 650.0,
+      "boss_damage_per_battle": 650.0,
+      "boss_damage_per_fr": 13.0,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_starting_hp": 2000.0,
+      "error": "",
+      "failed_before_battle": null,
+      "fleet_resources_committed": 50.0,
+      "fleet_resources_used": 50.0,
+      "fleet_resources_used_per_battle": 50.0,
+      "formation_key": "A",
+      "kill_refined": false,
+      "kill_sequence": [],
+      "killable_with_current_fr": null,
+      "outcome": "lose",
+      "projected_battles_to_kill": 4,
+      "projected_kill_fr": 200.0,
+      "refined_battles_to_kill": null,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null
+    },
+    "candidate_b": {
+      "boss_damage": 670.0,
+      "boss_damage_per_battle": 670.0,
+      "boss_damage_per_fr": 11.1666666666667,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_starting_hp": 2000.0,
+      "error": "",
+      "failed_before_battle": null,
+      "fleet_resources_committed": 60.0,
+      "fleet_resources_used": 60.0,
+      "fleet_resources_used_per_battle": 60.0,
+      "formation_key": "B",
+      "kill_refined": false,
+      "kill_sequence": [],
+      "killable_with_current_fr": null,
+      "outcome": "lose",
+      "projected_battles_to_kill": 3,
+      "projected_kill_fr": 180.0,
+      "refined_battles_to_kill": null,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null
+    },
+    "efficiency_first": "A",
+    "kill_cost_first": "B",
+    "passed": true
+  },
+  "scene_tree_paused": false,
+  "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Test"
+}

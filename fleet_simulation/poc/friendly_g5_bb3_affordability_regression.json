@@ -1,0 +1,12 @@
+{
+  "galaxy": 5,
+  "node": "BB3",
+  "boss": {"alive": true, "remaining_hp": 3500, "priority": "kill_cost"},
+  "hazards": ["BB3"],
+  "player_state": {
+    "fleet_resources": 500,
+    "damage_scale": 3.25,
+    "health_scale": 3.25,
+    "ships": {"Fighter": 1, "Corvette": 1, "Frigate": 1, "Cruiser": 1}
+  }
+}

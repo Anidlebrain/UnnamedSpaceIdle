@@ -1,0 +1,34 @@
+{
+  "objective": "boss",
+  "mode": "realistic",
+  "ship_types": ["Fighter", "Corvette", "Frigate", "Cruiser"],
+  "group_ranges": {
+    "Fighter": {"min": 0, "max": 0},
+    "Corvette": {"min": 0, "max": 0},
+    "Frigate": {"min": 0, "max": 0},
+    "Cruiser": {"min": 5, "max": 5}
+  },
+  "allowed_mod_slots": {
+    "Fighter": {"primary": [null], "secondary": [null]},
+    "Corvette": {"primary": [null], "secondary": [null]},
+    "Frigate": {"primary": [null], "secondary": [null]},
+    "Cruiser": {"primary": [null], "secondary": ["CruiserSingleArmorTank"]}
+  },
+  "max_total_groups": 5,
+  "max_groups_per_ship": {"Fighter": 0, "Corvette": 0, "Frigate": 0, "Cruiser": 5},
+  "max_simulations": 10,
+  "max_wall_seconds": 60,
+  "representative_formations_per_fleet": 1,
+  "beam_width_fleet": 1,
+  "beam_width_position": 1,
+  "beam_depth": 0,
+  "final_fleet_candidates": 1,
+  "local_exact_threshold": 0,
+  "local_exact_radius": 0,
+  "top_n": 1,
+  "kill_refine_top_n": 1,
+  "kill_refine_reserve_simulations": 6,
+  "kill_sequence_max_battles": 10,
+  "run_overdeploy_tests": false,
+  "v1_regression": false
+}

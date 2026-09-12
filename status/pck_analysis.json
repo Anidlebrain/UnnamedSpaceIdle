@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "pck_sha256": "47E161C73741E11DF9C5F2B8FCB8DCB71B5930180D1A60407EAAAE8D85B4C5CC",
+  "pck_size": 68319828,
+  "godot_version": "4.7.2",
+  "pck_format_version": 4,
+  "encrypted": false,
+  "compressed": "resource-dependent",
+  "extractable": true,
+  "resource_count": 7359,
+  "has_uid_or_import_remap": true,
+  "gdretools_version": "2.6.4",
+  "analysis_time": "2026-09-06T10:29:52.2712231+08:00",
+  "confidence": "high",
+  "notes": [
+    "GDRETools 能加载、列出并校验全部 7359 个资源，无需加密密钥。",
+    "PCK 头为 GDPC，pack_format=4，engine=4.7.2，flags=0x00000002。",
+    "翻译资源是启用 compress=true 的 OptimizedTranslation；不能据此断言整个 PCK 的所有条目均压缩。",
+    "存在 .godot/exported、.import、UID 与 remap 数据。"
+  ]
+}

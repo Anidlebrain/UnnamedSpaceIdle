@@ -1,0 +1,48 @@
+{
+  "galaxy": 5,
+  "node": "B35",
+  "boss": {
+    "alive": true,
+    "remaining_hp": 3500,
+    "priority": "kill_cost"
+  },
+  "hazards": [],
+  "supports": [],
+  "search": {
+    "profile": "fast",
+    "goal": "beat_baseline",
+    "simulation_clock": "offline_fixed_step",
+    "max_wall_seconds": 60,
+    "max_simulations": 1,
+    "workers": 1
+  },
+  "baseline": {
+    "enabled": true,
+    "formation": {
+      "A1": "Cruiser",
+      "A2": "Cruiser",
+      "A3": "Cruiser",
+      "A4": "Cruiser",
+      "A5": "Cruiser"
+    },
+    "loadouts": {
+      "Cruiser": {
+        "primary": null,
+        "secondary": "CruiserSingleArmorTank"
+      }
+    },
+    "observed": {
+      "fleet_resources_used": -1,
+      "boss_damage": -1
+    }
+  },
+  "player_state": {
+    "fleet_resources": 2627.3,
+    "ships": {
+      "Fighter": 1,
+      "Corvette": 1,
+      "Frigate": 1,
+      "Cruiser": 1
+    }
+  }
+}

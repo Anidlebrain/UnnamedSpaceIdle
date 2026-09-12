@@ -1,0 +1,150 @@
+{
+  "battle_id": "galaxy5_battle35",
+  "boss_health": 3500.0,
+  "enemy_difficulty": 3.0,
+  "enemy_fleet": [
+    {
+      "difficulty_override": 10.0,
+      "grid_position": [
+        1.0,
+        2.0
+      ],
+      "mods": [],
+      "ship": "EnemyCommandShip"
+    },
+    {
+      "difficulty_override": 1.5,
+      "grid_position": [
+        0.0,
+        0.0
+      ],
+      "mods": [
+        "DoubleDamage"
+      ],
+      "ship": "EnemyMediumShield"
+    },
+    {
+      "difficulty_override": 1.5,
+      "grid_position": [
+        0.0,
+        1.0
+      ],
+      "mods": [
+        "DoubleDamage"
+      ],
+      "ship": "EnemyMediumShield"
+    },
+    {
+      "difficulty_override": 1.5,
+      "grid_position": [
+        0.0,
+        3.0
+      ],
+      "mods": [
+        "DoubleDamage"
+      ],
+      "ship": "EnemyMediumArmor"
+    },
+    {
+      "difficulty_override": 1.5,
+      "grid_position": [
+        0.0,
+        4.0
+      ],
+      "mods": [
+        "DoubleDamage"
+      ],
+      "ship": "EnemyMediumArmor"
+    }
+  ],
+  "fight_enemy_command_ship": false,
+  "fleet_event_id": "g5_b35",
+  "fleet_resources": 2627.3,
+  "fleet_resources_retention": 0.5,
+  "formation": [
+    {
+      "grid_position": [
+        0,
+        0
+      ],
+      "position": "A1",
+      "primary_mod": null,
+      "secondary_mod": "CruiserSingleArmorTank",
+      "ship": "Cruiser",
+      "tertiary_mods": []
+    },
+    {
+      "grid_position": [
+        0,
+        1
+      ],
+      "position": "A2",
+      "primary_mod": null,
+      "secondary_mod": "CruiserSingleArmorTank",
+      "ship": "Cruiser",
+      "tertiary_mods": []
+    },
+    {
+      "grid_position": [
+        0,
+        2
+      ],
+      "position": "A3",
+      "primary_mod": null,
+      "secondary_mod": "CruiserSingleArmorTank",
+      "ship": "Cruiser",
+      "tertiary_mods": []
+    },
+    {
+      "grid_position": [
+        0,
+        3
+      ],
+      "position": "A4",
+      "primary_mod": null,
+      "secondary_mod": "CruiserSingleArmorTank",
+      "ship": "Cruiser",
+      "tertiary_mods": []
+    },
+    {
+      "grid_position": [
+        0,
+        4
+      ],
+      "position": "A5",
+      "primary_mod": null,
+      "secondary_mod": "CruiserSingleArmorTank",
+      "ship": "Cruiser",
+      "tertiary_mods": []
+    }
+  ],
+  "galaxy_id": "galaxy5",
+  "grid_size": [
+    2.0,
+    5.0
+  ],
+  "hazards": [],
+  "player_damage_scale": 3.25,
+  "player_health_scale": 3.25,
+  "ships_available": {
+    "Corvette": {
+      "available": 1,
+      "enabled": true
+    },
+    "Cruiser": {
+      "available": 1,
+      "enabled": true
+    },
+    "Fighter": {
+      "available": 1,
+      "enabled": true
+    },
+    "Frigate": {
+      "available": 1,
+      "enabled": true
+    }
+  },
+  "supports": [],
+  "temporary_events": [],
+  "simulation_clock": "offline_fixed_step"
+}

@@ -1,0 +1,26 @@
+{
+  "boss_efficiency_exhaustive": {
+    "passed": true,
+    "smart_pruned": false
+  },
+  "boss_efficiency_fast": {
+    "passed": true,
+    "reason": "efficiency_cutoff"
+  },
+  "boss_kill_cost": {
+    "baseline_total": 180.0,
+    "passed": true,
+    "projected_pruned": 210.0,
+    "projected_retained": 170.0
+  },
+  "formation_text": {
+    "passed": true,
+    "text": "Galaxy 5 / B35\nStatus: SEARCHED BEST\nObjective: boss / efficiency\nSearch Time: 1.0s\nSimulations: 1\n\nEnemy Summary:\n  Count: 0; Shield: 0; Armor: 0; Boss: false; Reinforcement: false\n\nRecommended Fleet:\n  Frigate x2\n  Cruiser x2\n\nMods:\n\nFormation:\n        1    2    3    4    5\nA      Fr   Fr   Cr   Cr    .\nB       .    .    .    .    .\n\nFR: Committed/Battle=1; Used/Battle=1\nBoss: Damage/Battle=1; Damage/FR=1\nKill: Battles=n/a; Total FR=n/a; Remaining FR=n/a\n\nSearch Notes:\n"
+  },
+  "normal_hard_bound": {
+    "battle_started": false,
+    "minimum_possible_used_fr": 250.0,
+    "passed": true
+  },
+  "passed": true
+}

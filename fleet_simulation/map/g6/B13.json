@@ -1,0 +1,58 @@
+{
+    "galaxy": 6,
+    "node": "B13",
+    "boss": {
+        "alive": false,
+        "remaining_hp": 0,
+        "priority": "efficiency"
+    },
+    "hazards": [],
+    "supports": [],
+    "player_state": {
+        "fleet_resources": 120,
+        "ships": {
+            "Fighter": 1,
+            "Corvette": 2,
+            "Frigate": 1,
+            "Cruiser": 2
+        }
+    },
+    "baseline": {
+        "enabled": true,
+        "formation": {
+            "A1": "Frigate",
+            "A3": "Cruiser",
+            "A4": "Frigate",
+            "A5": "Corvette",
+            "B3": "Fighter",
+            "B4": "Frigate",
+            "B5": "Cruiser"
+        },
+        "loadouts": {
+            "Fighter": {
+                "primary": null,
+                "secondary": null
+            },
+            "Corvette": {
+                "primary": "CorvetteChargeLaserMod",
+                "secondary": null
+            },
+            "Frigate": {
+                "primary": null,
+                "secondary": "ArmorMod"
+            },
+            "Cruiser": {
+                "primary": null,
+                "secondary": "CruiserSingleArmorTank"
+            }
+        }
+    },
+    "search": {
+        "profile": "fast",
+        "goal": "beat_baseline",
+        "simulation_clock": "offline_fixed_step",
+        "max_wall_seconds": 300,
+        "max_simulations": 300,
+        "workers": 4
+    }
+}

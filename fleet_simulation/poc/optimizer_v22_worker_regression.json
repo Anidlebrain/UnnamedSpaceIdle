@@ -1,0 +1,31 @@
+{
+  "objective": "normal",
+  "mode": "realistic",
+  "ship_types": ["Fighter", "Corvette", "Frigate", "Cruiser"],
+  "group_ranges": {
+    "Fighter": {"min": 0, "max": 1},
+    "Corvette": {"min": 0, "max": 1},
+    "Frigate": {"min": 0, "max": 1},
+    "Cruiser": {"min": 0, "max": 1}
+  },
+  "allowed_mod_slots": {
+    "Fighter": {"primary": [null], "secondary": [null]},
+    "Corvette": {"primary": [null], "secondary": [null]},
+    "Frigate": {"primary": [null], "secondary": [null]},
+    "Cruiser": {"primary": [null], "secondary": [null]}
+  },
+  "max_total_groups": 1,
+  "max_groups_per_ship": {"Fighter": 1, "Corvette": 1, "Frigate": 1, "Cruiser": 1},
+  "max_simulations": 5,
+  "max_wall_seconds": 180,
+  "representative_formations_per_fleet": 1,
+  "beam_width_fleet": 4,
+  "beam_width_position": 1,
+  "beam_depth": 0,
+  "final_fleet_candidates": 0,
+  "local_exact_threshold": 0,
+  "local_exact_radius": 0,
+  "top_n": 4,
+  "run_overdeploy_tests": false,
+  "v1_regression": false
+}

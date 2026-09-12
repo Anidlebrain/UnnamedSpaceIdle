@@ -1,0 +1,38 @@
+{
+  "galaxy_id": "galaxy1",
+  "fleet_event_id": "g1_1_b1",
+  "battle_id": "galaxy1_battle1",
+  "grid_size": [2, 5],
+  "player_damage_scale": 2.05,
+  "player_health_scale": 2.05,
+  "fleet_resources": 246.05,
+  "fleet_resources_retention": 0.5,
+  "ships_available": {
+    "Fighter": 1,
+    "Corvette": 1,
+    "Frigate": 1,
+    "Cruiser": 1
+  },
+  "formation": [
+    {
+      "ship": "Frigate",
+      "grid_position": [0, 2],
+      "primary_mod": null,
+      "secondary_mod": null,
+      "tertiary_mods": []
+    }
+  ],
+  "enemy_fleet": [
+    {
+      "ship": "EnemyBasic",
+      "grid_position": [0, 2],
+      "mods": [],
+      "difficulty_override": -1.0
+    }
+  ],
+  "hazards": [],
+  "supports": [],
+  "temporary_events": [],
+  "fight_enemy_command_ship": false,
+  "boss_health": null
+}

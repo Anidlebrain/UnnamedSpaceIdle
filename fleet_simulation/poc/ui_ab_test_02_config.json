@@ -1,0 +1,57 @@
+{
+  "galaxy_id": "galaxy5",
+  "fleet_event_id": "g5_b30",
+  "battle_id": "galaxy5_battle30",
+  "grid_size": [2, 5],
+  "player_damage_scale": 3.25,
+  "player_health_scale": 3.25,
+  "fleet_resources": 2627.3,
+  "fleet_resources_retention": 0.5,
+  "ships_available": {
+    "Cruiser": 1
+  },
+  "formation": [
+    {
+      "ship": "Cruiser",
+      "grid_position": [0, 1],
+      "primary_mod": null,
+      "secondary_mod": "CruiserSingleArmorTank",
+      "tertiary_mods": []
+    },
+    {
+      "ship": "Cruiser",
+      "grid_position": [0, 2],
+      "primary_mod": null,
+      "secondary_mod": "CruiserSingleArmorTank",
+      "tertiary_mods": []
+    },
+    {
+      "ship": "Cruiser",
+      "grid_position": [0, 3],
+      "primary_mod": null,
+      "secondary_mod": "CruiserSingleArmorTank",
+      "tertiary_mods": []
+    }
+  ],
+  "enemy_fleet": [
+    {
+      "ship": "EnemyGatlingArmor",
+      "grid_position": [0, 2],
+      "mods": [],
+      "difficulty_override": 13.0
+    },
+    {
+      "ship": "EnemyGatlingArmor",
+      "grid_position": [1, 2],
+      "mods": [],
+      "difficulty_override": 13.0
+    }
+  ],
+  "hazards": [
+    "g5_b30"
+  ],
+  "supports": [],
+  "temporary_events": [],
+  "fight_enemy_command_ship": false,
+  "boss_health": null
+}

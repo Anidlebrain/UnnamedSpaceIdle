@@ -1,0 +1,1974 @@
+{
+  "all_identical": true,
+  "baseline": {
+    "boss_damage": 1365.0,
+    "copy_battle_log_text": "ruiser(A,2|1) 造成了 91 伤害对 Medium(A,2|1)\nCruiser(A,3|1) 造成了 91 伤害对 Medium(A,3|1)\nCruiser(A,4|1) 造成了 91 伤害对 Medium(A,4|1)\nCruiser(A,2|1) 造成了 91 伤害对 Medium(A,2|1)\nCruiser(A,3|1) 造成了 91 伤害对 Medium(A,3|1)\nCruiser(A,4|1) 造成了 91 伤害对 Medium(A,4|1)\nCruiser(A,2|1) 造成了 91 伤害对 Medium(A,2|1)\nCruiser(A,3|1) 造成了 91 伤害对 Medium(A,3|1)\nCruiser(A,4|1) 造成了 91 伤害对 Medium(A,4|1)\nMedium(A,2|1) 造成了 49.5 伤害对 Cruiser(A,2|1)\nMedium(A,2|1) 造成了 49.5 伤害对 Cruiser(A,2|1)\nMedium(A,3|1) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,3|1) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,4|1) 造成了 49.5 伤害对 Cruiser(A,4|1)\nMedium(A,4|1) 造成了 49.5 伤害对 Cruiser(A,4|1)\nMedium(A,2|2) 造成了 49.5 伤害对 Cruiser(A,2|1)\nMedium(A,2|2) 造成了 49.5 伤害对 Cruiser(A,2|1)\nMedium(A,3|2) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,3|2) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,4|2) 造成了 49.5 伤害对 Cruiser(A,4|1)\nMedium(A,4|2) 造成了 49.5 伤害对 Cruiser(A,4|1)\nCruiser(A,5|1) 造成了 91 伤害对 Medium(A,4|2)\nCruiser(A,1|1) 造成了 91 伤害对 Medium(A,2|1)\nCruiser(A,5|1) 造成了 91 伤害对 Medium(A,4|2)\nCruiser(A,1|1) 造成了 26 伤害对 Medium(A,2|1)\nCruiser(A,1|1) 击毁了 Medium(A,2|1)\nCruiser(A,5|1) 造成了 91 伤害对 Medium(A,4|2)\nCruiser(A,3|1) 造成了 91 伤害对 Medium(A,3|1)\nCruiser(A,4|1) 造成了 91 伤害对 Medium(A,4|1)\nCruiser(A,2|1) 造成了 91 伤害对 Medium(A,2|2)\nCruiser(A,2|1) 造成了 91 伤害对 Medium(A,2|2)\nCruiser(A,4|1) 造成了 26 伤害对 Medium(A,4|1)\nCruiser(A,4|1) 击毁了 Medium(A,4|1)\nCruiser(A,3|1) 造成了 26 伤害对 Medium(A,3|1)\nCruiser(A,3|1) 击毁了 Medium(A,3|1)\nCruiser(A,2|1) 造成了 91 伤害对 Medium(A,2|2)\nMedium(A,4|1) 造成了 49.5 伤害对 Cruiser(A,4|1)\nMedium(A,4|1) 造成了 49.5 伤害对 Cruiser(A,4|1)\nMedium(A,3|1) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,3|1) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,4|2) 造成了 49.5 伤害对 Cruiser(A,4|1)\nMedium(A,4|2) 造成了 49.5 伤害对 Cruiser(A,4|1)\nMedium(A,3|2) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,3|2) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,2|2) 造成了 49.5 伤害对 Cruiser(A,2|1)\nMedium(A,2|2) 造成了 49.5 伤害对 Cruiser(A,2|1)\nCruiser(A,1|1) 造成了 91 伤害对 Medium(A,2|2)\nCruiser(A,5|1) 造成了 91 伤害对 Medium(A,4|2)\nCruiser(A,1|1) 造成了 26 伤害对 Medium(A,2|2)\nCruiser(A,1|1) 击毁了 Medium(A,2|2)\nCruiser(A,5|1) 造成了 26 伤害对 Medium(A,4|2)\nCruiser(A,5|1) 击毁了 Medium(A,4|2)\nCruiser(A,3|1) 造成了 91 伤害对 Medium(A,3|2)\nCruiser(A,3|1) 造成了 91 伤害对 Medium(A,3|2)\nCruiser(A,4|1) 造成了 91 伤害对 Medium(A,3|2)\nCruiser(A,4|1) 造成了 91 伤害对 Medium(A,3|2)\nCruiser(A,3|1) 造成了 26 伤害对 Medium(A,3|2)\nCruiser(A,3|1) 击毁了 Medium(A,3|2)\nMedium(A,3|2) 造成了 49.5 伤害对 Cruiser(A,3|1)\nMedium(A,3|2) 造成了 49.5 伤害对 Cruiser(A,3|1)\nCruiser(A,3|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,3|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,3|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nEnemy Base(B,3|1) 造成了 180 伤害对 Cruiser(A,3|1)\nEnemy Base(B,3|1) 击毁了 Cruiser(A,3|1)\nCruiser(A,4|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,4|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,4|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,2|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,2|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,2|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,1|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,1|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,1|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,5|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,5|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nCruiser(A,5|1) 造成了 91 伤害对 Enemy Base(B,3|1)\nEnemy Base(B,3|1) 造成了 243 伤害对 Cruiser(A,4|1)\nEnemy Base(B,3|1) 击毁了 Cruiser(A,4|1)\nEnemy Base(B,3|1) 造成了 342 伤害对 Cruiser(A,2|1)\nEnemy Base(B,3|1) 击毁了 Cruiser(A,2|1)\nEnemy Base(B,3|1) 造成了 633 伤害对 Cruiser(A,1|1)\nEnemy Base(B,3|1) 击毁了 Cruiser(A,1|1)\nEnemy Base(B,3|1) 造成了 627 伤害对 Cruiser(A,5|1)\nEnemy Base(B,3|1) 击毁了 Cruiser(A,5|1)",
+    "enemy_ships": [
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          1.0
+        ],
+        "hull": 0.0,
+        "id": "EnemyMedium",
+        "max_barrier": 0.0,
+        "max_hull": 390.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          ""
+        ],
+        "name": "Medium(A,2|1)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 1
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          1.0
+        ],
+        "hull": 0.0,
+        "id": "EnemyMedium",
+        "max_barrier": 0.0,
+        "max_hull": 390.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          ""
+        ],
+        "name": "Medium(A,2|2)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 1
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          2.0
+        ],
+        "hull": 0.0,
+        "id": "EnemyMedium",
+        "max_barrier": 0.0,
+        "max_hull": 390.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          ""
+        ],
+        "name": "Medium(A,3|1)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 1
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          2.0
+        ],
+        "hull": 0.0,
+        "id": "EnemyMedium",
+        "max_barrier": 0.0,
+        "max_hull": 390.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          ""
+        ],
+        "name": "Medium(A,3|2)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 1
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          3.0
+        ],
+        "hull": 0.0,
+        "id": "EnemyMedium",
+        "max_barrier": 0.0,
+        "max_hull": 390.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          ""
+        ],
+        "name": "Medium(A,4|1)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 1
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          3.0
+        ],
+        "hull": 0.0,
+        "id": "EnemyMedium",
+        "max_barrier": 0.0,
+        "max_hull": 390.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          ""
+        ],
+        "name": "Medium(A,4|2)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 1
+      },
+      {
+        "alive": true,
+        "barrier": 0.0,
+        "grid_position": [
+          1.0,
+          2.0
+        ],
+        "hull": 2135.0,
+        "id": "EnemyCommandShip",
+        "max_barrier": 0.0,
+        "max_hull": 3500.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          ""
+        ],
+        "name": "Enemy Base(B,3|1)",
+        "shields": 0,
+        "spawned_during_battle": false,
+        "team": 1
+      }
+    ],
+    "fleet_resources_used": 300.0,
+    "outcome": "lose",
+    "player_ships": [
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          0.0
+        ],
+        "hull": 0.0,
+        "id": "Cruiser",
+        "max_barrier": 0.0,
+        "max_hull": 975.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          "CruiserSingleArmorTank"
+        ],
+        "name": "Cruiser(A,1|1)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 0
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          1.0
+        ],
+        "hull": 0.0,
+        "id": "Cruiser",
+        "max_barrier": 0.0,
+        "max_hull": 975.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          "CruiserSingleArmorTank"
+        ],
+        "name": "Cruiser(A,2|1)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 0
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          2.0
+        ],
+        "hull": 0.0,
+        "id": "Cruiser",
+        "max_barrier": 0.0,
+        "max_hull": 975.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          "CruiserSingleArmorTank"
+        ],
+        "name": "Cruiser(A,3|1)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 0
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          3.0
+        ],
+        "hull": 0.0,
+        "id": "Cruiser",
+        "max_barrier": 0.0,
+        "max_hull": 975.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          "CruiserSingleArmorTank"
+        ],
+        "name": "Cruiser(A,4|1)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 0
+      },
+      {
+        "alive": false,
+        "barrier": 0.0,
+        "grid_position": [
+          0.0,
+          4.0
+        ],
+        "hull": 0.0,
+        "id": "Cruiser",
+        "max_barrier": 0.0,
+        "max_hull": 975.0,
+        "max_shields": 0.0,
+        "mods": [
+          "",
+          "CruiserSingleArmorTank"
+        ],
+        "name": "Cruiser(A,5|1)",
+        "shields": 0.0,
+        "spawned_during_battle": false,
+        "team": 0
+      }
+    ],
+    "raw_battle_log": [
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,2 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,2 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 1",
+        "amount": 26.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 26.0,
+        "target": "1:EnemyMedium A,2 1"
+      },
+      {
+        "action": 3,
+        "actor": "1:EnemyMedium A,2 1",
+        "amount": 0.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 2,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 0.0,
+        "target": "1:EnemyMedium A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 26.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 26.0,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 3,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 0.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 2,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 0.0,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 26.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 26.0,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 3,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 0.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 2,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 0.0,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,4 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 1",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 26.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 26.0,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 3,
+        "actor": "1:EnemyMedium A,2 2",
+        "amount": 0.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 2,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 0.0,
+        "target": "1:EnemyMedium A,2 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 26.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 26.0,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 3,
+        "actor": "1:EnemyMedium A,4 2",
+        "amount": 0.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 2,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 0.0,
+        "target": "1:EnemyMedium A,4 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 26.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 26.0,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 3,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 0.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 2,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 0.0,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 49.5,
+        "target": "1:EnemyMedium A,3 2"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyMedium A,3 2",
+        "amount": 49.5,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 180.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 180.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 3,
+        "actor": "0:Cruiser A,3 1",
+        "amount": 0.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 2,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 0.0,
+        "target": "0:Cruiser A,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 91.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 0,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 91.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 243.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 243.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 3,
+        "actor": "0:Cruiser A,4 1",
+        "amount": 0.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 2,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 0.0,
+        "target": "0:Cruiser A,4 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 342.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 342.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 3,
+        "actor": "0:Cruiser A,2 1",
+        "amount": 0.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 2,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 0.0,
+        "target": "0:Cruiser A,2 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 633.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 633.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 3,
+        "actor": "0:Cruiser A,1 1",
+        "amount": 0.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 2,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 0.0,
+        "target": "0:Cruiser A,1 1"
+      },
+      {
+        "action": 1,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 627.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 0,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 627.0,
+        "target": "0:Cruiser A,5 1"
+      },
+      {
+        "action": 3,
+        "actor": "0:Cruiser A,5 1",
+        "amount": 0.0,
+        "target": "1:EnemyCommandShip B,3 1"
+      },
+      {
+        "action": 2,
+        "actor": "1:EnemyCommandShip B,3 1",
+        "amount": 0.0,
+        "target": "0:Cruiser A,5 1"
+      }
+    ],
+    "runtime_effect_events": [
+      {
+        "enabled": true,
+        "event": "active",
+        "index": 0,
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 0.0,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 0.133333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 0.266666666666667,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 0.4,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 0.533333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 0.666666666666667,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 0.800000000000001,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 0.933333333333335,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 1.06666666666667,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 1.2,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 1.33333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 1.46666666666667,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 1.6,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 1.73333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 1.86666666666666,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 2.0,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 2.13333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 2.26666666666666,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 2.4,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 2.53333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 2.66666666666666,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 2.79999999999999,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 2.93333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 3.06666666666666,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 3.19999999999999,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 3.33333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 3.46666666666666,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 3.59999999999999,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 3.73333333333333,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 3.86666666666666,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 3.99999999999999,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 4.13333333333332,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 4.26666666666666,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 4.39999999999999,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 4.53333333333332,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 4.66666666666666,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 4.79999999999999,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 4.93333333333332,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 5.06666666666665,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 5.19999999999999,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 5.33333333333332,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 5.46666666666665,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 5.59999999999999,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 5.73333333333332,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 5.86666666666665,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 5.99999999999998,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 6.13333333333332,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 6.26666666666665,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 6.39999999999998,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 6.53333333333332,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 6.66666666666665,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 6.79999999999998,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 6.93333333333331,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 7.06666666666665,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 7.19999999999998,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 7.33333333333331,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 7.46666666666665,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 7.59999999999998,
+        "team": 1,
+        "type": "damage_per_second"
+      },
+      {
+        "event": "triggered",
+        "originator_node": "g5_bb3",
+        "simulated_seconds": 7.73333333333331,
+        "team": 1,
+        "type": "damage_per_second"
+      }
+    ]
+  },
+  "comparison_ignored_fields": [
+    "simulation_time",
+    "raw_battle_log[].time"
+  ],
+  "config": {
+    "battle_id": "galaxy5_basebattle3",
+    "boss_health": null,
+    "enemy_fleet": [
+      {
+        "difficulty_override": 7.0,
+        "grid_position": [
+          1.0,
+          2.0
+        ],
+        "mods": [],
+        "ship": "EnemyCommandShip"
+      },
+      {
+        "difficulty_override": -1.0,
+        "grid_position": [
+          0.0,
+          1.0
+        ],
+        "mods": [],
+        "ship": "EnemyMedium"
+      },
+      {
+        "difficulty_override": -1.0,
+        "grid_position": [
+          0.0,
+          2.0
+        ],
+        "mods": [],
+        "ship": "EnemyMedium"
+      },
+      {
+        "difficulty_override": -1.0,
+        "grid_position": [
+          0.0,
+          3.0
+        ],
+        "mods": [],
+        "ship": "EnemyMedium"
+      }
+    ],
+    "fight_enemy_command_ship": true,
+    "fleet_event_id": "g5_bb3",
+    "fleet_resources": 2627.3,
+    "fleet_resources_retention": 0.5,
+    "formation": [
+      {
+        "grid_position": [
+          0.0,
+          0.0
+        ],
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0.0,
+          1.0
+        ],
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0.0,
+          2.0
+        ],
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0.0,
+          3.0
+        ],
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0.0,
+          4.0
+        ],
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      }
+    ],
+    "galaxy_id": "galaxy5",
+    "grid_size": [
+      2.0,
+      5.0
+    ],
+    "hazards": [
+      "g5_bb3"
+    ],
+    "player_damage_scale": 3.25,
+    "player_health_scale": 3.25,
+    "ships_available": {
+      "Cruiser": 1.0
+    },
+    "supports": [],
+    "temporary_events": []
+  },
+  "engine_time_scale": 1.0,
+  "engine_version": "4.7.2-stable (official)",
+  "error_count": 0,
+  "http_nodes_proxied": 35,
+  "identical_count": 20,
+  "network_protection": "HTTP/HTTPS proxied to 127.0.0.1:9; Steam singleton unavailable",
+  "physics_ticks_per_second": 60,
+  "runs": [
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 1
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 2
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 3
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 4
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 5
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 6
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 7
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 8
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 9
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 10
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 11
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 12
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 13
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 14
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 15
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 16
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 17
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 18
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 19
+    },
+    {
+      "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d",
+      "different_fields": [],
+      "error": "",
+      "identical": true,
+      "run": 20
+    }
+  ],
+  "runs_completed": 20,
+  "runs_requested": 20,
+  "scene_tree_paused": false,
+  "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Test"
+}

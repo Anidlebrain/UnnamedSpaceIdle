@@ -1,0 +1,310 @@
+{
+  "core_results_identical": true,
+  "engine_time_scale": 1.0,
+  "engine_version": "4.7.2-stable (official)",
+  "full": {
+    "average_wall_ms": 1724.954,
+    "count": 5,
+    "median_battle_wall_ms": 1268.775,
+    "median_simulated_seconds": 8.45,
+    "median_wall_ms": 1610.854,
+    "median_wall_speedup": 6.6599672912849
+  },
+  "http_nodes_proxied": 25,
+  "minimal": {
+    "average_wall_ms": 1701.636,
+    "count": 5,
+    "median_battle_wall_ms": 1360.638,
+    "median_simulated_seconds": 8.45,
+    "median_wall_ms": 1714.386,
+    "median_wall_speedup": 6.21032192250988
+  },
+  "network_protection": "HTTP/HTTPS proxied to 127.0.0.1:9; Steam singleton unavailable",
+  "physics_ticks_per_second": 60,
+  "runs": 10,
+  "samples": [
+    {
+      "cleanup_ms": 14.918,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "full",
+      "performance_breakdown": {
+        "battle_start_ms": 43.795,
+        "battle_wall_ms": 1244.066,
+        "log_report_ms": 1.291,
+        "result_extract_ms": 1.426,
+        "run_battle_total_ms_before_cleanup": 2104.617,
+        "scene_creation_ms": 736.265,
+        "scene_setup_ms": 79.049
+      },
+      "run": 1,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.244066,
+        "wall_speedup": 6.792244141388
+      },
+      "wall_ms": 2119.551
+    },
+    {
+      "cleanup_ms": 18.791,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "full",
+      "performance_breakdown": {
+        "battle_start_ms": 48.146,
+        "battle_wall_ms": 1265.873,
+        "log_report_ms": 1.275,
+        "result_extract_ms": 1.413,
+        "run_battle_total_ms_before_cleanup": 1568.325,
+        "scene_creation_ms": 174.001,
+        "scene_setup_ms": 78.847
+      },
+      "run": 2,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.265873,
+        "wall_speedup": 6.67523519341988
+      },
+      "wall_ms": 1587.242
+    },
+    {
+      "cleanup_ms": 14.653,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "full",
+      "performance_breakdown": {
+        "battle_start_ms": 52.082,
+        "battle_wall_ms": 1268.775,
+        "log_report_ms": 1.336,
+        "result_extract_ms": 1.501,
+        "run_battle_total_ms_before_cleanup": 1593.793,
+        "scene_creation_ms": 193.052,
+        "scene_setup_ms": 78.36
+      },
+      "run": 3,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.268775,
+        "wall_speedup": 6.6599672912849
+      },
+      "wall_ms": 1608.74
+    },
+    {
+      "cleanup_ms": 14.779,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "full",
+      "performance_breakdown": {
+        "battle_start_ms": 48.343,
+        "battle_wall_ms": 1381.154,
+        "log_report_ms": 1.243,
+        "result_extract_ms": 1.387,
+        "run_battle_total_ms_before_cleanup": 1683.459,
+        "scene_creation_ms": 170.597,
+        "scene_setup_ms": 81.955
+      },
+      "run": 4,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.381154,
+        "wall_speedup": 6.11807227868869
+      },
+      "wall_ms": 1698.383
+    },
+    {
+      "cleanup_ms": 15.012,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "full",
+      "performance_breakdown": {
+        "battle_start_ms": 55.27,
+        "battle_wall_ms": 1287.383,
+        "log_report_ms": 1.199,
+        "result_extract_ms": 1.339,
+        "run_battle_total_ms_before_cleanup": 1595.508,
+        "scene_creation_ms": 171.645,
+        "scene_setup_ms": 79.854
+      },
+      "run": 5,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.287383,
+        "wall_speedup": 6.56370326468502
+      },
+      "wall_ms": 1610.854
+    },
+    {
+      "cleanup_ms": 13.016,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "minimal",
+      "performance_breakdown": {
+        "battle_start_ms": 40.75,
+        "battle_wall_ms": 1237.278,
+        "log_report_ms": 0.002,
+        "result_extract_ms": 0.147,
+        "run_battle_total_ms_before_cleanup": 1546.116,
+        "scene_creation_ms": 188.293,
+        "scene_setup_ms": 79.603
+      },
+      "run": 6,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.237278,
+        "wall_speedup": 6.82950800062718
+      },
+      "wall_ms": 1559.531
+    },
+    {
+      "cleanup_ms": 16.677,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "minimal",
+      "performance_breakdown": {
+        "battle_start_ms": 42.953,
+        "battle_wall_ms": 1519.633,
+        "log_report_ms": 0.002,
+        "result_extract_ms": 0.133,
+        "run_battle_total_ms_before_cleanup": 1830.709,
+        "scene_creation_ms": 187.917,
+        "scene_setup_ms": 80.053
+      },
+      "run": 7,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.519633,
+        "wall_speedup": 5.5605531072305
+      },
+      "wall_ms": 1847.421
+    },
+    {
+      "cleanup_ms": 13.421,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "minimal",
+      "performance_breakdown": {
+        "battle_start_ms": 44.735,
+        "battle_wall_ms": 1396.95,
+        "log_report_ms": 0.003,
+        "result_extract_ms": 0.155,
+        "run_battle_total_ms_before_cleanup": 1701.402,
+        "scene_creation_ms": 175.081,
+        "scene_setup_ms": 84.46
+      },
+      "run": 8,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.39695,
+        "wall_speedup": 6.04889222949998
+      },
+      "wall_ms": 1714.862
+    },
+    {
+      "cleanup_ms": 15.349,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "minimal",
+      "performance_breakdown": {
+        "battle_start_ms": 50.188,
+        "battle_wall_ms": 1360.638,
+        "log_report_ms": 0.003,
+        "result_extract_ms": 0.329,
+        "run_battle_total_ms_before_cleanup": 1698.964,
+        "scene_creation_ms": 172.571,
+        "scene_setup_ms": 115.212
+      },
+      "run": 9,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.360638,
+        "wall_speedup": 6.21032192250988
+      },
+      "wall_ms": 1714.386
+    },
+    {
+      "cleanup_ms": 16.707,
+      "core_sha256": "e0001fbc42a0db917c3612ba14adfd7232ecbf2fdb42483f6f756bc8b62cd661",
+      "detail": "minimal",
+      "performance_breakdown": {
+        "battle_start_ms": 46.52,
+        "battle_wall_ms": 1354.228,
+        "log_report_ms": 0.002,
+        "result_extract_ms": 0.137,
+        "run_battle_total_ms_before_cleanup": 1655.231,
+        "scene_creation_ms": 175.362,
+        "scene_setup_ms": 78.964
+      },
+      "run": 10,
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 1.354228,
+        "wall_speedup": 6.23971738880011
+      },
+      "wall_ms": 1671.98
+    }
+  ],
+  "scene_tree_paused": false,
+  "simulation_clock": {
+    "engine_fixed_fps": 60,
+    "fallback_warning": "",
+    "mode": "offline_fixed_step",
+    "physics_hz": 60,
+    "requested_mode": "offline_fixed_step",
+    "simulated_seconds": 8.45,
+    "step_seconds": 0.0166666666666667,
+    "wall_seconds": 1.244066,
+    "wall_speedup": 6.792244141388
+  },
+  "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Test"
+}
