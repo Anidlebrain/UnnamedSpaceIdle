@@ -127,9 +127,9 @@ func resolve(friendly: Dictionary, common: Dictionary = {}) -> Dictionary:
 		"profile": profile,
 		"goal": goal,
 		"simulation_clock": simulation_clock,
-		"max_wall_seconds": float(search.get("max_wall_seconds", 300.0 if profile == "fast" else 1800.0)),
-		"max_simulations": int(search.get("max_simulations", 300 if profile == "fast" else 1000)),
-		"workers": clampi(int(search.get("workers", 4 if profile == "fast" else 1)), 1, 4),
+		"max_wall_seconds": float(search.get("max_wall_seconds", 300.0)),
+		"max_simulations": int(search.get("max_simulations", 1000000)),
+		"workers": clampi(int(search.get("workers", 1)), 1, 4),
 	}
 	if search.max_wall_seconds <= 0.0 or search.max_simulations <= 0:
 		return _error("search max_wall_seconds and max_simulations must be positive")

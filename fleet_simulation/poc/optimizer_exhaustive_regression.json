@@ -1,0 +1,78 @@
+{
+  "objective": "normal",
+  "mode": "realistic",
+  "ship_types": [
+    "Fighter",
+    "Corvette",
+    "Frigate",
+    "Cruiser"
+  ],
+  "group_ranges": {
+    "Fighter": {
+      "min": 0,
+      "max": 0
+    },
+    "Corvette": {
+      "min": 0,
+      "max": 0
+    },
+    "Frigate": {
+      "min": 1,
+      "max": 1
+    },
+    "Cruiser": {
+      "min": 0,
+      "max": 0
+    }
+  },
+  "allowed_mod_slots": {
+    "Fighter": {
+      "primary": [
+        null,
+        "FighterMiniRailgunMod"
+      ],
+      "secondary": [
+        null
+      ]
+    },
+    "Corvette": {
+      "primary": [
+        null,
+        "CorvetteChargeLaserMod"
+      ],
+      "secondary": [
+        null,
+        "ShieldMod"
+      ]
+    },
+    "Frigate": {
+      "primary": [
+        null
+      ],
+      "secondary": [
+        null
+      ]
+    },
+    "Cruiser": {
+      "primary": [
+        null
+      ],
+      "secondary": [
+        null,
+        "CruiserSingleArmorTank"
+      ]
+    }
+  },
+  "max_total_groups": 10,
+  "max_groups_per_ship": {
+    "Fighter": 10,
+    "Corvette": 10,
+    "Frigate": 10,
+    "Cruiser": 10
+  },
+  "max_simulations": 1000000,
+  "max_wall_seconds": 300,
+  "top_n": 10,
+  "kill_refine_top_n": 3,
+  "kill_sequence_max_battles": 100
+}

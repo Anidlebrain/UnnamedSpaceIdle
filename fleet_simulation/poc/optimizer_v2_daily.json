@@ -1,29 +1,68 @@
 {
   "objective": "normal",
   "mode": "realistic",
-  "ship_types": ["Fighter", "Corvette", "Frigate", "Cruiser"],
+  "ship_types": [
+    "Fighter",
+    "Corvette",
+    "Frigate",
+    "Cruiser"
+  ],
   "group_ranges": {
-    "Fighter": {"min": 0, "max": 10},
-    "Corvette": {"min": 0, "max": 10},
-    "Frigate": {"min": 0, "max": 10},
-    "Cruiser": {"min": 0, "max": 10}
+    "Fighter": {
+      "min": 0,
+      "max": 10
+    },
+    "Corvette": {
+      "min": 0,
+      "max": 10
+    },
+    "Frigate": {
+      "min": 0,
+      "max": 10
+    },
+    "Cruiser": {
+      "min": 0,
+      "max": 10
+    }
   },
   "allowed_mod_slots": {
     "Fighter": {
-      "primary": [null, "FighterMiniRailgunMod"],
-      "secondary": [null]
+      "primary": [
+        null,
+        "FighterMiniRailgunMod"
+      ],
+      "secondary": [
+        null
+      ]
     },
     "Corvette": {
-      "primary": [null, "CorvetteChargeLaserMod"],
-      "secondary": [null, "ShieldMod"]
+      "primary": [
+        null,
+        "CorvetteChargeLaserMod"
+      ],
+      "secondary": [
+        null,
+        "ShieldMod"
+      ]
     },
     "Frigate": {
-      "primary": [null, "FrigateMissileMod"],
-      "secondary": [null, "ArmorMod"]
+      "primary": [
+        null,
+        "FrigateMissileMod"
+      ],
+      "secondary": [
+        null,
+        "ArmorMod"
+      ]
     },
     "Cruiser": {
-      "primary": [null],
-      "secondary": [null, "CruiserSingleArmorTank"]
+      "primary": [
+        null
+      ],
+      "secondary": [
+        null,
+        "CruiserSingleArmorTank"
+      ]
     }
   },
   "max_total_groups": 10,
@@ -33,23 +72,9 @@
     "Frigate": 10,
     "Cruiser": 10
   },
-  "max_simulations": 300,
+  "max_simulations": 1000000,
   "max_wall_seconds": 300,
-  "estimated_seconds_per_battle": 9.0,
-  "composition_quote_budget": 20,
-  "probe_budget": 20,
-  "finalization_reserve_seconds": 45,
-  "representative_formations_per_fleet": 3,
-  "beam_width_fleet": 12,
-  "beam_width_position": 12,
-  "beam_depth": 3,
-  "final_fleet_candidates": 3,
-  "local_exact_threshold": 500,
-  "local_exact_radius": 1,
   "top_n": 10,
   "kill_refine_top_n": 3,
-  "kill_refine_reserve_simulations": 30,
-  "kill_sequence_max_battles": 100,
-  "run_overdeploy_tests": false,
-  "v1_regression": false
+  "kill_sequence_max_battles": 100
 }

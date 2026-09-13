@@ -1,0 +1,3312 @@
+{
+  "game_version": "0.85.1.0",
+  "godot_version": "4.7.2",
+  "runs": [
+    {
+      "label": "before_b12",
+      "status": "SEARCHED BEST",
+      "recommendation_status": "SEARCHED BEST",
+      "best": {
+        "outcome": "victory",
+        "fleet_resources_used": 76.25,
+        "fleet_resources_committed": 80.0,
+        "boss_damage": 0.0,
+        "boss_damage_per_fr": 0.0,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              0,
+              0
+            ],
+            "position": "A1",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": "ShieldMod",
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": "ArmorMod",
+            "ship": "Frigate",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              4
+            ],
+            "position": "A5",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              0
+            ],
+            "position": "B1",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": "ShieldMod",
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              1
+            ],
+            "position": "B2",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Fighter",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Corvette": {
+            "id": "CorvetteChargeLaserMod+ShieldMod",
+            "primary": "CorvetteChargeLaserMod",
+            "secondary": "ShieldMod"
+          },
+          "Cruiser": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          },
+          "Fighter": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          },
+          "Frigate": {
+            "id": "ArmorMod",
+            "primary": null,
+            "secondary": "ArmorMod"
+          }
+        },
+        "candidate_hash": "63593fa4825c4c21f3da80a2316c9f1067e54f88147b995faf3bcda093630c16"
+      },
+      "best_measured_efficiency": null,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 86,
+      "unique_candidates": 85,
+      "cache_hits": 3,
+      "deployment_quote_cache_hits": null,
+      "process_wall_seconds": 275.3417346000206,
+      "optimizer_wall_seconds": 259.946,
+      "time_to_first_improvement_seconds": null,
+      "time_to_best_seconds": null,
+      "sampled_old_search_updates": [
+        {
+          "process_seconds": 21.17560690001119,
+          "update": 1
+        }
+      ],
+      "cpu_percent_one_core": 105.13639547616127,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 491.786220930233,
+        "average_battle_wall_ms": 1248.95908139535,
+        "average_canonicalization_ms": 1.16263953488372,
+        "average_cleanup_ms": 21.6472674418605,
+        "average_log_report_ms": 0.0557441860465116,
+        "average_quote_ms": 1411.02961904762,
+        "average_result_extract_ms": 0.633453488372093,
+        "average_run_battle_total_ms_before_cleanup": 2644.96446511628,
+        "average_scene_creation_ms": 689.051906976744,
+        "average_scene_setup_ms": 214.512302325581,
+        "candidate_generation_ms": 27095.5,
+        "canonicalization_total_ms": 99.987,
+        "deployment_quote_total_ms": 29631.622,
+        "json_serialization_ms": 68.576,
+        "resolver_ms": 5.182,
+        "samples": 86
+      },
+      "worker_startup": [],
+      "output_performance": null,
+      "coverage": null,
+      "finalization_status": "COMPLETE",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 6,
+        "node": "B12",
+        "boss": {
+          "alive": false,
+          "remaining_hp": 0,
+          "priority": "efficiency"
+        },
+        "hazards": [],
+        "supports": [
+          "F3"
+        ],
+        "player_state": {
+          "fleet_resources": 120,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 2,
+            "Frigate": 1,
+            "Cruiser": 2
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Corvette",
+            "A3": "Frigate",
+            "A4": "Cruiser",
+            "A5": "Cruiser",
+            "B1": "Corvette",
+            "B2": "Fighter"
+          },
+          "loadouts": {
+            "Fighter": {
+              "primary": null,
+              "secondary": null
+            },
+            "Corvette": {
+              "primary": "CorvetteChargeLaserMod",
+              "secondary": "ShieldMod"
+            },
+            "Frigate": {
+              "primary": null,
+              "secondary": "ArmorMod"
+            },
+            "Cruiser": {
+              "primary": null,
+              "secondary": null
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {
+        "permanent": {
+          "damage_scale": 1.75,
+          "health_scale": 1.75
+        },
+        "temporary": {
+          "damage_scale": 0.0,
+          "health_scale": 0.0
+        }
+      },
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "875793283b52f90f447fc7375da4bf5137653123b147a14f5e8fc8ac4652202e",
+        "fleet_optimizer_v2.gd": "b6374ababcaad5409aa0f8f859d53c8e4fcc76a1ec7247afe847455f5c5e851d",
+        "fleet_test.gd": "8b1a0932cf7b014fc850f67a633d3883cf64b9d4c5128adcbc3292e97c74804c",
+        "fleet_test_runner.gd": "93bfb3526063947031b73f81eb4455b09b74fbdb1b6e2adac540cb0ad9976cb4",
+        "friendly_config_resolver.gd": "99f37b02e814ac638652203831607be486ea62786d51a7e55f10b25c1e8f3758"
+      },
+      "raw_result_sha256": "89eda28d81052186519e9748dec6215c4b5f4e7b9e827bac72aa10cf2e15c0ff"
+    },
+    {
+      "label": "final_b12",
+      "status": "BEST FOUND",
+      "recommendation_status": "BEST FOUND",
+      "best": {
+        "outcome": "victory",
+        "fleet_resources_used": 46.25,
+        "fleet_resources_committed": 50.0,
+        "boss_damage": 0.0,
+        "boss_damage_per_fr": 0.0,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              0,
+              0
+            ],
+            "position": "A1",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": "ShieldMod",
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              1
+            ],
+            "position": "B2",
+            "primary_mod": null,
+            "secondary_mod": "ArmorMod",
+            "ship": "Frigate",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Fighter",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Corvette": {
+            "id": "CorvetteChargeLaserMod+ShieldMod",
+            "primary": "CorvetteChargeLaserMod",
+            "secondary": "ShieldMod"
+          },
+          "Cruiser": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          },
+          "Fighter": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          },
+          "Frigate": {
+            "id": "ArmorMod",
+            "primary": null,
+            "secondary": "ArmorMod"
+          }
+        },
+        "candidate_hash": "0fad576dd55380cc9afdde4bffb8c1c525eb9eec67116047eb20733a3ed3f164"
+      },
+      "best_measured_efficiency": 0.0,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 94,
+      "unique_candidates": 93,
+      "cache_hits": 11,
+      "deployment_quote_cache_hits": 49,
+      "process_wall_seconds": 294.6392855999875,
+      "optimizer_wall_seconds": 294.098,
+      "time_to_first_improvement_seconds": 24.691,
+      "time_to_best_seconds": 75.823,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 107.75888196764399,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 492.68928723404247,
+        "average_battle_wall_ms": 1395.927691489362,
+        "average_canonicalization_ms": 1.1294255319148938,
+        "average_cleanup_ms": 17.65041489361703,
+        "average_log_report_ms": 0.04665957446808511,
+        "average_quote_ms": 960.7619830508478,
+        "average_result_extract_ms": 0.5505106382978722,
+        "average_run_battle_total_ms_before_cleanup": 2342.3652659574464,
+        "average_scene_creation_ms": 334.0484893617022,
+        "average_scene_setup_ms": 119.09497872340427,
+        "battle_totals_ms": {
+          "battle_start_ms": 46312.79299999999,
+          "battle_wall_ms": 131217.203,
+          "cleanup_ms": 1659.1390000000006,
+          "log_report_ms": 4.386,
+          "result_extract_ms": 51.74799999999998,
+          "run_battle_total_ms_before_cleanup": 220182.33499999996,
+          "scene_creation_ms": 31400.558000000008,
+          "scene_setup_ms": 11194.928000000002
+        },
+        "candidate_generation_ms": 120.40399999999997,
+        "candidate_preprocessing_ms": 1.982,
+        "canonicalization_total_ms": 106.16600000000003,
+        "deployment_quote_total_ms": 56684.95700000002,
+        "enumeration_ms": 37.346,
+        "json_serialization_ms": 33.037,
+        "max_observed_battle_seconds": 4.6062899999999996,
+        "process_bootstrap_ms": 15116.0,
+        "resolver_ms": 6.27,
+        "samples": 94,
+        "scheduling_ms": 83.05799999999996,
+        "worker_serialization_io_ms": 0.0,
+        "worker_shutdown_ms": 0.004
+      },
+      "worker_startup": [],
+      "output_performance": {
+        "file_write_ms": 29.801000000000002,
+        "files": 6,
+        "serialization_ms": 60.382,
+        "text_format_ms": 0.224,
+        "text_write_ms": 1.58
+      },
+      "coverage": {
+        "affordability_rejections": 17,
+        "candidate_attempts": 118,
+        "composition_count": 1000,
+        "compositions_quoted": 57,
+        "compositions_simulated": 42,
+        "formation_count_in_configured_space": 465905660,
+        "full_search_completed": false,
+        "global_cursor": 30,
+        "global_pass": 0,
+        "materialized": 110,
+        "native_quote_classes": 57,
+        "scheduled_by_lane": {
+          "archive": 26,
+          "global": 13,
+          "incumbent": 53
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 6,
+        "node": "B12",
+        "boss": {
+          "alive": false,
+          "remaining_hp": 0,
+          "priority": "efficiency"
+        },
+        "hazards": [],
+        "supports": [
+          "F3"
+        ],
+        "player_state": {
+          "fleet_resources": 120,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 2,
+            "Frigate": 1,
+            "Cruiser": 2
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Corvette",
+            "A3": "Frigate",
+            "A4": "Cruiser",
+            "A5": "Cruiser",
+            "B1": "Corvette",
+            "B2": "Fighter"
+          },
+          "loadouts": {
+            "Fighter": {
+              "primary": null,
+              "secondary": null
+            },
+            "Corvette": {
+              "primary": "CorvetteChargeLaserMod",
+              "secondary": "ShieldMod"
+            },
+            "Frigate": {
+              "primary": null,
+              "secondary": "ArmorMod"
+            },
+            "Cruiser": {
+              "primary": null,
+              "secondary": null
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {
+        "permanent": {
+          "damage_scale": 1.75,
+          "health_scale": 1.75
+        },
+        "temporary": {
+          "damage_scale": 0.0,
+          "health_scale": 0.0
+        }
+      },
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "e5f0a6f8b701b9a68a9e6d455e64ec66862a492507d17cd1e8bc6f90846016b0",
+        "fleet_optimizer_search.gd": "08e459cd167b78ac56ac73a1c441135fa586af0be248ed2b90d6d799edf27825",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "a27b29b7e64b343996e78552100e318667ada4fb7dfdabebfc23ece77ba6006d",
+        "fleet_test_runner.gd": "898f5fc070c815b8551b712daaaa1b2aefeb01ab5bbbb8dbc259c335ab0aad7e",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "b581677814c91e5d41ae3a07643e3dc49d2edbd3566ae5012e908d29d5abba67"
+    },
+    {
+      "label": "before_b13",
+      "status": "SEARCHED BEST",
+      "recommendation_status": "SEARCHED BEST",
+      "best": {
+        "outcome": "victory",
+        "fleet_resources_used": 96.25,
+        "fleet_resources_committed": 100.0,
+        "boss_damage": 0.0,
+        "boss_damage_per_fr": 0.0,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              0,
+              0
+            ],
+            "position": "A1",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": null,
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": null,
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              4
+            ],
+            "position": "A5",
+            "primary_mod": null,
+            "secondary_mod": "ArmorMod",
+            "ship": "Frigate",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              2
+            ],
+            "position": "B3",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Fighter",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              3
+            ],
+            "position": "B4",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": null,
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              4
+            ],
+            "position": "B5",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Corvette": {
+            "id": "CorvetteChargeLaserMod",
+            "primary": "CorvetteChargeLaserMod",
+            "secondary": null
+          },
+          "Cruiser": {
+            "id": "CruiserSingleArmorTank",
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          },
+          "Fighter": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          },
+          "Frigate": {
+            "id": "ArmorMod",
+            "primary": null,
+            "secondary": "ArmorMod"
+          }
+        },
+        "candidate_hash": "685c6fb716f57daee5d65e31439e8569376524b58e7a22a66cde16f1409a9f4f"
+      },
+      "best_measured_efficiency": null,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 181,
+      "unique_candidates": 180,
+      "cache_hits": 135,
+      "deployment_quote_cache_hits": null,
+      "process_wall_seconds": 273.5664682999486,
+      "optimizer_wall_seconds": 257.86,
+      "time_to_first_improvement_seconds": null,
+      "time_to_best_seconds": null,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": null,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 395.287834254144,
+        "average_battle_wall_ms": 197.256187845304,
+        "average_canonicalization_ms": 0.376110497237569,
+        "average_cleanup_ms": 14.6253701657459,
+        "average_log_report_ms": 0.0145027624309392,
+        "average_quote_ms": 1166.02371428571,
+        "average_result_extract_ms": 0.216486187845304,
+        "average_run_battle_total_ms_before_cleanup": 1268.94451933702,
+        "average_scene_creation_ms": 576.98376243094,
+        "average_scene_setup_ms": 99.1821988950276,
+        "candidate_generation_ms": 22646.014,
+        "canonicalization_total_ms": 68.076,
+        "deployment_quote_total_ms": 24486.498,
+        "json_serialization_ms": 49.505,
+        "resolver_ms": 5.278,
+        "samples": 181
+      },
+      "worker_startup": [],
+      "output_performance": null,
+      "coverage": null,
+      "finalization_status": "COMPLETE",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 6,
+        "node": "B13",
+        "boss": {
+          "alive": false,
+          "remaining_hp": 0,
+          "priority": "efficiency"
+        },
+        "hazards": [],
+        "supports": [],
+        "player_state": {
+          "fleet_resources": 120,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 2,
+            "Frigate": 1,
+            "Cruiser": 2
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Corvette",
+            "A3": "Cruiser",
+            "A4": "Corvette",
+            "A5": "Frigate",
+            "B3": "Fighter",
+            "B4": "Corvette",
+            "B5": "Cruiser"
+          },
+          "loadouts": {
+            "Fighter": {
+              "primary": null,
+              "secondary": null
+            },
+            "Corvette": {
+              "primary": "CorvetteChargeLaserMod",
+              "secondary": null
+            },
+            "Frigate": {
+              "primary": null,
+              "secondary": "ArmorMod"
+            },
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {
+        "permanent": {
+          "damage_scale": 1.75,
+          "health_scale": 1.75
+        },
+        "temporary": {
+          "damage_scale": 0.0,
+          "health_scale": 0.0
+        }
+      },
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "875793283b52f90f447fc7375da4bf5137653123b147a14f5e8fc8ac4652202e",
+        "fleet_optimizer_v2.gd": "b6374ababcaad5409aa0f8f859d53c8e4fcc76a1ec7247afe847455f5c5e851d",
+        "fleet_test.gd": "8b1a0932cf7b014fc850f67a633d3883cf64b9d4c5128adcbc3292e97c74804c",
+        "fleet_test_runner.gd": "93bfb3526063947031b73f81eb4455b09b74fbdb1b6e2adac540cb0ad9976cb4",
+        "friendly_config_resolver.gd": "99f37b02e814ac638652203831607be486ea62786d51a7e55f10b25c1e8f3758"
+      },
+      "raw_result_sha256": "8d21332177198b4f097627381fac63110fc69cb83c111345b3c40d5dde5ea197"
+    },
+    {
+      "label": "final_b13",
+      "status": "BEST FOUND",
+      "recommendation_status": "BEST FOUND",
+      "best": {
+        "outcome": "victory",
+        "fleet_resources_used": 80.0,
+        "fleet_resources_committed": 90.0,
+        "boss_damage": 0.0,
+        "boss_damage_per_fr": 0.0,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              1,
+              0
+            ],
+            "position": "B1",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": null,
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": null,
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              2
+            ],
+            "position": "B3",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Fighter",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              3
+            ],
+            "position": "B4",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": null,
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              4
+            ],
+            "position": "B5",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Corvette": {
+            "id": "CorvetteChargeLaserMod",
+            "primary": "CorvetteChargeLaserMod",
+            "secondary": null
+          },
+          "Cruiser": {
+            "id": "CruiserSingleArmorTank",
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          },
+          "Fighter": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          }
+        },
+        "candidate_hash": "3b258b193f414b48925a21d96de3d30ebd4db719bb571f2d79780c575c72ddeb"
+      },
+      "best_measured_efficiency": 0.0,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 141,
+      "unique_candidates": 140,
+      "cache_hits": 14,
+      "deployment_quote_cache_hits": 80,
+      "process_wall_seconds": 298.34218869998585,
+      "optimizer_wall_seconds": 297.494,
+      "time_to_first_improvement_seconds": 77.624,
+      "time_to_best_seconds": 231.237,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 106.7566077019985,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 433.3572482269504,
+        "average_battle_wall_ms": 647.4915106382979,
+        "average_canonicalization_ms": 0.5951560283687939,
+        "average_cleanup_ms": 13.338375886524828,
+        "average_log_report_ms": 0.024822695035460994,
+        "average_quote_ms": 812.1861237113405,
+        "average_result_extract_ms": 0.3038085106382977,
+        "average_run_battle_total_ms_before_cleanup": 1430.3439716312055,
+        "average_scene_creation_ms": 277.21679432624114,
+        "average_scene_setup_ms": 71.93368085106385,
+        "battle_totals_ms": {
+          "battle_start_ms": 61103.372,
+          "battle_wall_ms": 91296.303,
+          "cleanup_ms": 1880.7110000000007,
+          "log_report_ms": 3.5,
+          "result_extract_ms": 42.83699999999998,
+          "run_battle_total_ms_before_cleanup": 201678.49999999997,
+          "scene_creation_ms": 39087.568,
+          "scene_setup_ms": 10142.649000000003
+        },
+        "candidate_generation_ms": 214.98699999999997,
+        "candidate_preprocessing_ms": 1.876,
+        "canonicalization_total_ms": 83.91699999999993,
+        "deployment_quote_total_ms": 78782.05400000003,
+        "enumeration_ms": 34.189,
+        "json_serialization_ms": 39.141,
+        "max_observed_battle_seconds": 2.845408,
+        "process_bootstrap_ms": 14443.0,
+        "resolver_ms": 5.191,
+        "samples": 141,
+        "scheduling_ms": 180.79799999999997,
+        "worker_serialization_io_ms": 0.0,
+        "worker_shutdown_ms": 0.011
+      },
+      "worker_startup": [],
+      "output_performance": {
+        "file_write_ms": 20.636,
+        "files": 6,
+        "serialization_ms": 78.786,
+        "text_format_ms": 0.403,
+        "text_write_ms": 1.626
+      },
+      "coverage": {
+        "affordability_rejections": 41,
+        "candidate_attempts": 192,
+        "composition_count": 1000,
+        "compositions_quoted": 97,
+        "compositions_simulated": 69,
+        "formation_count_in_configured_space": 465905660,
+        "full_search_completed": false,
+        "global_cursor": 48,
+        "global_pass": 0,
+        "materialized": 181,
+        "native_quote_classes": 97,
+        "scheduled_by_lane": {
+          "archive": 45,
+          "global": 20,
+          "incumbent": 74
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 6,
+        "node": "B13",
+        "boss": {
+          "alive": false,
+          "remaining_hp": 0,
+          "priority": "efficiency"
+        },
+        "hazards": [],
+        "supports": [],
+        "player_state": {
+          "fleet_resources": 120,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 2,
+            "Frigate": 1,
+            "Cruiser": 2
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Corvette",
+            "A3": "Cruiser",
+            "A4": "Corvette",
+            "A5": "Frigate",
+            "B3": "Fighter",
+            "B4": "Corvette",
+            "B5": "Cruiser"
+          },
+          "loadouts": {
+            "Fighter": {
+              "primary": null,
+              "secondary": null
+            },
+            "Corvette": {
+              "primary": "CorvetteChargeLaserMod",
+              "secondary": null
+            },
+            "Frigate": {
+              "primary": null,
+              "secondary": "ArmorMod"
+            },
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {
+        "permanent": {
+          "damage_scale": 1.75,
+          "health_scale": 1.75
+        },
+        "temporary": {
+          "damage_scale": 0.0,
+          "health_scale": 0.0
+        }
+      },
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "e5f0a6f8b701b9a68a9e6d455e64ec66862a492507d17cd1e8bc6f90846016b0",
+        "fleet_optimizer_search.gd": "08e459cd167b78ac56ac73a1c441135fa586af0be248ed2b90d6d799edf27825",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "a27b29b7e64b343996e78552100e318667ada4fb7dfdabebfc23ece77ba6006d",
+        "fleet_test_runner.gd": "898f5fc070c815b8551b712daaaa1b2aefeb01ab5bbbb8dbc259c335ab0aad7e",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "5379b0e41d634a24a009161a122c3e40edc8bba055432f94cb625878d0e4a338"
+    },
+    {
+      "label": "before_boss_efficiency",
+      "status": "SEARCHED BEST",
+      "recommendation_status": "NO WIN FOUND",
+      "best": {
+        "outcome": null,
+        "fleet_resources_used": null,
+        "fleet_resources_committed": null,
+        "boss_damage": null,
+        "boss_damage_per_fr": null,
+        "boss_damage_per_fr_is_infinite": null,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": null,
+        "kill_sequence_stop_reason": null,
+        "formation": null,
+        "ship_loadouts": null,
+        "candidate_hash": null
+      },
+      "best_measured_efficiency": 5.2,
+      "best_measured_verified_kill_fr": 814.38,
+      "simulations": 164,
+      "unique_candidates": 155,
+      "cache_hits": 27,
+      "deployment_quote_cache_hits": null,
+      "process_wall_seconds": 283.58888819999993,
+      "optimizer_wall_seconds": 269.097,
+      "time_to_first_improvement_seconds": null,
+      "time_to_best_seconds": null,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 102.08990445204618,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 409.53806097561,
+        "average_battle_wall_ms": 371.342512195122,
+        "average_canonicalization_ms": 0.758432926829267,
+        "average_cleanup_ms": 12.5478292682927,
+        "average_log_report_ms": 0.00187804878048781,
+        "average_quote_ms": 1133.76633333333,
+        "average_result_extract_ms": 0.193737804878049,
+        "average_run_battle_total_ms_before_cleanup": 1474.5132195122,
+        "average_scene_creation_ms": 592.816963414634,
+        "average_scene_setup_ms": 100.603731707317,
+        "candidate_generation_ms": 22037.133,
+        "canonicalization_total_ms": 124.383,
+        "deployment_quote_total_ms": 23809.093,
+        "json_serialization_ms": 19.791,
+        "resolver_ms": 5.422,
+        "samples": 164
+      },
+      "worker_startup": [],
+      "output_performance": null,
+      "coverage": null,
+      "finalization_status": "NO VALID CANDIDATE",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 5,
+        "node": "BB3",
+        "boss": {
+          "alive": true,
+          "remaining_hp": 3500,
+          "priority": "efficiency"
+        },
+        "hazards": [
+          "BB3"
+        ],
+        "player_state": {
+          "fleet_resources": 2627.3,
+          "damage_scale": 3.25,
+          "health_scale": 3.25,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 1,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Cruiser",
+            "A2": "Cruiser",
+            "A3": "Cruiser",
+            "A4": "Cruiser",
+            "A5": "Cruiser"
+          },
+          "loadouts": {
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {},
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "875793283b52f90f447fc7375da4bf5137653123b147a14f5e8fc8ac4652202e",
+        "fleet_optimizer_v2.gd": "b6374ababcaad5409aa0f8f859d53c8e4fcc76a1ec7247afe847455f5c5e851d",
+        "fleet_test.gd": "8b1a0932cf7b014fc850f67a633d3883cf64b9d4c5128adcbc3292e97c74804c",
+        "fleet_test_runner.gd": "93bfb3526063947031b73f81eb4455b09b74fbdb1b6e2adac540cb0ad9976cb4",
+        "friendly_config_resolver.gd": "99f37b02e814ac638652203831607be486ea62786d51a7e55f10b25c1e8f3758"
+      },
+      "raw_result_sha256": "2c9143c5677c031307d78b06d92ec9aafebf7f3d1ac088f11ee72003818926ba"
+    },
+    {
+      "label": "final_boss_efficiency",
+      "status": "BEST FOUND",
+      "recommendation_status": "BEST FOUND",
+      "best": {
+        "outcome": "lose",
+        "fleet_resources_used": 120.0,
+        "fleet_resources_committed": 120.0,
+        "boss_damage": 819.0,
+        "boss_damage_per_fr": 6.825,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              0,
+              1
+            ],
+            "position": "A2",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Cruiser": {
+            "id": "CruiserSingleArmorTank",
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          }
+        },
+        "candidate_hash": "3e56fce9b12956812e00439e97984a0d677d984e689050f6ba6df530eb543e98"
+      },
+      "best_measured_efficiency": 6.825,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 211,
+      "unique_candidates": 210,
+      "cache_hits": 31,
+      "deployment_quote_cache_hits": 115,
+      "process_wall_seconds": 297.6260887000244,
+      "optimizer_wall_seconds": 296.998,
+      "time_to_first_improvement_seconds": 24.401,
+      "time_to_best_seconds": 34.904,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 103.64829788524338,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 405.81233175355425,
+        "average_battle_wall_ms": 266.26797630331754,
+        "average_canonicalization_ms": 0.6619383886255927,
+        "average_cleanup_ms": 12.130056872037919,
+        "average_log_report_ms": 0.006175355450236969,
+        "average_quote_ms": 665.5433157894739,
+        "average_result_extract_ms": 0.2045876777251185,
+        "average_run_battle_total_ms_before_cleanup": 1012.071582938389,
+        "average_scene_creation_ms": 290.76414218009484,
+        "average_scene_setup_ms": 48.99128909952605,
+        "battle_totals_ms": {
+          "battle_start_ms": 85626.40199999994,
+          "battle_wall_ms": 56182.543,
+          "cleanup_ms": 2559.442000000001,
+          "log_report_ms": 1.3030000000000004,
+          "result_extract_ms": 43.168,
+          "run_battle_total_ms_before_cleanup": 213547.10400000008,
+          "scene_creation_ms": 61351.23400000001,
+          "scene_setup_ms": 10337.161999999997
+        },
+        "candidate_generation_ms": 214.20300000000006,
+        "candidate_preprocessing_ms": 1.683,
+        "canonicalization_total_ms": 139.66900000000007,
+        "deployment_quote_total_ms": 63226.61500000002,
+        "enumeration_ms": 41.464,
+        "json_serialization_ms": 29.696,
+        "max_observed_battle_seconds": 1.600765,
+        "process_bootstrap_ms": 16835.0,
+        "resolver_ms": 5.233,
+        "samples": 211,
+        "scheduling_ms": 172.73900000000006,
+        "worker_serialization_io_ms": 0.0,
+        "worker_shutdown_ms": 0.005
+      },
+      "worker_startup": [],
+      "output_performance": {
+        "file_write_ms": 22.087999999999997,
+        "files": 6,
+        "serialization_ms": 79.21600000000001,
+        "text_format_ms": 0.298,
+        "text_write_ms": 1.752
+      },
+      "coverage": {
+        "affordability_rejections": 0,
+        "candidate_attempts": 238,
+        "composition_count": 1000,
+        "compositions_quoted": 94,
+        "compositions_simulated": 94,
+        "formation_count_in_configured_space": 465905660,
+        "full_search_completed": false,
+        "global_cursor": 60,
+        "global_pass": 0,
+        "materialized": 210,
+        "native_quote_classes": 94,
+        "scheduled_by_lane": {
+          "archive": 52,
+          "global": 60,
+          "incumbent": 97
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 5,
+        "node": "BB3",
+        "boss": {
+          "alive": true,
+          "remaining_hp": 3500,
+          "priority": "efficiency"
+        },
+        "hazards": [
+          "BB3"
+        ],
+        "player_state": {
+          "fleet_resources": 2627.3,
+          "damage_scale": 3.25,
+          "health_scale": 3.25,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 1,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Cruiser",
+            "A2": "Cruiser",
+            "A3": "Cruiser",
+            "A4": "Cruiser",
+            "A5": "Cruiser"
+          },
+          "loadouts": {
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {},
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "f4f207489a460d4d092f25a8e78771df5700b2d78272ffd10e6b488ba00c5043",
+        "fleet_optimizer_search.gd": "d9df5619b0cbf70e1c42650adf8d13f72da690f3d556163473c9382054cf4f2a",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "a27b29b7e64b343996e78552100e318667ada4fb7dfdabebfc23ece77ba6006d",
+        "fleet_test_runner.gd": "898f5fc070c815b8551b712daaaa1b2aefeb01ab5bbbb8dbc259c335ab0aad7e",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "4eafcced1dc7db4c6e1d77a9aaf203d4b222c67e9e47902b07e95fbaf6707115"
+    },
+    {
+      "label": "before_boss_kill",
+      "status": "SEARCHED BEST",
+      "recommendation_status": "NO WIN FOUND",
+      "best": {
+        "outcome": null,
+        "fleet_resources_used": null,
+        "fleet_resources_committed": null,
+        "boss_damage": null,
+        "boss_damage_per_fr": null,
+        "boss_damage_per_fr_is_infinite": null,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": null,
+        "kill_sequence_stop_reason": null,
+        "formation": null,
+        "ship_loadouts": null,
+        "candidate_hash": null
+      },
+      "best_measured_efficiency": 5.2,
+      "best_measured_verified_kill_fr": 814.38,
+      "simulations": 162,
+      "unique_candidates": 151,
+      "cache_hits": 27,
+      "deployment_quote_cache_hits": null,
+      "process_wall_seconds": 285.05878969997866,
+      "optimizer_wall_seconds": 269.196,
+      "time_to_first_improvement_seconds": null,
+      "time_to_best_seconds": null,
+      "sampled_old_search_updates": [
+        {
+          "process_seconds": 19.6498697999632,
+          "update": 1
+        },
+        {
+          "process_seconds": 48.21919509995496,
+          "update": 2
+        },
+        {
+          "process_seconds": 49.74845319997985,
+          "update": 3
+        },
+        {
+          "process_seconds": 114.42585100000724,
+          "update": 4
+        }
+      ],
+      "cpu_percent_one_core": 101.958134778407,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 413.654259259259,
+        "average_battle_wall_ms": 367.79912962963,
+        "average_canonicalization_ms": 0.728679012345679,
+        "average_cleanup_ms": 12.5329074074074,
+        "average_log_report_ms": 0.00202469135802469,
+        "average_quote_ms": 1215.92733333333,
+        "average_result_extract_ms": 0.202216049382716,
+        "average_run_battle_total_ms_before_cleanup": 1482.78841358025,
+        "average_scene_creation_ms": 599.104543209877,
+        "average_scene_setup_ms": 102.009388888889,
+        "candidate_generation_ms": 23612.381,
+        "canonicalization_total_ms": 118.046,
+        "deployment_quote_total_ms": 25534.474,
+        "json_serialization_ms": 19.352,
+        "resolver_ms": 5.638,
+        "samples": 162
+      },
+      "worker_startup": [],
+      "output_performance": null,
+      "coverage": null,
+      "finalization_status": "NO VALID CANDIDATE",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 5,
+        "node": "BB3",
+        "boss": {
+          "alive": true,
+          "remaining_hp": 3500,
+          "priority": "kill_cost"
+        },
+        "hazards": [
+          "BB3"
+        ],
+        "player_state": {
+          "fleet_resources": 2627.3,
+          "damage_scale": 3.25,
+          "health_scale": 3.25,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 1,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Cruiser",
+            "A2": "Cruiser",
+            "A3": "Cruiser",
+            "A4": "Cruiser",
+            "A5": "Cruiser"
+          },
+          "loadouts": {
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {},
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "875793283b52f90f447fc7375da4bf5137653123b147a14f5e8fc8ac4652202e",
+        "fleet_optimizer_v2.gd": "b6374ababcaad5409aa0f8f859d53c8e4fcc76a1ec7247afe847455f5c5e851d",
+        "fleet_test.gd": "8b1a0932cf7b014fc850f67a633d3883cf64b9d4c5128adcbc3292e97c74804c",
+        "fleet_test_runner.gd": "93bfb3526063947031b73f81eb4455b09b74fbdb1b6e2adac540cb0ad9976cb4",
+        "friendly_config_resolver.gd": "99f37b02e814ac638652203831607be486ea62786d51a7e55f10b25c1e8f3758"
+      },
+      "raw_result_sha256": "fdf5809c5393ea77679d5cadbeb8106d3037ad48e338f7eb0ac76dc4b239a4c0"
+    },
+    {
+      "label": "final_boss_kill",
+      "status": "BEST FOUND",
+      "recommendation_status": "BEST FOUND",
+      "best": {
+        "outcome": "lose",
+        "fleet_resources_used": 120.0,
+        "fleet_resources_committed": 120.0,
+        "boss_damage": 819.0,
+        "boss_damage_per_fr": 6.825,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": 584.22,
+        "refined_battles_to_kill": 5,
+        "killable_with_current_fr": true,
+        "kill_sequence": [
+          {
+            "battle": 1,
+            "boss_damage": 819.0,
+            "boss_hp_after": 2681.0,
+            "boss_hp_before": 3500.0,
+            "committed_fr": 120.0,
+            "fr_remaining": 2507.3,
+            "native_resource_debit": 120.0,
+            "outcome": "lose",
+            "used_fr": 120.0
+          },
+          {
+            "battle": 2,
+            "boss_damage": 819.0,
+            "boss_hp_after": 1862.0,
+            "boss_hp_before": 2681.0,
+            "committed_fr": 120.0,
+            "fr_remaining": 2387.3,
+            "native_resource_debit": 120.0,
+            "outcome": "lose",
+            "used_fr": 120.0
+          },
+          {
+            "battle": 3,
+            "boss_damage": 819.0,
+            "boss_hp_after": 1043.0,
+            "boss_hp_before": 1862.0,
+            "committed_fr": 120.0,
+            "fr_remaining": 2267.3,
+            "native_resource_debit": 120.0,
+            "outcome": "lose",
+            "used_fr": 120.0
+          },
+          {
+            "battle": 4,
+            "boss_damage": 819.0,
+            "boss_hp_after": 224.0,
+            "boss_hp_before": 1043.0,
+            "committed_fr": 120.0,
+            "fr_remaining": 2147.3,
+            "native_resource_debit": 120.0,
+            "outcome": "lose",
+            "used_fr": 120.0
+          },
+          {
+            "battle": 5,
+            "boss_damage": 224.0,
+            "boss_hp_after": 0.0,
+            "boss_hp_before": 224.0,
+            "committed_fr": 120.0,
+            "fr_remaining": 2043.3000000000002,
+            "native_resource_debit": 104.0,
+            "outcome": "victory",
+            "used_fr": 104.22
+          }
+        ],
+        "kill_sequence_stop_reason": "boss_killed",
+        "formation": [
+          {
+            "grid_position": [
+              0,
+              1
+            ],
+            "position": "A2",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Cruiser": {
+            "id": "CruiserSingleArmorTank",
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          }
+        },
+        "candidate_hash": "3e56fce9b12956812e00439e97984a0d677d984e689050f6ba6df530eb543e98"
+      },
+      "best_measured_efficiency": 6.825,
+      "best_measured_verified_kill_fr": 584.22,
+      "simulations": 181,
+      "unique_candidates": 149,
+      "cache_hits": 14,
+      "deployment_quote_cache_hits": 77,
+      "process_wall_seconds": 300.7526458000066,
+      "optimizer_wall_seconds": 299.49,
+      "time_to_first_improvement_seconds": 245.53,
+      "time_to_best_seconds": 245.53,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 101.45380406824448,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 445.427359116022,
+        "average_battle_wall_ms": 375.13667403314923,
+        "average_canonicalization_ms": 0.6214751381215474,
+        "average_cleanup_ms": 15.19708287292818,
+        "average_log_report_ms": 0.009712707182320444,
+        "average_quote_ms": 745.0454027777777,
+        "average_result_extract_ms": 0.2692044198895028,
+        "average_run_battle_total_ms_before_cleanup": 1259.4779558011046,
+        "average_scene_creation_ms": 365.61482320441985,
+        "average_scene_setup_ms": 72.98854143646406,
+        "battle_totals_ms": {
+          "battle_start_ms": 80622.35199999998,
+          "battle_wall_ms": 67899.73800000001,
+          "cleanup_ms": 2750.6720000000005,
+          "log_report_ms": 1.7580000000000005,
+          "result_extract_ms": 48.726,
+          "run_battle_total_ms_before_cleanup": 227965.50999999995,
+          "scene_creation_ms": 66176.283,
+          "scene_setup_ms": 13210.925999999996
+        },
+        "candidate_generation_ms": 168.64500000000007,
+        "candidate_preprocessing_ms": 1.017,
+        "canonicalization_total_ms": 112.48700000000008,
+        "deployment_quote_total_ms": 53643.26899999999,
+        "enumeration_ms": 38.184,
+        "json_serialization_ms": 43.501,
+        "max_observed_battle_seconds": 2.7332419999999997,
+        "process_bootstrap_ms": 14355.0,
+        "resolver_ms": 5.005,
+        "samples": 181,
+        "scheduling_ms": 130.46100000000007,
+        "worker_serialization_io_ms": 0.0,
+        "worker_shutdown_ms": 0.238
+      },
+      "worker_startup": [],
+      "output_performance": {
+        "file_write_ms": 37.019,
+        "files": 6,
+        "serialization_ms": 129.87,
+        "text_format_ms": 0.586,
+        "text_write_ms": 1.6920000000000002
+      },
+      "coverage": {
+        "affordability_rejections": 0,
+        "candidate_attempts": 160,
+        "composition_count": 1000,
+        "compositions_quoted": 71,
+        "compositions_simulated": 71,
+        "formation_count_in_configured_space": 465905660,
+        "full_search_completed": false,
+        "global_cursor": 40,
+        "global_pass": 0,
+        "materialized": 149,
+        "native_quote_classes": 71,
+        "scheduled_by_lane": {
+          "archive": 36,
+          "global": 40,
+          "incumbent": 72
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 5,
+        "node": "BB3",
+        "boss": {
+          "alive": true,
+          "remaining_hp": 3500,
+          "priority": "kill_cost"
+        },
+        "hazards": [
+          "BB3"
+        ],
+        "player_state": {
+          "fleet_resources": 2627.3,
+          "damage_scale": 3.25,
+          "health_scale": 3.25,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 1,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Cruiser",
+            "A2": "Cruiser",
+            "A3": "Cruiser",
+            "A4": "Cruiser",
+            "A5": "Cruiser"
+          },
+          "loadouts": {
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {},
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "b5fda7613add2d454f6652bc243263c856591735baaa6b741ebc4b6be85bf9c2",
+        "fleet_optimizer_search.gd": "06eac8e803b720148bd7b147d09088084c9d665439598f5e3ab77f2b7e9a895d",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "a27b29b7e64b343996e78552100e318667ada4fb7dfdabebfc23ece77ba6006d",
+        "fleet_test_runner.gd": "898f5fc070c815b8551b712daaaa1b2aefeb01ab5bbbb8dbc259c335ab0aad7e",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "ecbe838c057e9671faa946e4c0fa6e7e8b3c9a3a1e9a073924c494784ed4a81c"
+    },
+    {
+      "label": "worker_compare_1",
+      "status": "BEST FOUND",
+      "recommendation_status": "BEST FOUND",
+      "best": {
+        "outcome": "lose",
+        "fleet_resources_used": 300.0,
+        "fleet_resources_committed": 300.0,
+        "boss_damage": 1365.0,
+        "boss_damage_per_fr": 4.55,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              0,
+              0
+            ],
+            "position": "A1",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              1
+            ],
+            "position": "A2",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              4
+            ],
+            "position": "A5",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Cruiser": {
+            "id": "CruiserSingleArmorTank",
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          }
+        },
+        "candidate_hash": "a9892bb9ae4d8cae02711aeade6cd16755379f1ba3b6469a3617dc63b738f24d"
+      },
+      "best_measured_efficiency": 4.55,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 66,
+      "unique_candidates": 65,
+      "cache_hits": 2,
+      "deployment_quote_cache_hits": 1,
+      "process_wall_seconds": 113.65302590001374,
+      "optimizer_wall_seconds": 113.163,
+      "time_to_first_improvement_seconds": null,
+      "time_to_best_seconds": 18.107,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 102.93115741847208,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 414.0801363636363,
+        "average_battle_wall_ms": 385.00457575757576,
+        "average_canonicalization_ms": 0.5896666666666665,
+        "average_cleanup_ms": 11.767030303030307,
+        "average_log_report_ms": 0.016484848484848488,
+        "average_quote_ms": 1883.5,
+        "average_result_extract_ms": 0.21233333333333337,
+        "average_run_battle_total_ms_before_cleanup": 1436.9134545454544,
+        "average_scene_creation_ms": 532.1115909090909,
+        "average_scene_setup_ms": 105.47324242424244,
+        "battle_totals_ms": {
+          "battle_start_ms": 27329.288999999997,
+          "battle_wall_ms": 25410.302,
+          "cleanup_ms": 776.6240000000003,
+          "log_report_ms": 1.088,
+          "result_extract_ms": 14.014000000000003,
+          "run_battle_total_ms_before_cleanup": 94836.288,
+          "scene_creation_ms": 35119.365,
+          "scene_setup_ms": 6961.234000000001
+        },
+        "candidate_generation_ms": 0.079,
+        "canonicalization_total_ms": 38.917999999999985,
+        "deployment_quote_total_ms": 1883.5,
+        "enumeration_ms": 0.079,
+        "json_serialization_ms": 19.688,
+        "max_observed_battle_seconds": 2.0202560000000003,
+        "resolver_ms": 5.939,
+        "samples": 66,
+        "scheduling_ms": 0.0,
+        "worker_serialization_io_ms": 0.0,
+        "worker_shutdown_ms": 0.005
+      },
+      "worker_startup": [],
+      "output_performance": {
+        "file_write_ms": 21.292,
+        "files": 6,
+        "serialization_ms": 55.294
+      },
+      "coverage": {
+        "affordability_rejections": 0,
+        "candidate_attempts": 0,
+        "composition_count": 1,
+        "compositions_quoted": 1,
+        "compositions_simulated": 1,
+        "formation_count_in_configured_space": 504,
+        "full_search_completed": false,
+        "global_cursor": 0,
+        "global_pass": 0,
+        "materialized": 2,
+        "native_quote_classes": 1,
+        "scheduled_by_lane": {
+          "archive": 0,
+          "global": 0,
+          "incumbent": 0
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 5,
+        "node": "BB3",
+        "boss": {
+          "alive": true,
+          "remaining_hp": 3500,
+          "priority": "efficiency"
+        },
+        "hazards": [
+          "BB3"
+        ],
+        "player_state": {
+          "fleet_resources": 2627.3,
+          "damage_scale": 3.25,
+          "health_scale": 3.25,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 1,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Cruiser",
+            "A2": "Cruiser",
+            "A3": "Cruiser",
+            "A4": "Cruiser",
+            "A5": "Cruiser"
+          },
+          "loadouts": {
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "exhaustive",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 65,
+          "workers": 1
+        }
+      },
+      "common": {},
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "34d2b89938cb8f5ad2021db581364dffae3026bdb52e4e21ddc247dcd3e13ade",
+        "fleet_optimizer_search.gd": "125104465c1ab49232be74060685e5276d776bf8269eb2d9096f8ff7d6864268",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "7ca65a3efdc3f81fd8608d6897d465730b2970fabeb7105bf4e28eaf58ce1a6f",
+        "fleet_test_runner.gd": "1cf430aed79f50c8838327898f672163971be35ef29527e5fc2a775e8a857764",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "d89c541d4c1cb1a279592de23c05f5bc421573255d1905d28b01163742d0078a"
+    },
+    {
+      "label": "worker_compare_4",
+      "status": "BEST FOUND",
+      "recommendation_status": "BEST FOUND",
+      "best": {
+        "outcome": "lose",
+        "fleet_resources_used": 300.0,
+        "fleet_resources_committed": 300.0,
+        "boss_damage": 1365.0,
+        "boss_damage_per_fr": 4.55,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              0,
+              0
+            ],
+            "position": "A1",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              1
+            ],
+            "position": "A2",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              4
+            ],
+            "position": "A5",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Cruiser": {
+            "id": "CruiserSingleArmorTank",
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          }
+        },
+        "candidate_hash": "a9892bb9ae4d8cae02711aeade6cd16755379f1ba3b6469a3617dc63b738f24d"
+      },
+      "best_measured_efficiency": 4.55,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 66,
+      "unique_candidates": 65,
+      "cache_hits": 2,
+      "deployment_quote_cache_hits": 1,
+      "process_wall_seconds": 89.0707085999893,
+      "optimizer_wall_seconds": 88.404,
+      "time_to_first_improvement_seconds": null,
+      "time_to_best_seconds": 22.224,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 295.9727211601319,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 554.0088030303029,
+        "average_battle_wall_ms": 575.3600606060608,
+        "average_canonicalization_ms": 0.7962727272727274,
+        "average_cleanup_ms": 20.038909090909094,
+        "average_log_report_ms": 0.01751515151515152,
+        "average_quote_ms": 1947.5,
+        "average_result_extract_ms": 0.3509848484848484,
+        "average_run_battle_total_ms_before_cleanup": 2138.644954545454,
+        "average_scene_creation_ms": 843.6270454545453,
+        "average_scene_setup_ms": 165.22493939393942,
+        "battle_totals_ms": {
+          "battle_start_ms": 36564.58099999999,
+          "battle_wall_ms": 37973.76400000001,
+          "cleanup_ms": 1322.5680000000002,
+          "log_report_ms": 1.1560000000000001,
+          "result_extract_ms": 23.164999999999996,
+          "run_battle_total_ms_before_cleanup": 141150.56699999995,
+          "scene_creation_ms": 55679.38499999999,
+          "scene_setup_ms": 10904.846000000001
+        },
+        "candidate_generation_ms": 0.063,
+        "candidate_preprocessing_ms": 2.577,
+        "canonicalization_total_ms": 52.554,
+        "deployment_quote_total_ms": 1947.5,
+        "enumeration_ms": 0.063,
+        "json_serialization_ms": 30.829,
+        "max_observed_battle_seconds": 3.878421,
+        "process_bootstrap_ms": 19453.0,
+        "resolver_ms": 4.996,
+        "samples": 66,
+        "scheduling_ms": 0.0,
+        "worker_serialization_io_ms": 688.9309999999999,
+        "worker_shutdown_ms": 434.52
+      },
+      "worker_startup": [
+        {
+          "pid": 23476.0,
+          "startup_ms": 27365.0,
+          "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Worker 14660_0"
+        },
+        {
+          "pid": 28984.0,
+          "startup_ms": 27620.0,
+          "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Worker 14660_1"
+        },
+        {
+          "pid": 28720.0,
+          "startup_ms": 27471.0,
+          "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Worker 14660_2"
+        },
+        {
+          "pid": 42532.0,
+          "startup_ms": 27604.0,
+          "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Worker 14660_3"
+        }
+      ],
+      "output_performance": {
+        "file_write_ms": 35.708999999999996,
+        "files": 6,
+        "serialization_ms": 75.645
+      },
+      "coverage": {
+        "affordability_rejections": 0,
+        "candidate_attempts": 0,
+        "composition_count": 1,
+        "compositions_quoted": 1,
+        "compositions_simulated": 1,
+        "formation_count_in_configured_space": 504,
+        "full_search_completed": false,
+        "global_cursor": 0,
+        "global_pass": 0,
+        "materialized": 2,
+        "native_quote_classes": 1,
+        "scheduled_by_lane": {
+          "archive": 0,
+          "global": 0,
+          "incumbent": 0
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 5,
+        "node": "BB3",
+        "boss": {
+          "alive": true,
+          "remaining_hp": 3500,
+          "priority": "efficiency"
+        },
+        "hazards": [
+          "BB3"
+        ],
+        "player_state": {
+          "fleet_resources": 2627.3,
+          "damage_scale": 3.25,
+          "health_scale": 3.25,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 1,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Cruiser",
+            "A2": "Cruiser",
+            "A3": "Cruiser",
+            "A4": "Cruiser",
+            "A5": "Cruiser"
+          },
+          "loadouts": {
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "exhaustive",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 65,
+          "workers": 4
+        }
+      },
+      "common": {},
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "34d2b89938cb8f5ad2021db581364dffae3026bdb52e4e21ddc247dcd3e13ade",
+        "fleet_optimizer_search.gd": "8f07e2bb4dcff61f6b22ccf2a40cdd2fbe56d42064fd67c386d08273198589e0",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "7ca65a3efdc3f81fd8608d6897d465730b2970fabeb7105bf4e28eaf58ce1a6f",
+        "fleet_test_runner.gd": "1cf430aed79f50c8838327898f672163971be35ef29527e5fc2a775e8a857764",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "90139e9b38156689b18d47da43ec3f4324c13d35fd194c1dfbc869a738960f4a"
+    },
+    {
+      "label": "after_boss_support",
+      "status": "BEST FOUND",
+      "recommendation_status": "BEST FOUND",
+      "best": {
+        "outcome": "victory",
+        "fleet_resources_used": 105.77,
+        "fleet_resources_committed": 120.0,
+        "boss_damage": 100.0,
+        "boss_damage_per_fr": 0.9454476694714948,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              0,
+              0
+            ],
+            "position": "A1",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              1
+            ],
+            "position": "A2",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Fighter",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              3
+            ],
+            "position": "A4",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": "ShieldMod",
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              0
+            ],
+            "position": "B1",
+            "primary_mod": "FrigateMissileMod",
+            "secondary_mod": null,
+            "ship": "Frigate",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              1
+            ],
+            "position": "B2",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1,
+              2
+            ],
+            "position": "B3",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Fighter",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0,
+              2
+            ],
+            "position": "A3",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": "ShieldMod",
+            "ship": "Corvette",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Corvette": {
+            "id": "CorvetteChargeLaserMod+ShieldMod",
+            "primary": "CorvetteChargeLaserMod",
+            "secondary": "ShieldMod"
+          },
+          "Cruiser": {
+            "id": "CruiserSingleArmorTank",
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          },
+          "Fighter": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          },
+          "Frigate": {
+            "id": "FrigateMissileMod",
+            "primary": "FrigateMissileMod",
+            "secondary": null
+          }
+        },
+        "candidate_hash": "5325782580d62b21a3ed51325de31284acfc78bffffc205bb179163de94db09e"
+      },
+      "best_measured_efficiency": 0.9454476694714948,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 20,
+      "unique_candidates": 19,
+      "cache_hits": 2,
+      "deployment_quote_cache_hits": 2,
+      "process_wall_seconds": 58.47782179998467,
+      "optimizer_wall_seconds": 57.788,
+      "time_to_first_improvement_seconds": 22.288,
+      "time_to_best_seconds": 49.519,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 104.92760009063143,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 429.95359999999994,
+        "average_battle_wall_ms": 878.2542000000001,
+        "average_canonicalization_ms": 0.6922999999999999,
+        "average_cleanup_ms": 14.440750000000003,
+        "average_log_report_ms": 0.1463,
+        "average_quote_ms": 797.183,
+        "average_result_extract_ms": 0.48265,
+        "average_run_battle_total_ms_before_cleanup": 1425.29305,
+        "average_scene_creation_ms": 90.5883,
+        "average_scene_setup_ms": 25.95995,
+        "battle_totals_ms": {
+          "battle_start_ms": 8599.071999999998,
+          "battle_wall_ms": 17565.084000000003,
+          "cleanup_ms": 288.81500000000005,
+          "log_report_ms": 2.926,
+          "result_extract_ms": 9.653,
+          "run_battle_total_ms_before_cleanup": 28505.861,
+          "scene_creation_ms": 1811.766,
+          "scene_setup_ms": 519.199
+        },
+        "candidate_generation_ms": 69.552,
+        "candidate_preprocessing_ms": 2.477,
+        "canonicalization_total_ms": 13.845999999999998,
+        "deployment_quote_total_ms": 13552.110999999999,
+        "enumeration_ms": 42.194,
+        "json_serialization_ms": 20.125,
+        "max_observed_battle_seconds": 2.478131,
+        "process_bootstrap_ms": 15229.0,
+        "resolver_ms": 5.237,
+        "samples": 20,
+        "scheduling_ms": 27.358000000000004,
+        "worker_serialization_io_ms": 0.0,
+        "worker_shutdown_ms": 0.003
+      },
+      "worker_startup": [],
+      "output_performance": {
+        "file_write_ms": 34.088,
+        "files": 6,
+        "serialization_ms": 70.165,
+        "text_format_ms": 0.317,
+        "text_write_ms": 1.339
+      },
+      "coverage": {
+        "affordability_rejections": 0,
+        "candidate_attempts": 18,
+        "composition_count": 1000,
+        "compositions_quoted": 17,
+        "compositions_simulated": 17,
+        "formation_count_in_configured_space": 465905660,
+        "full_search_completed": false,
+        "global_cursor": 5,
+        "global_pass": 0,
+        "materialized": 19,
+        "native_quote_classes": 17,
+        "scheduled_by_lane": {
+          "archive": 4,
+          "global": 5,
+          "incumbent": 9
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 6,
+        "node": "B21",
+        "boss": {
+          "alive": true,
+          "remaining_hp": 100,
+          "priority": "efficiency"
+        },
+        "hazards": [],
+        "supports": [
+          "F3"
+        ],
+        "player_state": {
+          "fleet_resources": 1082.4,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 2,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Cruiser",
+            "A2": "Fighter",
+            "A4": "Corvette",
+            "A5": "Corvette",
+            "B1": "Cruiser",
+            "B2": "Cruiser",
+            "B3": "Fighter",
+            "B4": "Corvette"
+          },
+          "loadouts": {
+            "Fighter": {
+              "primary": null,
+              "secondary": null
+            },
+            "Corvette": {
+              "primary": "CorvetteChargeLaserMod",
+              "secondary": "ShieldMod"
+            },
+            "Frigate": {
+              "primary": null,
+              "secondary": null
+            },
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 60.0,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {
+        "permanent": {
+          "damage_scale": 1.75,
+          "health_scale": 1.75
+        },
+        "temporary": {
+          "damage_scale": 0.0,
+          "health_scale": 0.0
+        }
+      },
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "34d2b89938cb8f5ad2021db581364dffae3026bdb52e4e21ddc247dcd3e13ade",
+        "fleet_optimizer_search.gd": "2118e913b84a89109446202d959303847b116dcbc3fe774d3a5175c1361ad4db",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "7ca65a3efdc3f81fd8608d6897d465730b2970fabeb7105bf4e28eaf58ce1a6f",
+        "fleet_test_runner.gd": "898f5fc070c815b8551b712daaaa1b2aefeb01ab5bbbb8dbc259c335ab0aad7e",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "ac2647f7783621eef22e4d748361453a9e804683dfe93764a5fe7fe16591e983"
+    },
+    {
+      "label": "final_b13_workers4",
+      "status": "BEST FOUND",
+      "recommendation_status": "BEST FOUND",
+      "best": {
+        "outcome": "victory",
+        "fleet_resources_used": 75.0,
+        "fleet_resources_committed": 80.0,
+        "boss_damage": 0.0,
+        "boss_damage_per_fr": 0.0,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              0.0,
+              2.0
+            ],
+            "position": "A3",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0.0,
+              3.0
+            ],
+            "position": "A4",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": null,
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              0.0,
+              1.0
+            ],
+            "position": "A2",
+            "primary_mod": null,
+            "secondary_mod": "ArmorMod",
+            "ship": "Frigate",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1.0,
+              3.0
+            ],
+            "position": "B4",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Fighter",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1.0,
+              2.0
+            ],
+            "position": "B3",
+            "primary_mod": "CorvetteChargeLaserMod",
+            "secondary_mod": null,
+            "ship": "Corvette",
+            "tertiary_mods": []
+          },
+          {
+            "grid_position": [
+              1.0,
+              4.0
+            ],
+            "position": "B5",
+            "primary_mod": null,
+            "secondary_mod": "CruiserSingleArmorTank",
+            "ship": "Cruiser",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Corvette": {
+            "id": "CorvetteChargeLaserMod",
+            "primary": "CorvetteChargeLaserMod",
+            "secondary": null
+          },
+          "Cruiser": {
+            "id": "CruiserSingleArmorTank",
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          },
+          "Fighter": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          },
+          "Frigate": {
+            "id": "ArmorMod",
+            "primary": null,
+            "secondary": "ArmorMod"
+          }
+        },
+        "candidate_hash": "81906449cb353621c87af6d7abe7dea780344395f45668675789144658e39b42"
+      },
+      "best_measured_efficiency": 0.0,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 130,
+      "unique_candidates": 129,
+      "cache_hits": 9,
+      "deployment_quote_cache_hits": 62,
+      "process_wall_seconds": 292.1969859999954,
+      "optimizer_wall_seconds": 291.287,
+      "time_to_first_improvement_seconds": 127.512,
+      "time_to_best_seconds": 177.136,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 242.3290310735824,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 589.5502615384618,
+        "average_battle_wall_ms": 1126.7491153846154,
+        "average_canonicalization_ms": 0.8016846153846157,
+        "average_cleanup_ms": 22.57754615384615,
+        "average_log_report_ms": 0.025692307692307695,
+        "average_quote_ms": 1388.8399473684208,
+        "average_result_extract_ms": 0.47284615384615375,
+        "average_run_battle_total_ms_before_cleanup": 2801.1947307692303,
+        "average_scene_creation_ms": 849.2815615384621,
+        "average_scene_setup_ms": 235.08252307692314,
+        "battle_totals_ms": {
+          "battle_start_ms": 76641.53400000003,
+          "battle_wall_ms": 146477.385,
+          "cleanup_ms": 2935.0809999999997,
+          "log_report_ms": 3.3400000000000003,
+          "result_extract_ms": 61.469999999999985,
+          "run_battle_total_ms_before_cleanup": 364155.31499999994,
+          "scene_creation_ms": 110406.60300000008,
+          "scene_setup_ms": 30560.728000000006
+        },
+        "candidate_generation_ms": 274.3439999999999,
+        "candidate_preprocessing_ms": 2.684,
+        "canonicalization_total_ms": 104.21900000000004,
+        "deployment_quote_total_ms": 131939.79499999998,
+        "enumeration_ms": 59.388,
+        "json_serialization_ms": 51.899,
+        "max_observed_battle_seconds": 6.662404,
+        "process_bootstrap_ms": 21068.0,
+        "resolver_ms": 7.579,
+        "samples": 130,
+        "scheduling_ms": 214.95599999999988,
+        "worker_serialization_io_ms": 1540.8609999999994,
+        "worker_shutdown_ms": 644.848
+      },
+      "worker_startup": [
+        {
+          "pid": 30660.0,
+          "startup_ms": 32907.0,
+          "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Worker 19620_0"
+        },
+        {
+          "pid": 5832.0,
+          "startup_ms": 33205.0,
+          "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Worker 19620_1"
+        },
+        {
+          "pid": 6380.0,
+          "startup_ms": 33168.0,
+          "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Worker 19620_2"
+        },
+        {
+          "pid": 22656.0,
+          "startup_ms": 33134.0,
+          "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Worker 19620_3"
+        }
+      ],
+      "output_performance": {
+        "file_write_ms": 30.532000000000004,
+        "files": 6,
+        "serialization_ms": 100.712,
+        "text_format_ms": 0.407,
+        "text_write_ms": 1.7570000000000001
+      },
+      "coverage": {
+        "affordability_rejections": 33,
+        "candidate_attempts": 168,
+        "composition_count": 1000,
+        "compositions_quoted": 95,
+        "compositions_simulated": 70,
+        "formation_count_in_configured_space": 465905660,
+        "full_search_completed": false,
+        "global_cursor": 42,
+        "global_pass": 0,
+        "materialized": 162,
+        "native_quote_classes": 95,
+        "scheduled_by_lane": {
+          "archive": 41,
+          "global": 17,
+          "incumbent": 70
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 6,
+        "node": "B13",
+        "boss": {
+          "alive": false,
+          "remaining_hp": 0,
+          "priority": "efficiency"
+        },
+        "hazards": [],
+        "supports": [],
+        "player_state": {
+          "fleet_resources": 120,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 2,
+            "Frigate": 1,
+            "Cruiser": 2
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Corvette",
+            "A3": "Cruiser",
+            "A4": "Corvette",
+            "A5": "Frigate",
+            "B3": "Fighter",
+            "B4": "Corvette",
+            "B5": "Cruiser"
+          },
+          "loadouts": {
+            "Fighter": {
+              "primary": null,
+              "secondary": null
+            },
+            "Corvette": {
+              "primary": "CorvetteChargeLaserMod",
+              "secondary": null
+            },
+            "Frigate": {
+              "primary": null,
+              "secondary": "ArmorMod"
+            },
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          }
+        },
+        "search": {
+          "profile": "fast",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 4
+        }
+      },
+      "common": {
+        "permanent": {
+          "damage_scale": 1.75,
+          "health_scale": 1.75
+        },
+        "temporary": {
+          "damage_scale": 0.0,
+          "health_scale": 0.0
+        }
+      },
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "b5fda7613add2d454f6652bc243263c856591735baaa6b741ebc4b6be85bf9c2",
+        "fleet_optimizer_search.gd": "72fd59d9d4e18bca34fb0ca87e49892b399e61ac350daf947e41a9859d3e7a97",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "a27b29b7e64b343996e78552100e318667ada4fb7dfdabebfc23ece77ba6006d",
+        "fleet_test_runner.gd": "898f5fc070c815b8551b712daaaa1b2aefeb01ab5bbbb8dbc259c335ab0aad7e",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "a6816fe82b4e11ffae206051dad6a0c375864a976530811495f2e48cbdf5151f"
+    },
+    {
+      "label": "g1_exhaustive",
+      "status": "EXHAUSTIVE BEST",
+      "recommendation_status": "EXHAUSTIVE BEST",
+      "best": {
+        "outcome": "victory",
+        "fleet_resources_used": 5.3999999999999995,
+        "fleet_resources_committed": 10.0,
+        "boss_damage": 0.0,
+        "boss_damage_per_fr": 0.0,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              1,
+              0
+            ],
+            "position": "B1",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Frigate",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Frigate": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          }
+        },
+        "candidate_hash": "3a2832aff55bb76d2a6af9a8bd4343d2fbf22a780c04d6c60affa34b34bfaf51"
+      },
+      "best_measured_efficiency": 0.0,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 11,
+      "unique_candidates": 10,
+      "cache_hits": 3,
+      "deployment_quote_cache_hits": 1,
+      "process_wall_seconds": 31.05255110003054,
+      "optimizer_wall_seconds": 30.491,
+      "time_to_first_improvement_seconds": 20.855,
+      "time_to_best_seconds": 20.855,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 92.08180644446915,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 376.69245454545455,
+        "average_battle_wall_ms": 101.99118181818181,
+        "average_canonicalization_ms": 0.19936363636363638,
+        "average_cleanup_ms": 9.98690909090909,
+        "average_log_report_ms": 0.02036363636363636,
+        "average_quote_ms": 2117.409,
+        "average_result_extract_ms": 0.13527272727272727,
+        "average_run_battle_total_ms_before_cleanup": 996.2999090909092,
+        "average_scene_creation_ms": 453.96936363636365,
+        "average_scene_setup_ms": 63.48990909090908,
+        "battle_totals_ms": {
+          "battle_start_ms": 4143.617,
+          "battle_wall_ms": 1121.903,
+          "cleanup_ms": 109.856,
+          "log_report_ms": 0.22399999999999998,
+          "result_extract_ms": 1.488,
+          "run_battle_total_ms_before_cleanup": 10959.299,
+          "scene_creation_ms": 4993.6630000000005,
+          "scene_setup_ms": 698.3889999999999
+        },
+        "candidate_generation_ms": 0.086,
+        "candidate_preprocessing_ms": 1.178,
+        "canonicalization_total_ms": 2.193,
+        "deployment_quote_total_ms": 2117.409,
+        "enumeration_ms": 0.086,
+        "json_serialization_ms": 4.032,
+        "max_observed_battle_seconds": 1.092732,
+        "process_bootstrap_ms": 17227.0,
+        "resolver_ms": 5.453,
+        "samples": 11,
+        "scheduling_ms": 0.0,
+        "worker_serialization_io_ms": 0.0,
+        "worker_shutdown_ms": 0.003
+      },
+      "worker_startup": [],
+      "output_performance": {
+        "file_write_ms": 26.547,
+        "files": 6,
+        "serialization_ms": 9.192,
+        "text_format_ms": 0.205,
+        "text_write_ms": 1.315
+      },
+      "coverage": {
+        "affordability_rejections": 0,
+        "candidate_attempts": 0,
+        "composition_count": 1,
+        "compositions_quoted": 1,
+        "compositions_simulated": 1,
+        "formation_count_in_configured_space": 10,
+        "full_search_completed": true,
+        "global_cursor": 0,
+        "global_pass": 0,
+        "materialized": 2,
+        "native_quote_classes": 1,
+        "scheduled_by_lane": {
+          "archive": 0,
+          "global": 0,
+          "incumbent": 0
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 1,
+        "node": "B1",
+        "hazards": [],
+        "supports": [],
+        "boss": {
+          "alive": false,
+          "remaining_hp": 0
+        },
+        "player_state": {
+          "fleet_resources": 246.05,
+          "damage_scale": 2.05,
+          "health_scale": 2.05,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 1,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A3": "Frigate"
+          },
+          "loadouts": {
+            "Frigate": {
+              "primary": null,
+              "secondary": null
+            }
+          }
+        },
+        "search": {
+          "profile": "exhaustive",
+          "goal": "best",
+          "simulation_clock": "offline_fixed_step",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {},
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "e5f0a6f8b701b9a68a9e6d455e64ec66862a492507d17cd1e8bc6f90846016b0",
+        "fleet_optimizer_search.gd": "08e459cd167b78ac56ac73a1c441135fa586af0be248ed2b90d6d799edf27825",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "a27b29b7e64b343996e78552100e318667ada4fb7dfdabebfc23ece77ba6006d",
+        "fleet_test_runner.gd": "898f5fc070c815b8551b712daaaa1b2aefeb01ab5bbbb8dbc259c335ab0aad7e",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "a6c17da10f46b99f9b71c2a9184444911fc56d5291a1d7c3dbe0d8c894c512d0"
+    },
+    {
+      "label": "g1_exhaustive_realtime",
+      "status": "EXHAUSTIVE BEST",
+      "recommendation_status": "EXHAUSTIVE BEST",
+      "best": {
+        "outcome": "victory",
+        "fleet_resources_used": 5.3999999999999995,
+        "fleet_resources_committed": 10.0,
+        "boss_damage": 0.0,
+        "boss_damage_per_fr": 0.0,
+        "boss_damage_per_fr_is_infinite": false,
+        "refined_total_kill_fr": null,
+        "refined_battles_to_kill": null,
+        "killable_with_current_fr": null,
+        "kill_sequence": [],
+        "kill_sequence_stop_reason": null,
+        "formation": [
+          {
+            "grid_position": [
+              1,
+              0
+            ],
+            "position": "B1",
+            "primary_mod": null,
+            "secondary_mod": null,
+            "ship": "Frigate",
+            "tertiary_mods": []
+          }
+        ],
+        "ship_loadouts": {
+          "Frigate": {
+            "id": "none",
+            "primary": null,
+            "secondary": null
+          }
+        },
+        "candidate_hash": "a2406e78e0cc23cb1815a587a7fe9c5888d7bab2804f0822696cbc1efa9bac34"
+      },
+      "best_measured_efficiency": 0.0,
+      "best_measured_verified_kill_fr": null,
+      "simulations": 11,
+      "unique_candidates": 10,
+      "cache_hits": 3,
+      "deployment_quote_cache_hits": 1,
+      "process_wall_seconds": 73.46386780001922,
+      "optimizer_wall_seconds": 72.798,
+      "time_to_first_improvement_seconds": 24.852,
+      "time_to_best_seconds": 24.852,
+      "sampled_old_search_updates": [],
+      "cpu_percent_one_core": 40.75132564690825,
+      "logical_processors": 12,
+      "performance": {
+        "average_battle_start_ms": 386.25563636363637,
+        "average_battle_wall_ms": 4013.6660909090906,
+        "average_canonicalization_ms": 0.4742727272727272,
+        "average_cleanup_ms": 196.7323636363636,
+        "average_log_report_ms": 0.024909090909090912,
+        "average_quote_ms": 1715.741,
+        "average_result_extract_ms": 0.27799999999999997,
+        "average_run_battle_total_ms_before_cleanup": 4931.035090909091,
+        "average_scene_creation_ms": 469.3879090909091,
+        "average_scene_setup_ms": 61.403818181818195,
+        "battle_totals_ms": {
+          "battle_start_ms": 4248.812,
+          "battle_wall_ms": 44150.327,
+          "cleanup_ms": 2164.0559999999996,
+          "log_report_ms": 0.274,
+          "result_extract_ms": 3.058,
+          "run_battle_total_ms_before_cleanup": 54241.386,
+          "scene_creation_ms": 5163.267,
+          "scene_setup_ms": 675.4420000000001
+        },
+        "candidate_generation_ms": 0.075,
+        "candidate_preprocessing_ms": 0.599,
+        "canonicalization_total_ms": 5.216999999999999,
+        "deployment_quote_total_ms": 1715.741,
+        "enumeration_ms": 0.075,
+        "json_serialization_ms": 4.182,
+        "max_observed_battle_seconds": 5.795452,
+        "process_bootstrap_ms": 14604.0,
+        "resolver_ms": 5.583,
+        "samples": 11,
+        "scheduling_ms": 0.0,
+        "worker_serialization_io_ms": 0.0,
+        "worker_shutdown_ms": 0.004
+      },
+      "worker_startup": [],
+      "output_performance": {
+        "file_write_ms": 16.148,
+        "files": 6,
+        "serialization_ms": 11.435000000000002,
+        "text_format_ms": 0.229,
+        "text_write_ms": 1.8330000000000002
+      },
+      "coverage": {
+        "affordability_rejections": 0,
+        "candidate_attempts": 0,
+        "composition_count": 1,
+        "compositions_quoted": 1,
+        "compositions_simulated": 1,
+        "formation_count_in_configured_space": 10,
+        "full_search_completed": true,
+        "global_cursor": 0,
+        "global_pass": 0,
+        "materialized": 2,
+        "native_quote_classes": 1,
+        "scheduled_by_lane": {
+          "archive": 0,
+          "global": 0,
+          "incumbent": 0
+        },
+        "unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed"
+      },
+      "finalization_status": "COMPLETE: native replay matches search result",
+      "exit_code": 0,
+      "errors": 0,
+      "input": {
+        "galaxy": 1,
+        "node": "B1",
+        "hazards": [],
+        "supports": [],
+        "boss": {
+          "alive": false,
+          "remaining_hp": 0
+        },
+        "player_state": {
+          "fleet_resources": 246.05,
+          "damage_scale": 2.05,
+          "health_scale": 2.05,
+          "ships": {
+            "Fighter": 1,
+            "Corvette": 1,
+            "Frigate": 1,
+            "Cruiser": 1
+          }
+        },
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A3": "Frigate"
+          },
+          "loadouts": {
+            "Frigate": {
+              "primary": null,
+              "secondary": null
+            }
+          }
+        },
+        "search": {
+          "profile": "exhaustive",
+          "goal": "best",
+          "simulation_clock": "realtime",
+          "max_wall_seconds": 300,
+          "max_simulations": 1000000,
+          "workers": 1
+        }
+      },
+      "common": {},
+      "source_sha256": {
+        "fleet_battle_analyzer.gd": "76182c666f08a12c27f5404e10eae5b742b1477823a37a76d46de252428a10e7",
+        "fleet_optimizer.gd": "5ce157a3f217224286f9054a978c8c449b608a20903cecbbc32cf92c884d7320",
+        "fleet_optimizer_battle_area.gd": "8f1c4ed491af96a80b724f6f6c772e96dad60ebbc50ead16d3161ef968b7412c",
+        "fleet_optimizer_bootstrap.gd": "547d57748aa117bc2c935c21d78cad8c9ad6f5cda48d1d88ae559ab851183a79",
+        "fleet_optimizer_regression.gd": "e5f0a6f8b701b9a68a9e6d455e64ec66862a492507d17cd1e8bc6f90846016b0",
+        "fleet_optimizer_search.gd": "08e459cd167b78ac56ac73a1c441135fa586af0be248ed2b90d6d799edf27825",
+        "fleet_optimizer_v2.gd": "9ba003db58a19a4184a16d5f06dbae0b02b684a57548dbda1d883dc6d165f7e9",
+        "fleet_test.gd": "a27b29b7e64b343996e78552100e318667ada4fb7dfdabebfc23ece77ba6006d",
+        "fleet_test_runner.gd": "898f5fc070c815b8551b712daaaa1b2aefeb01ab5bbbb8dbc259c335ab0aad7e",
+        "friendly_config_resolver.gd": "97678a978dc42d69643b08207cbcc7212e70da194631d39f67f67a7da4d98afd"
+      },
+      "raw_result_sha256": "a19b6265d3bff74d2559d63312aae6b7a03b4ce773c5024a2e2298baf8ab50b8"
+    }
+  ],
+  "correctness": {
+    "native_regression": {
+      "passed": true,
+      "checks": [
+        {
+          "label": "lazy exact positions C(10,5)",
+          "passed": true
+        },
+        {
+          "label": "lazy mixed exact positions 10*9*8",
+          "passed": true
+        },
+        {
+          "label": "normal ranks Used before committed",
+          "passed": true
+        },
+        {
+          "label": "efficiency allows loss above win",
+          "passed": true
+        },
+        {
+          "label": "positive damage / zero FR ranks first",
+          "passed": true
+        },
+        {
+          "label": "infinite efficiency improvement is explicit",
+          "passed": true
+        },
+        {
+          "label": "unrefined null kill status is not an improvement",
+          "passed": true
+        },
+        {
+          "label": "native resource ledger rounds debit",
+          "passed": true
+        },
+        {
+          "label": "native debit at integer boundary",
+          "passed": true
+        },
+        {
+          "label": "Used FR preserves native precision",
+          "passed": true
+        },
+        {
+          "label": "quote costs come from native deployment groups",
+          "passed": true
+        },
+        {
+          "label": "prepared native quote reuses identical battle",
+          "passed": true
+        },
+        {
+          "label": "array ordering is equivalent at fixed grid",
+          "passed": true
+        },
+        {
+          "label": "known lower Used FR replay",
+          "passed": true
+        },
+        {
+          "label": "formation sensitivity victory",
+          "passed": true
+        },
+        {
+          "label": "formation sensitivity lose",
+          "passed": true
+        },
+        {
+          "label": "composition sensitivity victory",
+          "passed": true
+        },
+        {
+          "label": "composition sensitivity lose",
+          "passed": true
+        },
+        {
+          "label": "prepared scene ui_ab_test_02_config.json",
+          "passed": true
+        },
+        {
+          "label": "prepared scene ui_ab_test_03_config.json",
+          "passed": true
+        },
+        {
+          "label": "Support prepared/fresh equivalence",
+          "passed": true
+        },
+        {
+          "label": "undeployed reinforcement ship uses selected native mod",
+          "passed": true
+        },
+        {
+          "label": "support-only mods have distinct candidate keys",
+          "passed": true
+        },
+        {
+          "label": "Boss with original Support route",
+          "passed": true
+        },
+        {
+          "label": "baseline fail fast b13",
+          "passed": true
+        },
+        {
+          "label": "baseline fail fast boss_efficiency",
+          "passed": true
+        },
+        {
+          "label": "baseline sequence slice preserves exploration",
+          "passed": true
+        },
+        {
+          "label": "partial sequence resumes to a native verified kill",
+          "passed": true
+        },
+        {
+          "label": "boss real sequence and last battle refund",
+          "passed": true
+        },
+        {
+          "label": "boss per-battle commitment gate",
+          "passed": true
+        }
+      ]
+    },
+    "clock_regression": [
+      {
+        "label": "g1_b1",
+        "offline_realtime_identical": true,
+        "previous_core_identical": false,
+        "previous_canonical_sha256_identical": true,
+        "previous_core_equal_at_historical_precision": true,
+        "previous_non_fr_core_identical": false,
+        "previous_used_fr": 5.6,
+        "exact_used_fr": 5.6,
+        "events_identical": true,
+        "offline_simulation_time": 3.433333333333326,
+        "realtime_simulation_time": 3.516666666666659,
+        "canonical_sha256": "759acca688d986afca9910d968d5975041e2fc624d0c2de395c09e038c244d66"
+      },
+      {
+        "label": "g5_b30_hazard",
+        "offline_realtime_identical": true,
+        "previous_core_identical": false,
+        "previous_canonical_sha256_identical": true,
+        "previous_core_equal_at_historical_precision": true,
+        "previous_non_fr_core_identical": false,
+        "previous_used_fr": 114.6,
+        "exact_used_fr": 114.6,
+        "events_identical": true,
+        "offline_simulation_time": 6.16666666666665,
+        "realtime_simulation_time": 6.2333333333333165,
+        "canonical_sha256": "f56c0ffa4e894bd512fb463cc59a6b24cf42d8b80a01ad0529636ca32dedbbe8"
+      },
+      {
+        "label": "g5_bb3_boss_hazard",
+        "offline_realtime_identical": true,
+        "previous_core_identical": false,
+        "previous_canonical_sha256_identical": true,
+        "previous_core_equal_at_historical_precision": true,
+        "previous_non_fr_core_identical": false,
+        "previous_used_fr": 300.0,
+        "exact_used_fr": 300.0,
+        "events_identical": true,
+        "offline_simulation_time": 7.783333333333311,
+        "realtime_simulation_time": 7.816666666666644,
+        "canonical_sha256": "8d5331aef359472b4b501237d0bf85f6a6edf9388267557d422c0c54c5915d8d"
+      },
+      {
+        "label": "g6_b8_hazard_support",
+        "offline_realtime_identical": true,
+        "previous_core_identical": false,
+        "previous_canonical_sha256_identical": true,
+        "previous_core_equal_at_historical_precision": true,
+        "previous_non_fr_core_identical": false,
+        "previous_used_fr": 282.31,
+        "exact_used_fr": 282.31,
+        "events_identical": true,
+        "offline_simulation_time": 12.63333333333354,
+        "realtime_simulation_time": 12.716666666666878,
+        "canonical_sha256": "a54efc533971b427b37b01b884c127e9f8795d6675c51764aa8bc1c00993a086"
+      }
+    ],
+    "determinism": {
+      "runs_requested": 20,
+      "runs_completed": 20,
+      "identical_count": 20,
+      "all_identical": true,
+      "error_count": 0,
+      "comparison_ignored_fields": [
+        "simulation_time",
+        "raw_battle_log[].time"
+      ]
+    },
+    "workers": {
+      "same_candidate_set": true,
+      "all_core_results_identical": true,
+      "candidate_counts": [
+        65,
+        65
+      ]
+    },
+    "original_scripts": {
+      "fleet/FleetBattle.gd": {
+        "before": "910ab6b313e207ef7265b59e5473a874e48885c9cd5b43f0581d441440ba2509",
+        "after": "910ab6b313e207ef7265b59e5473a874e48885c9cd5b43f0581d441440ba2509",
+        "unchanged": true
+      },
+      "fleet/FleetController.gd": {
+        "before": "8272f116af9e09f5fbc2e66de95872a4a39ca4aa86ad485fb2e3a09cfd664243",
+        "after": "8272f116af9e09f5fbc2e66de95872a4a39ca4aa86ad485fb2e3a09cfd664243",
+        "unchanged": true
+      },
+      "fleet/HazardManager.gd": {
+        "before": "31003ecbbd10a19c084d1507d3355354fd4dac1df8eb4659500f1c2e8381b9c5",
+        "after": "31003ecbbd10a19c084d1507d3355354fd4dac1df8eb4659500f1c2e8381b9c5",
+        "unchanged": true
+      },
+      "fleet/ShipDeploymentGroup.gd": {
+        "before": "2a962d1a01a8869f48050124f332722c435ca19d4be3c96ed355f8f61f1a2df2",
+        "after": "2a962d1a01a8869f48050124f332722c435ca19d4be3c96ed355f8f61f1a2df2",
+        "unchanged": true
+      },
+      "fleet/ships/FleetShip.gd": {
+        "before": "10d3c76661bdf13a37aa5429aee037242e48261f94d0581f4acb9a5a64552ad9",
+        "after": "10d3c76661bdf13a37aa5429aee037242e48261f94d0581f4acb9a5a64552ad9",
+        "unchanged": true
+      },
+      "fleet/Fleet.gd": {
+        "before": "91d3a75256ecae14a0fceecff2b1e39604ec2fa6151bcc3b77ebce7f0be163ba",
+        "after": "91d3a75256ecae14a0fceecff2b1e39604ec2fa6151bcc3b77ebce7f0be163ba",
+        "unchanged": true
+      },
+      "projectiles/Projectile.gd": {
+        "before": "ce16f360c12895a8dd8f3997c449d240a8551ba241b22abc7bc6f9dd0a399a49",
+        "after": "ce16f360c12895a8dd8f3997c449d240a8551ba241b22abc7bc6f9dd0a399a49",
+        "unchanged": true
+      }
+    }
+  },
+  "notes": [
+    "Only measured completed runs are included.",
+    "Missing old improvement timestamps are unknown, not zero.",
+    "before_b13 CPU unavailable: initial console wrapper measurement was invalid.",
+    "CPU 100% denotes one logical processor.",
+    "No global optimum claim for bounded portfolio or kill_cost."
+  ]
+}

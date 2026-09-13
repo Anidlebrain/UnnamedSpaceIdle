@@ -48,3 +48,5 @@ tools/*
 fleet_simulation/results/*/
 
 backup/.gitkeep
+
+!fleet_simulation/results/optimizer_v3_benchmark_summary.json

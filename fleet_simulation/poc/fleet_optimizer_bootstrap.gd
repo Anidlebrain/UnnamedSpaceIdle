@@ -14,6 +14,15 @@ func _ready() -> void:
 	galaxy.visible = false
 	add_child(galaxy)
 
+	for extra in _argument_value("--validation-galaxies=").split(",", false):
+		var extra_id := "galaxy" + extra
+		if extra_id == galaxy_id:
+			continue
+		var extra_galaxy := preload("res://fleet/interface/FleetGalaxy.tscn").instantiate()
+		extra_galaxy.galaxy_id = extra_id
+		extra_galaxy.visible = false
+		add_child(extra_galaxy)
+
 	Fleet.hidden_fleet_battle_holder = self
 	_add_http_guard(preload("res://fleet/interface/HTTPSaveBattleDetails.gd"))
 	_add_http_guard(preload("res://fleet/interface/HTTPValidateBattleDetails.gd"))

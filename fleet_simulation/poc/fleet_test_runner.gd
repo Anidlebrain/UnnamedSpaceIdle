@@ -16,6 +16,7 @@ const DAILY_COMMON_PATH := "res://common.json"
 const DAILY_SETTINGS_PATH := "res://optimizer_v2_daily.json"
 
 var blocked_http_nodes := 0
+var _output_profile := {"serialization_ms": 0.0, "file_write_ms": 0.0, "files": 0, "text_format_ms": 0.0, "text_write_ms": 0.0}
 
 
 func _enter_tree() -> void:
@@ -23,6 +24,7 @@ func _enter_tree() -> void:
 	if worker_id != "":
 		ProjectSettings.set_setting("application/config/use_custom_user_dir", true)
 		ProjectSettings.set_setting("application/config/custom_user_dir_name", "Unnamed Space Idle Fleet Worker %s" % worker_id)
+	DirAccess.make_dir_recursive_absolute(OS.get_user_data_dir())
 	get_tree().node_added.connect(_on_node_added)
 
 
@@ -64,6 +66,12 @@ func _run() -> void:
 			add_child(probe)
 			if worker_dir != "":
 				await _run_fleet_worker(probe, worker_dir)
+				return
+			if _has_argument("--v3-regression"):
+				var tests := preload("res://fleet_optimizer_regression.gd").new()
+				add_child(tests)
+				var regression: Dictionary = await tests.run(probe)
+				_finish(regression, 0 if regression.passed else 11, "user://optimizer_v3_regression.json")
 				return
 			if _has_argument("--v22-unit-regression"):
 				var unit_optimizer := preload("res://fleet_optimizer_v2.gd").new()
@@ -108,7 +116,7 @@ func _run() -> void:
 					_write_daily_resolved_config(config)
 			var optimizer_v2_settings_path := _requested_optimizer_v2_settings_path()
 			if optimizer_v2_settings_path != "":
-				var optimizer_v2 := preload("res://fleet_optimizer_v2.gd").new()
+				var optimizer_v2 := preload("res://fleet_optimizer_search.gd").new()
 				add_child(optimizer_v2)
 				var optimizer_settings := _load_json(optimizer_v2_settings_path)
 				if config.has("optimizer"):
@@ -130,9 +138,6 @@ func _run() -> void:
 					optimizer_settings,
 				)
 				_add_runtime_metadata(optimizer_v2_summary)
-				if daily_optimizer:
-					var daily_result_path := _write_daily_optimizer_result(optimizer_v2_summary, config)
-					_print_daily_finished(optimizer_v2_summary, daily_result_path)
 				var regression: Dictionary = optimizer_v2_summary.get("v1_regression", {"enabled": false})
 				var optimizer_v2_ok: bool = (
 					int(optimizer_v2_summary.errors) == 0
@@ -141,6 +146,16 @@ func _run() -> void:
 					and (not bool(regression.enabled) or bool(regression.passed))
 					and bool(optimizer_v2_summary.boss_ranking_unit_test.passed)
 				)
+				if daily_optimizer:
+					if optimizer_v2_ok:
+						var daily_result_path := _write_daily_optimizer_result(optimizer_v2_summary, config)
+						_print_daily_finished(optimizer_v2_summary, daily_result_path)
+					else:
+						var failure_message := str(optimizer_v2_summary.get(
+							"baseline_warning",
+							optimizer_v2_summary.get("result_claim", "Optimizer validation failed"),
+						))
+						_print_daily_error(failure_message + "; existing daily results were not changed")
 				_finish(optimizer_v2_summary, 0 if optimizer_v2_ok else 5, OPTIMIZER_V2_RESULT_PATH)
 				return
 			if friendly_path != "":
@@ -439,7 +454,8 @@ func _run_fleet_worker(probe: Node, worker_dir: String) -> void:
 	while not FileAccess.file_exists(worker_dir.path_join("stop")):
 		var request_path := worker_dir.path_join("request.json")
 		if not FileAccess.file_exists(request_path):
-			await get_tree().create_timer(0.02).timeout
+			OS.delay_msec(5)
+			await get_tree().process_frame
 			continue
 		var request := _load_json(request_path)
 		DirAccess.remove_absolute(request_path)
@@ -464,7 +480,7 @@ func _write_worker_message(path: String, value: Dictionary) -> void:
 	var temporary_path := path + ".tmp"
 	var file := FileAccess.open(temporary_path, FileAccess.WRITE)
 	assert(file != null, "Unable to write worker message %s" % path)
-	file.store_string(JSON.stringify(value))
+	file.store_string(JSON.stringify(value, "", true, true))
 	file.close()
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(path)
@@ -567,11 +583,16 @@ func _load_json(path: String) -> Dictionary:
 
 
 func _write_result(path: String, result: Dictionary) -> String:
-	var json := JSON.stringify(result, "  ")
+	var started := Time.get_ticks_usec()
+	var json := JSON.stringify(result, "  ", true, true)
+	_output_profile.serialization_ms += (Time.get_ticks_usec() - started) / 1000.0
+	started = Time.get_ticks_usec()
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file != null:
 		file.store_string(json)
 		file.close()
+	_output_profile.file_write_ms += (Time.get_ticks_usec() - started) / 1000.0
+	_output_profile.files += 1
 	return json
 
 
@@ -690,7 +711,9 @@ func _write_daily_optimizer_result(summary: Dictionary, config: Dictionary) -> S
 	_write_result(latest_path, summary)
 	var compact := _build_compact_summary(summary, config)
 	_write_result(compact_path, compact)
+	var format_started := Time.get_ticks_usec()
 	var readable_summary := _build_text_summary(compact)
+	_output_profile.text_format_ms += (Time.get_ticks_usec() - format_started) / 1000.0
 	_write_text(text_path, readable_summary)
 	if node_result_path != "":
 		DirAccess.make_dir_recursive_absolute(node_result_path.get_base_dir())
@@ -700,7 +723,9 @@ func _write_daily_optimizer_result(summary: Dictionary, config: Dictionary) -> S
 				node_result.erase(candidate_list)
 		_write_result(node_result_path, node_result)
 		_write_text(node_text_path, readable_summary)
+		_write_result(output_dir.path_join("output_performance.json"), _output_profile.duplicate())
 		return node_result_path
+	_write_result(output_dir.path_join("output_performance.json"), _output_profile.duplicate())
 	return result_path
 
 
@@ -741,7 +766,8 @@ func _build_compact_summary(summary: Dictionary, config: Dictionary) -> Dictiona
 		"improvement_vs_baseline": summary.get("improvement_vs_baseline", {}),
 		"notes": [
 			"SEARCHED BEST",
-			"Fast heuristic pruning enabled" if summary.get("search_profile") == "fast" else "Heuristic profile: %s" % summary.get("search_profile"),
+			"Interleaved exploration; unvisited candidates are not proven inferior",
+			str(summary.get("search_termination", "")),
 			"Not mathematically global exact" if summary.get("search_profile") != "exhaustive" else "Exact only where an exact subspace is explicitly reported",
 		],
 	}
@@ -766,6 +792,7 @@ func _compact_candidate(candidate: Dictionary) -> Dictionary:
 		"refined_total_kill_fr": candidate.get("refined_total_kill_fr"),
 		"killable_with_current_fr": candidate.get("killable_with_current_fr"),
 		"remaining_fr_after_kill": candidate.get("remaining_fr_after_kill"),
+		"kill_sequence": candidate.get("kill_sequence", []),
 	}
 
 
@@ -841,6 +868,8 @@ func _build_text_summary(compact: Dictionary) -> String:
 	if compact.get("objective") == "boss":
 		lines.append("Boss: Damage/Battle=%s; Damage/FR=%s" % [best.get("boss_damage", "n/a"), best.get("damage_per_fr", "n/a")])
 		lines.append("Kill: Battles=%s; Total FR=%s; Remaining FR=%s" % [best.get("refined_battles_to_kill", "n/a"), best.get("refined_total_kill_fr", "n/a"), best.get("remaining_fr_after_kill", "n/a")])
+		for battle in best.get("kill_sequence", []):
+			lines.append("  Battle %s: HP %s -> %s; Damage=%s; Committed=%s; Used=%s; FR left=%s" % [battle.battle, battle.boss_hp_before, battle.boss_hp_after, battle.boss_damage, battle.committed_fr, battle.used_fr, battle.fr_remaining])
 	lines.append("")
 	lines.append("Search Notes:")
 	for note in compact.get("notes", []):
@@ -897,10 +926,12 @@ func _sum_numeric(values: Dictionary) -> int:
 
 
 func _write_text(path: String, value: String) -> void:
+	var started := Time.get_ticks_usec()
 	var file := FileAccess.open(path, FileAccess.WRITE)
 	if file != null:
 		file.store_string(value)
 		file.close()
+	_output_profile.text_write_ms += (Time.get_ticks_usec() - started) / 1000.0
 
 
 func _print_daily_finished(summary: Dictionary, result_path: String) -> void:

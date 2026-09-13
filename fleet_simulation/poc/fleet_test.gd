@@ -8,6 +8,52 @@ const POST_BATTLE_SETTLE_TIMEOUT_MSEC := 6000
 var _native_ship_mod_scopes := {}
 var _last_setup_breakdown := {}
 var _scaled_player_groups := {}
+var _prepared_config := {}
+
+
+# Hold the PackedScene for native Fleet.load_battle's resource cache. Each run
+# still instantiates and frees a fresh original FleetBattle scene.
+var _battle_scene_resource = preload("res://fleet/FleetBattle.tscn")
+
+class SettlementSink extends Node:
+	var battle_done := false
+	func set_battle_complete(_details, _manual, _auto) -> void:
+		pass
+
+
+func native_fr_settlement(galaxy_id: String, available: float, used: float) -> Dictionary:
+	# Invoke original debit logic; isolate the campaign progression receiver.
+	var resource := galaxy_id + "FleetResources"
+	var had_resource: bool = PlayerInfo.resources.has(resource)
+	var saved_resource = PlayerInfo.resources.get(resource)
+	var saved_origin = Fleet.battle_started_from
+	var saved_galaxy: String = Fleet.galaxy_exploring
+	var saved_auto: bool = Fleet.full_auto_battle
+	var saved_practice: bool = Fleet.battle_practice_mode
+	var saved_on: String = Fleet.battle_on
+	var sink := SettlementSink.new()
+	add_child(sink)
+	Fleet.battle_started_from = sink
+	Fleet.galaxy_exploring = galaxy_id
+	Fleet.full_auto_battle = false
+	PlayerInfo.resources[resource] = available
+	var details := BattleCompletionDetails.new()
+	details.resources_used = used
+	Fleet.battle_complete(true, details)
+	var after := float(PlayerInfo.resources[resource])
+	if had_resource:
+		PlayerInfo.resources[resource] = saved_resource
+	else:
+		PlayerInfo.resources.erase(resource)
+	Fleet.battle_started_from = saved_origin
+	Fleet.galaxy_exploring = saved_galaxy
+	Fleet.full_auto_battle = saved_auto
+	Fleet.battle_practice_mode = saved_practice
+	Fleet.battle_on = saved_on
+	sink.free()
+	return {"resources_after": after, "resource_debit": available - after,
+		"source": "Fleet.battle_complete -> PlayerInfo.gain_resource"}
+
 
 func run_demo() -> Dictionary:
 	return await run_battle({
@@ -43,7 +89,15 @@ func run_demo() -> Dictionary:
 
 func run_battle(config: Dictionary) -> Dictionary:
 	var total_started := Time.get_ticks_usec()
-	var battle: FleetBattle = await _setup_battle(config)
+	var battle: FleetBattle
+	if not _prepared_config.is_empty() and _prepared_config == config and is_instance_valid(Fleet.fleet_battle):
+		battle = Fleet.fleet_battle
+		_prepared_config = {}
+		_last_setup_breakdown = {}
+	else:
+		if not _prepared_config.is_empty():
+			await cleanup_battle()
+		battle = await _setup_battle(config)
 	var start_started := Time.get_ticks_usec()
 	# The original start handler awaits a physics frame; clear tutorial pause first.
 	Engine.time_scale = 1.0
@@ -89,6 +143,8 @@ func run_battle(config: Dictionary) -> Dictionary:
 	var extraction_ms := (Time.get_ticks_usec() - extraction_started) / 1000.0
 	if battle.battle_state == FleetBattle.BattleState.IN_PROGRESS:
 		result["error"] = "Fleet simulation timed out"
+	elif _has_pending_projectiles():
+		result["error"] = "Pending projectiles did not settle before adapter timeout"
 	_clear_battle_submission_queue()
 	result["performance_breakdown"] = {
 		"scene_creation_ms": float(_last_setup_breakdown.get("scene_creation_ms", 0.0)),
@@ -103,7 +159,7 @@ func run_battle(config: Dictionary) -> Dictionary:
 	return result
 
 
-func quote_player_deployment(config: Dictionary) -> Dictionary:
+func quote_player_deployment(config: Dictionary, keep_prepared: bool = false) -> Dictionary:
 	var disabled_ships: Array = []
 	for item in config.get("formation", []):
 		var ship_id := str(item.ship)
@@ -120,15 +176,23 @@ func quote_player_deployment(config: Dictionary) -> Dictionary:
 		}
 	var battle: FleetBattle = await _setup_battle(config)
 	var committed := float(battle.fleet_resources)
+	var native_costs := {}
+	for group in get_tree().get_nodes_in_group("deployment_group"):
+		if group.team == Fleet.Team.LEFT and not group.removing:
+			native_costs[str(group.fleet_ship_info.id)] = group.fleet_ship_info.fleet_resources_cost
 	var result := {
 		"deployable": true,
 		"reason": "",
 		"fleet_resources_committed": committed,
+		"native_modded_costs": native_costs,
 		"within_budget": NumberUtils.fleet_less_or_equal(committed, float(config.fleet_resources)),
 		"deployment": _deployment_breakdown(config),
 		"source": "FleetBattle.calc_total_deployment",
 	}
-	await cleanup_battle()
+	if keep_prepared and bool(result.within_budget):
+		_prepared_config = config.duplicate(true)
+	else:
+		await cleanup_battle()
 	return result
 
 
@@ -209,6 +273,7 @@ func _has_pending_projectiles() -> bool:
 
 
 func cleanup_battle() -> Dictionary:
+	_prepared_config = {}
 	var started := Time.get_ticks_usec()
 	FleetController.fleet_controller_enabled = false
 	FleetController.reset()
@@ -371,6 +436,8 @@ func _configure_ship_mods(config: Dictionary) -> void:
 		var ship_state: Dictionary = Fleet.get_fleet_ship_dict(ship_id)
 		ship_state.selected_mods = ["", ""]
 		ship_state.mods = _native_ship_mod_scopes.get(ship_id, {}).duplicate(true)
+	for ship_id in config.get("fleet_mod_loadouts", {}):
+		_apply_mod_list(str(ship_id), _player_mods_from_entry(config.fleet_mod_loadouts[ship_id]))
 	for item in config.formation:
 		_apply_mod_list(str(item.ship), _player_mods_from_entry(item))
 	for item in config.enemy_fleet:
@@ -538,7 +605,7 @@ func _collect_result(
 		"outcome": outcome,
 		"simulation_time": FleetController.battle_timer,
 		"fleet_resources_committed": battle.fleet_resources_committed,
-		"fleet_resources_used": snapped(battle.fleet_resources_committed - battle.fleet_resources, 0.01),
+		"fleet_resources_used": battle.fleet_resources_committed - battle.fleet_resources,
 		"boss_damage": battle.bcd.boss_damage if battle.bcd != null else 0.0,
 		"player_ships": ships.player,
 		"enemy_ships": ships.enemy,

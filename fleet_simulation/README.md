@@ -1,5 +1,15 @@
 # Fleet Battle 原生模拟复用
 
+## 当前日常 Optimizer：v3
+
+日常入口已切换为 `poc/fleet_optimizer_search.gd`。普通战按 **WIN → 最低真实 Used FR** 排名；Boss 使用现有 `boss.priority: "efficiency" | "kill_cost"`。Efficiency 允许 LOSS；Kill Cost 只推荐完成原版连续战斗并逐场支付得起 committed FR 的方案。
+
+必须提供 `baseline.enabled: true`、formation 和 loadouts。启动先验证 Baseline：普通战必须 WIN，Boss 必须 `boss_damage > 0`，否则输出 **BASELINE VALIDATION FAILED** 并停止；不会进入 Recovery。Baseline 是参考上界，并不限制全局 composition 的生成。
+
+日常只需 `"search": {"profile": "fast"}`，默认单 worker、300 秒（含 Godot 初始化）。Balanced 增加全局探索比例；已有显式时间、worker 和 simulation 上限仍兼容。收尾预留真实重跑与 Boss 序列时间，当前战斗会完成，极慢战斗可能略超预算。`beat_baseline` 字段兼容，但仍尽量搜索到预算结束。Exhaustive 只用于受限空间验证；只有确实完成全部配置空间的普通战/效率搜索才显示 EXHAUSTIVE BEST。
+
+新流程交错生成全局 composition、档案候选和当前优胜方案的变体，移除了日常路径中的 Beam/Probe 截断与 Smart Prune。**BEST FOUND / TIME BUDGET REACHED 均不代表全局最优。** 详细算法、原版语义、性能拆解、回归与前后对照见 [optimizer_v3_report.md](docs/optimizer_v3_report.md)。下文的 v2 搜索描述和结果保留作历史记录。
+
 ## Daily Usage（日常使用）
 
 map/ 是本机输入目录，已加入 Git 忽略；从远端克隆后需在本机自行准备 Galaxy/Node JSON 和 common.json。
@@ -8,11 +18,11 @@ map/ 是本机输入目录，已加入 Git 忽略；从远端克隆后需在本�
 2. 运行 `run_optimizer.bat g6 B21`。
 3. 等待本机搜索完成。
 4. 查看控制台中的输入、解析、搜索预算和最优结果摘要。
-5. 查看 `map/g6/B21.result.json`；`results/latest.json` 继续作为兼容调试输出。
+5. 查看 `map/g6/B21.result.txt`，需要完整结构化数据时查看 `map/g6/B21.result.json`；`results/latest.json` 和 `results/latest.txt` 继续作为兼容调试输出。
 
 日常使用不需要 Codex。模拟和优化完全在本机 Godot 中运行，不会消耗 Codex token。用户只填写 Friendly Config；Fleet Event、Battle、敌舰、Hazard、Support 和 Command Ship 等内部 ID 继续由 Resolver 从原版数据解析。
 
-`run_optimizer.bat` 根据 Galaxy 和 Node 参数读取 `map/<galaxy>/<node>.json`，不写死 G6。Galaxy 公共倍率来自同目录 `common.json`：`permanent` 是长期最终倍率，`temporary` 是手工加算增量，`effective = permanent + temporary`；节点文件不再保存这两个 scale。使用已验证的 Godot 4.7.2 隔离测试工程，并采用当前已确认解锁的 Standard Galaxy Mod 集合。Fast / Balanced 默认使用 `offline_fixed_step`；Runner 通过 Godot 官方 `--fixed-fps 60` 关闭墙钟同步，但仍逐 tick 执行原版 60 Hz physics。可把 `search.simulation_clock` 改为 `realtime` 做 Reference / Debug。
+`run_optimizer.bat` 根据 Galaxy 和 Node 参数读取 `map/<galaxy>/<node>.json`，不写死 G6。Galaxy 公共倍率来自同目录 `common.json`：`permanent` 是长期最终倍率，`temporary` 是手工加算增量，`effective = permanent + temporary`；节点文件不再保存这两个 scale。使用已验证的 Godot 4.7.2 隔离测试工程，并采用当前已确认解锁的 Standard Galaxy Mod 集合。Fast / Balanced 默认使用 `offline_fixed_step`；Runner 通过 Godot 官方 `--fixed-fps 60` 关闭墙钟同步，但仍逐 tick 执行原版 60 Hz physics。可把 `search.simulation_clock` 改为 `realtime` 做 Reference / Debug。配置或 Baseline 验证失败时命令返回非零退出码，且不会覆盖已有的节点 JSON/TXT 或兼容 `latest` 输出。
 
 普通节点的正式 `<node>.result.json` 只保留现有排序逻辑选出的 `best_result`，内部搜索和兼容的 `results/latest.json` 仍可包含多候选。Boss 节点继续保留 Top、refinement 和 ranked candidate 结构。加上 `--verbose` 可实时查看完整 Godot 输出；普通模式只折叠已确认不影响战斗的 Shader 编译器断言和固定退出清理摘要，原始输出始终写到 `map/<galaxy>/<node>.godot.log`，其他错误不会被过滤。
 
@@ -32,7 +42,9 @@ map/ 是本机输入目录，已加入 Git 忽略；从远端克隆后需在本�
 - `poc/fleet_test.gd`：参数化 `run_battle(config)` 适配器；`run_demo()` 仅构造兼容示例
 - `poc/fleet_optimizer_bootstrap.tscn` / `poc/fleet_optimizer_battle_area.gd`：Optimizer 专用最小启动场景和原版 Projectile Pool 接口
 - `poc/fleet_optimizer.gd`：v1 固定舰队的唯一位置精确枚举与公共评分
-- `poc/fleet_optimizer_v2.gd`：v2 舰种级 Loadout、舰种数量、代表阵型、Fleet/Position Beam、局部精确搜索与全局缓存
+- `poc/fleet_optimizer_search.gd`：v3 日常调度、严格 Baseline、真实目标、预算及连续 Boss 验证
+- `tools/benchmark_optimizer.py`：隔离真实 Godot 基准、进程 CPU 与源码哈希
+- `poc/fleet_optimizer_v2.gd`：保留公共运行服务及历史 v2 算法；v2 舰种级 Loadout、舰种数量、代表阵型、Fleet/Position Beam、局部精确搜索与全局缓存
 - `poc/friendly_config_resolver.gd`：把日常 `galaxy + node + hazards + supports + boss.remaining_hp + player_state` 输入解析为原版 Battle Config
 - `poc/optimizer_v2_bb3_regression.json`：只使用已确认 Cruiser Loadout 的 BB3 v1 兼容回归设置
 - `poc/fleet_test_runner.gd`：等待原版初始化、拦截 HTTP、执行单场或确定性测试、写 JSON 并退出的薄 Runner

@@ -1302,9 +1302,7 @@ func _evaluate_batch(items: Array) -> Array:
 		var wave: Array = pending.slice(cursor, mini(cursor + _workers.size(), pending.size()))
 		var configs: Array = []
 		for entry in wave:
-			var config := _base_config.duplicate(true)
-			config.formation = Array(entry.item.formation).duplicate(true)
-			config.simulation_detail = str(_settings.simulation_detail)
+			var config := _evaluation_config(entry.item.formation)
 			_mark_queued(entry.item.formation)
 			configs.append(config)
 		var raw_results := await _run_worker_wave(configs)
@@ -1486,7 +1484,7 @@ func _write_worker_json(path: String, value: Dictionary) -> void:
 	var temporary_path := path + ".tmp"
 	var file := FileAccess.open(temporary_path, FileAccess.WRITE)
 	assert(file != null, "Unable to write worker request %s" % path)
-	file.store_string(JSON.stringify(value))
+	file.store_string(JSON.stringify(value, "", true, true))
 	file.close()
 	if FileAccess.file_exists(path):
 		DirAccess.remove_absolute(path)
@@ -1552,9 +1550,7 @@ func _evaluate(fleet: Dictionary, formation: Array) -> Dictionary:
 	if not _can_simulate():
 		return {}
 	_mark_queued(formation)
-	var config := _base_config.duplicate(true)
-	config.formation = formation.duplicate(true)
-	config.simulation_detail = str(_settings.simulation_detail)
+	var config := _evaluation_config(formation)
 	var result: Dictionary = await _probe.run_battle(config)
 	canonical_started = Time.get_ticks_usec()
 	var summary := _summarize_result(_simulations + 1, result)
@@ -1822,8 +1818,10 @@ func _baseline_validation_failure_output() -> Dictionary:
 	var baseline: Dictionary = _settings.get("baseline", {})
 	var details := {
 		"message": "BASELINE VALIDATION FAILED",
-		"observed_outcome": baseline.get("observed", {}).get("outcome", "victory"),
+		"observed_outcome": baseline.get("observed", {}).get("outcome"),
 		"simulated_outcome": _verified_baseline.get("outcome", "not-run"),
+		"committed_fr": _verified_baseline.get("deployment_quote_committed_fr"),
+		"simulated_result": _verified_baseline.duplicate(true),
 		"formation": baseline.get("formation", {}).duplicate(true),
 		"ship_counts": _candidate_composition(baseline),
 		"loadouts": baseline.get("loadouts", {}).duplicate(true),
@@ -2285,3 +2283,10 @@ func run_v22_logic_unit_tests() -> Dictionary:
 		"boss_efficiency_exhaustive": {"passed": efficiency_exhaustive_passed, "smart_pruned": exhaustive_fleet.get("smart_pruned", false)},
 		"boss_kill_cost": {"passed": kill_cost_passed, "projected_pruned": 210.0, "projected_retained": 170.0, "baseline_total": 180.0},
 	}
+
+
+func _evaluation_config(formation: Array) -> Dictionary:
+	var config := _base_config.duplicate(true)
+	config.formation = formation.duplicate(true)
+	config.simulation_detail = str(_settings.simulation_detail)
+	return config
