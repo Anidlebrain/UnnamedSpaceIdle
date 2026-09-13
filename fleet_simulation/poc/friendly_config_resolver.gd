@@ -141,6 +141,15 @@ func resolve(friendly: Dictionary, common: Dictionary = {}) -> Dictionary:
 		var baseline_error := _validate_baseline(baseline, ships)
 		if baseline_error != "":
 			return _error(baseline_error)
+	var diagnostic: Dictionary = friendly.get("diagnostic", {}) if friendly.get("diagnostic", {}) is Dictionary else {}
+	for candidate_name in ["known_candidate", "micro_test"]:
+		if diagnostic.has(candidate_name):
+			var candidate = diagnostic[candidate_name]
+			if not candidate is Dictionary:
+				return _error("diagnostic.%s must be an object" % candidate_name)
+			var candidate_error := _validate_candidate(candidate, ships, "diagnostic.%s" % candidate_name)
+			if candidate_error != "":
+				return _error(candidate_error)
 
 	var grid: Vector2 = battle.get("grid_size", Vector2(2, 5))
 	var resolved := {
@@ -169,6 +178,7 @@ func resolve(friendly: Dictionary, common: Dictionary = {}) -> Dictionary:
 			"boss_remaining_hp": remaining_hp,
 			"search": search,
 			"baseline": baseline.duplicate(true),
+			"diagnostic": diagnostic.duplicate(true),
 		},
 		"resolver": {
 			"source": "original runtime DB / FleetEvent / Fleet.fleet_battles",
@@ -238,29 +248,33 @@ func _resolve_scales(player: Dictionary, common: Dictionary) -> Dictionary:
 
 
 func _validate_baseline(baseline: Dictionary, ships: Dictionary) -> String:
-	if not baseline.get("formation", {}) is Dictionary:
-		return "baseline.formation must be an object keyed by A1..B5"
-	if not baseline.get("loadouts", {}) is Dictionary:
-		return "baseline.loadouts must be an object"
+	return _validate_candidate(baseline, ships, "baseline")
+
+
+func _validate_candidate(candidate: Dictionary, ships: Dictionary, label: String) -> String:
+	if not candidate.get("formation", {}) is Dictionary:
+		return "%s.formation must be an object keyed by A1..B5" % label
+	if not candidate.get("loadouts", {}) is Dictionary:
+		return "%s.loadouts must be an object" % label
 	var seen_ships := {}
-	for position in baseline.formation:
+	for position in candidate.formation:
 		var position_name := str(position).to_upper()
 		if position_name.length() != 2 or position_name.substr(0, 1) not in ["A", "B"] or int(position_name.substr(1, 1)) < 1 or int(position_name.substr(1, 1)) > 5:
-			return "Invalid baseline position: %s" % position
-		var ship_type := str(baseline.formation[position])
+			return "Invalid %s position: %s" % [label, position]
+		var ship_type := str(candidate.formation[position])
 		if ship_type not in ships or not bool(ships[ship_type].enabled):
-			return "Baseline ship is not enabled: %s" % ship_type
+			return "%s ship is not enabled: %s" % [label, ship_type]
 		seen_ships[ship_type] = true
 	for ship_type in seen_ships:
-		if ship_type not in baseline.loadouts:
-			return "Missing baseline loadout for %s" % ship_type
-		var loadout = baseline.loadouts[ship_type]
+		if ship_type not in candidate.loadouts:
+			return "Missing %s loadout for %s" % [label, ship_type]
+		var loadout = candidate.loadouts[ship_type]
 		if not loadout is Dictionary:
-			return "baseline.loadouts.%s must be an object" % ship_type
+			return "%s.loadouts.%s must be an object" % [label, ship_type]
 		for slot in ["primary", "secondary"]:
 			var mod_id = loadout.get(slot)
 			if mod_id != null and str(mod_id) not in db.fleet_mods:
-				return "Unknown baseline Mod in original DB: %s" % mod_id
+				return "Unknown %s Mod in original DB: %s" % [label, mod_id]
 	return ""
 
 

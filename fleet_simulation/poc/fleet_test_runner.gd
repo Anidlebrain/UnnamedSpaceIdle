@@ -117,6 +117,7 @@ func _run() -> void:
 					optimizer_settings.boss_remaining_hp = config.optimizer.boss_remaining_hp
 					optimizer_settings.search = config.optimizer.get("search", {}).duplicate(true)
 					optimizer_settings.baseline = config.optimizer.get("baseline", {}).duplicate(true)
+					optimizer_settings.diagnostic = config.optimizer.get("diagnostic", {}).duplicate(true)
 					optimizer_settings.player_state = {
 						"fleet_resources": config.fleet_resources,
 						"ships": config.ships_available.duplicate(true),

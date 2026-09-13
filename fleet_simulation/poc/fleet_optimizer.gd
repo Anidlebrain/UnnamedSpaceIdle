@@ -294,6 +294,11 @@ func _rank_before(a: Dictionary, b: Dictionary) -> bool:
 		if a.fleet_resources_used != b.fleet_resources_used:
 			return a.fleet_resources_used < b.fleet_resources_used
 	else:
+		if not a_win:
+			if a.enemy_destroyed != b.enemy_destroyed:
+				return a.enemy_destroyed > b.enemy_destroyed
+			if a.player_remaining_health != b.player_remaining_health:
+				return a.player_remaining_health > b.player_remaining_health
 		if a.fleet_resources_used != b.fleet_resources_used:
 			return a.fleet_resources_used < b.fleet_resources_used
 	if a.fleet_resources_committed != b.fleet_resources_committed:
