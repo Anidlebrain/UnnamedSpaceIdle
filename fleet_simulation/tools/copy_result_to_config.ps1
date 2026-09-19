@@ -35,8 +35,8 @@ try {
     }
 
     $tokens = @($rows.A) + @($rows.B)
-    $numeric = @($tokens | Where-Object { $_ -notmatch '^[0-4]$' }).Count -eq 0
-    $english = @($tokens | Where-Object { $_ -notin @('.', 'Fi', 'Co', 'Fr', 'Cr', 'Fighter', 'Corvette', 'Frigate', 'Cruiser') }).Count -eq 0
+    $numeric = @($tokens | Where-Object { $_ -notmatch '^[0-5]$' }).Count -eq 0
+    $english = @($tokens | Where-Object { $_ -notin @('.', 'Fi', 'Co', 'Fr', 'Cr', 'HC', 'Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser') }).Count -eq 0
     if (-not $numeric -and -not $english) { Fail 'Formation contains unsupported or mixed ship tokens' }
 
     $ships = @{
@@ -44,6 +44,7 @@ try {
         '2'='Corvette'; 'Co'='Corvette'; 'Corvette'='Corvette'
         '3'='Frigate'; 'Fr'='Frigate'; 'Frigate'='Frigate'
         '4'='Cruiser'; 'Cr'='Cruiser'; 'Cruiser'='Cruiser'
+        '5'='HeavyCruiser'; 'HC'='HeavyCruiser'; 'HeavyCruiser'='HeavyCruiser'
     }
     $formation = [ordered]@{}
     foreach ($row in @('A', 'B')) {
@@ -57,7 +58,7 @@ try {
     $foundLoadouts = @{}
     for ($i = $modsAt + 1; $i -lt $formationAt; $i++) {
         if ([string]::IsNullOrWhiteSpace($lines[$i])) { continue }
-        if ($lines[$i] -notmatch '^\s*(Fighter|Corvette|Frigate|Cruiser|[1-4]):\s*Primary=([^;]+);\s*Secondary=(\S+)\s*$') {
+        if ($lines[$i] -notmatch '^\s*(Fighter|Corvette|Frigate|Cruiser|HeavyCruiser|[1-5]):\s*Primary=([^;]+);\s*Secondary=(\S+)\s*$') {
             Fail "unsupported Mods line: $($lines[$i].Trim())"
         }
         $ship = $ships[$matches[1]]
@@ -78,7 +79,7 @@ try {
     if ($foundLoadouts.Count -eq 0) { Fail 'result TXT Mods section is empty' }
 
     $loadouts = [ordered]@{}
-    foreach ($ship in @('Fighter', 'Corvette', 'Frigate', 'Cruiser')) {
+    foreach ($ship in @('Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser')) {
         if ($foundLoadouts.ContainsKey($ship)) { $loadouts[$ship] = $foundLoadouts[$ship] }
     }
 

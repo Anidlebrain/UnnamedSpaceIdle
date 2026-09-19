@@ -14,6 +14,19 @@ func run(probe: Node) -> Dictionary:
 	add_child(resolver)
 	var optimizer := preload("res://fleet_optimizer_search.gd").new()
 	add_child(optimizer)
+	var float_position_formation := [
+		{"ship": "Cruiser", "grid_position": [0.0, 2.0]},
+		{"ship": "Frigate", "grid_position": [1.0, 2.0]},
+	]
+	var free_cells := optimizer._free_cells(float_position_formation)
+	check("float worker positions are removed from free cells",
+		[0, 2] not in free_cells and [1, 2] not in free_cells and free_cells.size() == 8,
+		free_cells)
+	var duplicate_position_formation: Array = float_position_formation.duplicate(true)
+	duplicate_position_formation.append({"ship": "Fighter", "grid_position": [0, 2]})
+	check("duplicate grid positions are rejected",
+		not optimizer._has_unique_positions(duplicate_position_formation),
+		duplicate_position_formation)
 	var seed: Array = []
 	for i in range(5):
 		seed.append({"ship": "Cruiser", "primary_mod": null, "secondary_mod": null, "grid_position": [0, i]})

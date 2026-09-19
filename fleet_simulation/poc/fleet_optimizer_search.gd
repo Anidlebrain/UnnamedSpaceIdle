@@ -62,7 +62,7 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 	_started_msec = 0
 	_rng.seed = 20260913
 	_pruning_stats = {"generated": 0, "quoted_generated": 0, "simulated": 0, "refined": 0,
-		"hard_pruned": {"fr_budget": 0, "disabled_ship": 0}, "smart_pruned": {},
+		"hard_pruned": {"fr_budget": 0, "disabled_ship": 0, "invalid_formation": 0}, "smart_pruned": {},
 		"hard_pruning_enabled": true, "smart_pruning_enabled": false}
 	_search_audit = {"candidates_generated": 0, "candidates_enumerated": 0, "normalized": 0,
 		"deduplicated": 0, "queued": 0, "simulated": 0, "wins": 0, "losses": 0}
@@ -356,9 +356,11 @@ func _next_mutation(parent: Dictionary) -> Array:
 func _build_mutation_stream(parent: Dictionary) -> Dictionary:
 	var formation: Array = parent.formation
 	var buckets: Array = [[], [], [], [], [], []]
-	var free := STANDARD_CELLS.duplicate(true)
-	for group in formation:
-		free.erase(group.grid_position)
+	# Worker JSON turns integer coordinates into floats. Array.erase() can then
+	# fail to remove an occupied integer cell, producing a duplicate position
+	# which the original battle scene silently relocates. Use the canonical grid
+	# name so search, replay, and the user-facing formation describe one layout.
+	var free := _free_cells(formation)
 	var seen_ships := {}
 	for i in range(formation.size()):
 		var removed := formation.duplicate(true)
@@ -437,10 +439,36 @@ func _within_ranges(formation: Array) -> bool:
 	return true
 
 
+func _occupied_position_names(formation: Array) -> Dictionary:
+	var occupied := {}
+	for group in formation:
+		occupied[_position_name(Array(group.grid_position))] = true
+	return occupied
+
+
+func _free_cells(formation: Array) -> Array:
+	var occupied := _occupied_position_names(formation)
+	var free: Array = []
+	for cell in STANDARD_CELLS:
+		if not occupied.has(_position_name(cell)):
+			free.append(cell.duplicate())
+	return free
+
+
+func _has_unique_positions(formation: Array) -> bool:
+	return _occupied_position_names(formation).size() == formation.size()
+
+
 func _materialize(formation: Array, mandatory: bool = false) -> Dictionary:
 	_generated += 1
 	_pruning_stats.generated += 1
 	_search_audit.candidates_generated += 1
+	if not _has_unique_positions(formation):
+		var hard_pruned: Dictionary = _pruning_stats.get("hard_pruned", {})
+		hard_pruned["invalid_formation"] = int(hard_pruned.get("invalid_formation", 0)) + 1
+		_pruning_stats["hard_pruned"] = hard_pruned
+		_rejected += 1
+		return {}
 	var composition := {}
 	var loadouts := {}
 	for group in formation:
@@ -718,6 +746,8 @@ func _consider_kill_best(candidate: Dictionary) -> void:
 func _attach_full_result(candidate: Dictionary) -> String:
 	if candidate.is_empty():
 		return "NO VERIFIED CANDIDATE"
+	if not _has_unique_positions(Array(candidate.get("formation", []))):
+		return "FAILED: candidate formation contains duplicate grid positions"
 	var config := _config_for(candidate.formation)
 	config.simulation_detail = "full"
 	var raw: Dictionary = await _probe.run_battle(config)
