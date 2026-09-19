@@ -172,10 +172,17 @@ func _run() -> void:
 						)
 						_print_daily_finished(optimizer_v2_summary, daily_result_path)
 					else:
-						var failure_message := str(optimizer_v2_summary.get(
-							"baseline_warning",
-							optimizer_v2_summary.get("result_claim", "Optimizer validation failed"),
-						))
+						var failure_message := str(optimizer_v2_summary.get("baseline_warning", "")).strip_edges()
+						if failure_message == "":
+							failure_message = str(optimizer_v2_summary.get("result_claim", "Optimizer validation failed"))
+						var finalization := str(optimizer_v2_summary.get("finalization_status", ""))
+						if finalization.begins_with("FAILED"):
+							failure_message += ": " + finalization
+						var node_result_path := _requested_node_result_path()
+						if node_result_path != "":
+							var failure_path := node_result_path.trim_suffix(".json") + ".failed.json"
+							_write_result(failure_path, optimizer_v2_summary)
+							print("Failure details: %s" % failure_path)
 						_print_daily_error(failure_message + "; existing daily results were not changed")
 				_finish(optimizer_v2_summary, 0 if optimizer_v2_ok else 5, OPTIMIZER_V2_RESULT_PATH)
 				return
@@ -646,7 +653,7 @@ func _print_daily_input(friendly: Dictionary, common: Dictionary) -> void:
 	print("  Temporary Scales: %s" % common.get("temporary", "missing"))
 	print("")
 	print("Ships Available:")
-	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser"]:
+	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser", "Heavy Cruiser"]:
 		print("  %s: %d" % [ship_type, int(ships.get(ship_type, 0))])
 
 
@@ -863,13 +870,13 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 	lines.append("")
 	lines.append("Recommended Fleet:")
 	lines.append("  Outcome: %s" % str(best.get("outcome", "unknown")).capitalize())
-	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser"]:
+	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser", "HeavyCruiser"]:
 		var count := int(best.get("composition", {}).get(ship_type, 0))
 		if count > 0:
 			lines.append("  %s x%d" % [_ship_number_text(ship_type), count])
 	lines.append("")
 	lines.append("Mods:")
-	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser"]:
+	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser", "HeavyCruiser"]:
 		if ship_type not in best.get("loadouts", {}):
 			continue
 		var loadout: Dictionary = best.loadouts[ship_type]
@@ -887,7 +894,7 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 			var ship_type := str(best.get("formation", {}).get("%s%d" % [row, column], ""))
 			cells.append(_ship_number_text(ship_type))
 		lines.append("%s    %4s %4s %4s %4s %4s" % [row, cells[0], cells[1], cells[2], cells[3], cells[4]])
-	lines.append("  0=empty; ship IDs: 1 / 2 / 3 / 4")
+	lines.append("  0=empty; ship IDs: 1 / 2 / 3 / 4 / 5")
 	lines.append("")
 	lines.append("FR: Committed/Battle=%s; Used/Battle=%s" % [best.get("committed_fr", "n/a"), best.get("used_fr", "n/a")])
 	if compact.get("objective") == "boss":
@@ -917,7 +924,7 @@ func _effect_detail_text(detail: Dictionary) -> String:
 
 
 func _ship_number_text(ship_type: String) -> String:
-	return {"Fighter": "1", "Corvette": "2", "Frigate": "3", "Cruiser": "4"}.get(ship_type, "0")
+	return {"Fighter": "1", "Corvette": "2", "Frigate": "3", "Cruiser": "4", "HeavyCruiser": "5"}.get(ship_type, "0")
 
 
 func _mod_number_text(value, ship_type: String, slot: String, allowed_mod_slots: Dictionary) -> String:

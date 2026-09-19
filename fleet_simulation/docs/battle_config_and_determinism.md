@@ -88,6 +88,7 @@ Artifact、Galaxy completion、Fleet upgrades 和路线进度不应作为输入�
 - 舰船、武器、Ability、Mod、Hazard、Battle 定义仍来自同版本原版 `game_data.cdb` 和场景资源；这是复用原版规则的固定依赖。
 - 碰撞、SceneTree group 顺序和物理更新依赖 Godot 4.7.2、固定 60 Hz 与相同场景构造。
 - 原版 `FleetController.reset()` 不清零 `battle_timer`。第一次诊断重复测试因此出现跨场物理相位差；适配器现在每场前后显式设置 `battle_timer=0.0`。
+- 原版战斗代码会用进程全局 `randf()` 判定 Fighter 闪避。主进程和并行 worker 的全局随机状态彼此独立；适配器现在每场开始前都重置为 `simulation_seed`（省略时为固定默认值），避免搜索候选与最终主进程回放走不同的随机轨迹。
 - 原版胜利状态会检查教程 Dialogue，并可能改变 `Engine.time_scale` 或暂停 SceneTree。适配器仅在隔离进程中把 Dialogue 标记为已查看，并在每场前恢复 `time_scale=1.0`、`paused=false`。
 - 原版完成路径仍可能增加内存中的 misc stats 或检查成就。Runner 不 Accept、不 Save，测试 `user://` 与正式目录隔离；这些非战斗副作用不作为后续场次输入。
 - HTTP Save/Validate 被设为 unavailable、队列被清空，并通过 `127.0.0.1:9` 代理阻断。Steam singleton 在官方 Godot 中不可用。

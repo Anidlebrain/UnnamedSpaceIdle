@@ -114,6 +114,9 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 	var best: Dictionary = {} if finalists.is_empty() else finalists[0]
 	_progress_stage_start("Final Native Replay", 4, 4, 1)
 	var validation := await _attach_full_result(best)
+	print("Final validation: %s" % validation)
+	if not best.is_empty() and not validation.begins_with("FAILED"):
+		print("Final verified: %s Used FR=%s Boss Damage/FR=%s" % [best.outcome, best.fleet_resources_used, best.boss_damage_per_fr])
 	var cache_check := await _cache_validation(ranked)
 	var counts := _result_counts(ranked)
 	var shutdown_started := Time.get_ticks_usec()
@@ -583,7 +586,7 @@ func _progress_consider_best(candidate: Dictionary) -> void:
 		_first_improvement = _time_to_best
 	_incumbent_history.append({"seconds": _time_to_best, "used_fr": candidate.fleet_resources_used,
 		"boss_damage_per_fr": candidate.boss_damage_per_fr, "candidate_hash": candidate.candidate_hash})
-	print("Best verified: %s Used FR=%s Boss Damage/FR=%s at %.2fs" % [candidate.outcome, candidate.fleet_resources_used, candidate.boss_damage_per_fr, _time_to_best])
+	print("Best native candidate: %s Used FR=%s Boss Damage/FR=%s at %.2fs" % [candidate.outcome, candidate.fleet_resources_used, candidate.boss_damage_per_fr, _time_to_best])
 
 
 func _objective_improved(a: Dictionary, b: Dictionary) -> bool:
@@ -722,19 +725,33 @@ func _attach_full_result(candidate: Dictionary) -> String:
 	var cleanup: Dictionary = await _probe.cleanup_battle()
 	_record_performance(raw.get("performance_breakdown", {}), cleanup)
 	var actual := _summarize_result(_simulations, raw)
-	var mismatch: Array = []
+	var mismatch := {}
 	var fields := ["outcome", "fleet_resources_used", "fleet_resources_committed", "boss_damage", "player_remaining_health", "enemy_destroyed"]
 	# Realtime snapshot timing includes post-battle physics/process frame waits.
 	# Keep the existing reference canonical semantics; offline replay is stricter.
 	if str(_settings.simulation_clock) == "offline_fixed_step":
 		fields.append("simulation_time")
 	for key in fields:
-		if actual.get(key) != candidate.get(key):
-			mismatch.append(key)
+		if not _replay_field_matches(key, candidate.get(key), actual.get(key)):
+			mismatch[key] = {"search": candidate.get(key), "replay": actual.get(key)}
+			if key == "simulation_time":
+				mismatch[key]["search_physics_ticks"] = roundi(float(candidate.get(key)) * Engine.physics_ticks_per_second)
+				mismatch[key]["replay_physics_ticks"] = roundi(float(actual.get(key)) * Engine.physics_ticks_per_second)
 	candidate.full_battle_result = raw
 	if not mismatch.is_empty() or raw.has("error"):
-		return "FAILED: native replay differs in %s; error=%s" % [mismatch, raw.get("error", "")]
+		return "FAILED: native replay differences=%s; error=%s" % [JSON.stringify(mismatch), raw.get("error", "")]
 	return "COMPLETE: native replay matches search result"
+
+
+func _replay_field_matches(key: String, search_value, replay_value) -> bool:
+	if key == "simulation_time" and str(_settings.simulation_clock) == "offline_fixed_step":
+		# Fixed-step time is accumulated as a float. Separate Godot processes can
+		# differ in the last binary digit while completing on the same physics tick.
+		return (
+			roundi(float(search_value) * Engine.physics_ticks_per_second)
+			== roundi(float(replay_value) * Engine.physics_ticks_per_second)
+		)
+	return search_value == replay_value
 
 
 func _performance_breakdown() -> Dictionary:

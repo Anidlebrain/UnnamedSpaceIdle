@@ -36,6 +36,8 @@ func run(probe: Node) -> Dictionary:
 	b.fleet_resources_committed = 90
 	optimizer.objective = "normal"
 	check("normal ranks Used before committed", optimizer._rank_before(a, b))
+	optimizer._settings = {"simulation_clock": "offline_fixed_step"}
+	check("offline replay compares simulation time by physics tick", optimizer._replay_field_matches("simulation_time", 11.23333333333349, 11.23333333333351))
 	optimizer.objective = "boss"
 	optimizer.boss_priority = "efficiency"
 	b.outcome = "lose"
@@ -62,6 +64,14 @@ func run(probe: Node) -> Dictionary:
 	var reference: Dictionary = await probe.run_battle(normal)
 	check("Used FR preserves native precision", reference.fleet_resources_used == Fleet.fleet_battle.fleet_resources_committed - Fleet.fleet_battle.fleet_resources)
 	await probe.cleanup_battle()
+	# Disturb the process-global RNG between identical battles. The adapter must
+	# reset it because original combat code uses randf() for fighter evasion.
+	seed(987654321)
+	for _index in range(37):
+		randf()
+	var rng_replay: Dictionary = await probe.run_battle(normal)
+	await probe.cleanup_battle()
+	check("combat RNG is independent of process history", core(reference) == core(rng_replay), {"reference": core(reference), "replay": core(rng_replay)})
 	var quote: Dictionary = await probe.quote_player_deployment(normal, true)
 	var native_costs_match := true
 	for group in get_tree().get_nodes_in_group("deployment_group"):

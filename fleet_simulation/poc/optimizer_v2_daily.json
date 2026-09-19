@@ -5,7 +5,8 @@
     "Fighter",
     "Corvette",
     "Frigate",
-    "Cruiser"
+    "Cruiser",
+    "HeavyCruiser"
   ],
   "group_ranges": {
     "Fighter": {
@@ -21,6 +22,10 @@
       "max": 10
     },
     "Cruiser": {
+      "min": 0,
+      "max": 10
+    },
+    "HeavyCruiser": {
       "min": 0,
       "max": 10
     }
@@ -63,6 +68,14 @@
         null,
         "CruiserSingleArmorTank"
       ]
+    },
+    "HeavyCruiser": {
+      "primary": [
+        null
+      ],
+      "secondary": [
+        null
+      ]
     }
   },
   "max_total_groups": 10,
@@ -70,7 +83,8 @@
     "Fighter": 10,
     "Corvette": 10,
     "Frigate": 10,
-    "Cruiser": 10
+    "Cruiser": 10,
+    "HeavyCruiser": 10
   },
   "max_simulations": 1000000,
   "max_wall_seconds": 300,

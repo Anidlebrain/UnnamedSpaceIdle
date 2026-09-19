@@ -22,7 +22,7 @@ map/ 是本机输入目录，已加入 Git 忽略；从远端克隆后需在本�
 
 运行 `run_optimizer.bat g6 B21 --copy`（短别名 `--c`，大小写不敏感）可将 `map/g6/B21.result.txt` 中推荐的阵型和 Mod 配置写回 `map/g6/B21.json` 的 `baseline`。复制模式只更新结果，不启动 Godot 优化器；它同时兼容英文舰种/Mod ID 和数字格式的结果文本。解析或校验失败时不会改写 JSON。
 
-Friendly Config 的舰种既可沿用英文名，也可使用数字：`1=Fighter`、`2=Corvette`、`3=Frigate`、`4=Cruiser`。`baseline.formation`（以及 diagnostic candidate 的 formation）可以把 A1–B5 全部写出，空位使用 `0` 或 `null`。`player_state.ships` 与 `loadouts` 的键也兼容字符串数字键 `"1"`–`"4"`。
+Friendly Config 的舰种既可沿用英文名，也可使用数字：`1=Fighter`、`2=Corvette`、`3=Frigate`、`4=Cruiser`、`5=Heavy Cruiser`。`baseline.formation`（以及 diagnostic candidate 的 formation）可以把 A1–B5 全部写出，空位使用 `0` 或 `null`。`player_state.ships` 与 `loadouts` 的键也兼容字符串数字键 `"1"`–`"5"`。
 
 `primary` / `secondary` 可以沿用内部 Mod ID，也可使用数字索引：`0` 表示不使用，`1` 表示该槽位在 `poc/optimizer_v2_daily.json` 中的第一个 Mod，未来存在第二个 Mod 时使用 `2`。越界索引会直接报错，不会静默替换。数字格式输入文件可使用 `<node>_num.json`，例如 `run_optimizer.bat g6 B16_num` 会读取 `B16_num.json`，校验其中的 `node: "B16"`，并仍输出 `B16.result.json` / `B16.result.txt`。TXT 中推荐舰种、阵型和两个 Mod 槽位均使用同一数字表示，空阵位显示为 `0`。
 

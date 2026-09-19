@@ -4,6 +4,7 @@ signal finished(result: Dictionary)
 
 const BATTLE_TIMEOUT_MSEC := 120000
 const POST_BATTLE_SETTLE_TIMEOUT_MSEC := 6000
+const DEFAULT_SIMULATION_SEED := 20260919
 
 var _native_ship_mod_scopes := {}
 var _last_setup_breakdown := {}
@@ -199,7 +200,7 @@ func quote_player_deployment(config: Dictionary, keep_prepared: bool = false) ->
 func _setup_battle(config: Dictionary) -> FleetBattle:
 	var setup_started := Time.get_ticks_usec()
 	_validate_config(config)
-	_prepare_runtime()
+	_prepare_runtime(config)
 	var fleet_event = Fleet.fleet_event_refs[str(config.fleet_event_id)]
 	var player_ship_list := _build_player_ship_list(config)
 
@@ -289,11 +290,16 @@ func cleanup_battle() -> Dictionary:
 	return {"cleanup_ms": (Time.get_ticks_usec() - started) / 1000.0}
 
 
-func _prepare_runtime() -> void:
+func _prepare_runtime(config: Dictionary) -> void:
 	FleetController.fleet_controller_enabled = false
 	FleetController.reset()
 	FleetController.battle_timer = 0.0
 	_scaled_player_groups.clear()
+	# The original battle code uses the process-global RNG for combat-affecting
+	# checks such as fighter evasion. Workers otherwise start with unrelated RNG
+	# state, so a candidate can win in a worker and fail its main-process replay.
+	# Reset it before every battle so identical configs have identical combat RNG.
+	seed(int(config.get("simulation_seed", DEFAULT_SIMULATION_SEED)))
 	Engine.time_scale = 1.0
 	get_tree().paused = false
 	# Tutorial popups and their pause state are unrelated to combat inputs.
@@ -641,6 +647,7 @@ func simulation_clock_metadata(
 		"wall_seconds": wall_seconds,
 		"wall_speedup": simulated_seconds / wall_seconds if wall_seconds > 0.0 else 0.0,
 		"engine_fixed_fps": fixed_fps,
+		"random_seed": int(config.get("simulation_seed", DEFAULT_SIMULATION_SEED)),
 		"fallback_warning": warning,
 	}
 

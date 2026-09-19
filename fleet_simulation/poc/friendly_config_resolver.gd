@@ -5,6 +5,7 @@ const SHIP_NUMBER_TO_ID := {
 	2: "Corvette",
 	3: "Frigate",
 	4: "Cruiser",
+	5: "HeavyCruiser",
 }
 
 
@@ -320,14 +321,16 @@ func _resolve_ship_selector(value, allow_empty: bool) -> Dictionary:
 		if ship_number == 0 and allow_empty:
 			return {"ok": true, "ship": "", "error": ""}
 		if ship_number not in SHIP_NUMBER_TO_ID:
-			return {"ok": false, "ship": "", "error": "ship number must be 1..4%s" % (" or 0/null" if allow_empty else "")}
+			return {"ok": false, "ship": "", "error": "ship number must be 1..5%s" % (" or 0/null" if allow_empty else "")}
 		return {"ok": true, "ship": SHIP_NUMBER_TO_ID[ship_number], "error": ""}
 	var ship_text := str(value).strip_edges()
 	if ship_text.is_valid_int():
 		return _resolve_ship_selector(ship_text.to_int(), allow_empty)
+	if ship_text == "Heavy Cruiser":
+		return {"ok": true, "ship": "HeavyCruiser", "error": ""}
 	if ship_text in SHIP_NUMBER_TO_ID.values():
 		return {"ok": true, "ship": ship_text, "error": ""}
-	return {"ok": false, "ship": "", "error": "unknown ship '%s' (use Fighter/Corvette/Frigate/Cruiser or 1/2/3/4)" % ship_text}
+	return {"ok": false, "ship": "", "error": "unknown ship '%s' (use Fighter/Corvette/Frigate/Cruiser/Heavy Cruiser or 1/2/3/4/5)" % ship_text}
 
 
 func _resolve_mod_selector(value, ship_type: String, slot: String, allowed_mod_slots: Dictionary) -> Dictionary:
