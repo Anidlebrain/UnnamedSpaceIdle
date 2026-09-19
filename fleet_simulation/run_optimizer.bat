@@ -6,28 +6,31 @@ set "ROOT_DIR=%CD%"
 set "GALAXY=%~1"
 set "NODE=%~2"
 set "VERBOSE=0"
+set "COPY_RESULT=0"
 if /I "%~3"=="--verbose" set "VERBOSE=1"
+if /I "%~3"=="--c" set "COPY_RESULT=1"
+if /I "%~3"=="--copy" set "COPY_RESULT=1"
 
 if "%GALAXY%"=="" (
   echo ERROR: galaxy argument is required
-  echo Usage: run_optimizer.bat g6 B21 [--verbose]
+  echo Usage: run_optimizer.bat g6 B21 [--verbose^|--copy]
   echo Config: "%ROOT_DIR%\map\[galaxy]\[node].json"
   exit /b 1
 )
 if "%NODE%"=="" (
   echo ERROR: node argument is required
-  echo Usage: run_optimizer.bat g6 B21 [--verbose]
+  echo Usage: run_optimizer.bat g6 B21 [--verbose^|--copy]
   echo Config: "%ROOT_DIR%\map\%GALAXY%\[node].json"
   exit /b 1
 )
 if not "%~4"=="" (
   echo ERROR: unexpected argument: %~4
-  echo Usage: run_optimizer.bat g6 B21 [--verbose]
+  echo Usage: run_optimizer.bat g6 B21 [--verbose^|--copy]
   exit /b 1
 )
-if not "%~3"=="" if /I not "%~3"=="--verbose" (
+if not "%~3"=="" if /I not "%~3"=="--verbose" if /I not "%~3"=="--c" if /I not "%~3"=="--copy" (
   echo ERROR: unknown option: %~3
-  echo Usage: run_optimizer.bat g6 B21 [--verbose]
+  echo Usage: run_optimizer.bat g6 B21 [--verbose^|--copy]
   exit /b 1
 )
 
@@ -45,6 +48,7 @@ set "SUMMARY_FILE=%GALAXY_DIR%\%NODE%.result.txt"
 set "LOG_FILE=%GALAXY_DIR%\%NODE%.godot.log"
 set "DAILY_SETTINGS=%ROOT_DIR%\poc\optimizer_v2_daily.json"
 set "GODOT_RUNNER=%ROOT_DIR%\tools\run_godot_optimizer.ps1"
+set "COPY_RESULT_TOOL=%ROOT_DIR%\tools\copy_result_to_config.ps1"
 set "GODOT_PROJECT=%ROOT_DIR%\work\full_recovered"
 set "GODOT_DIR=E:\tools\Godot_v4.7.2-stable_win64"
 set "GODOT_EXE=%GODOT_DIR%\Godot_v4.7.2-stable_win64_console.exe"
@@ -61,31 +65,49 @@ if not exist "%CONFIG_FILE%" (
   echo Config: "%CONFIG_FILE%"
   exit /b 1
 )
-if not exist "%COMMON_FILE%" (
-  echo ERROR: Galaxy common JSON not found
-  echo Common: "%COMMON_FILE%"
-  echo Config: "%CONFIG_FILE%"
-  exit /b 1
-)
-if not exist "%GODOT_EXE%" (
-  echo ERROR: Godot executable not found
-  echo Expected: "%GODOT_EXE%"
-  exit /b 1
-)
-if not exist "%DAILY_SETTINGS%" (
-  echo ERROR: internal Optimizer settings not found
-  echo Expected: "%DAILY_SETTINGS%"
-  exit /b 1
-)
-if not exist "%GODOT_RUNNER%" (
-  echo ERROR: internal Godot runner not found
-  echo Expected: "%GODOT_RUNNER%"
-  exit /b 1
+if "%COPY_RESULT%"=="0" (
+  if not exist "%COMMON_FILE%" (
+    echo ERROR: Galaxy common JSON not found
+    echo Common: "%COMMON_FILE%"
+    echo Config: "%CONFIG_FILE%"
+    exit /b 1
+  )
+  if not exist "%GODOT_EXE%" (
+    echo ERROR: Godot executable not found
+    echo Expected: "%GODOT_EXE%"
+    exit /b 1
+  )
+  if not exist "%DAILY_SETTINGS%" (
+    echo ERROR: internal Optimizer settings not found
+    echo Expected: "%DAILY_SETTINGS%"
+    exit /b 1
+  )
+  if not exist "%GODOT_RUNNER%" (
+    echo ERROR: internal Godot runner not found
+    echo Expected: "%GODOT_RUNNER%"
+    exit /b 1
+  )
 )
 
 set "FLEET_CONFIG_TO_VALIDATE=%CONFIG_FILE%"
-powershell.exe -NoProfile -Command "try { $value = Get-Content -LiteralPath $env:FLEET_CONFIG_TO_VALIDATE -Raw | ConvertFrom-Json -ErrorAction Stop; if ($null -eq $value -or $value.GetType().Name -ne 'PSCustomObject') { throw 'top-level JSON value must be an object' }; $expectedGalaxy = [int]$env:FLEET_GALAXY.Substring(1); if ([int]$value.galaxy -ne $expectedGalaxy) { throw ('galaxy field must be ' + $expectedGalaxy) }; if ([string]$value.node -ine $env:FLEET_NODE) { throw ('node field must be ' + $env:FLEET_NODE) }; exit 0 } catch { [Console]::Error.WriteLine('ERROR: unable to parse config JSON: ' + $env:FLEET_CONFIG_TO_VALIDATE + ' - ' + $_.Exception.Message); exit 2 }"
+powershell.exe -NoProfile -Command "try { $value = Get-Content -LiteralPath $env:FLEET_CONFIG_TO_VALIDATE -Raw | ConvertFrom-Json -ErrorAction Stop; if ($null -eq $value -or $value.GetType().Name -ne 'PSCustomObject') { throw 'top-level JSON value must be an object' }; $expectedGalaxy = [int]$env:FLEET_GALAXY.Substring(1); if ([int]$value.galaxy -ne $expectedGalaxy) { throw ('galaxy field must be ' + $expectedGalaxy) }; $expectedNode = $env:FLEET_NODE -replace '(?i)_num$', ''; if ([string]$value.node -ine $expectedNode) { throw ('node field must be ' + $expectedNode) }; exit 0 } catch { [Console]::Error.WriteLine('ERROR: unable to parse config JSON: ' + $env:FLEET_CONFIG_TO_VALIDATE + ' - ' + $_.Exception.Message); exit 2 }"
 if errorlevel 1 exit /b 1
+
+for /f "usebackq delims=" %%I in (`powershell.exe -NoProfile -Command "$value = Get-Content -LiteralPath $env:FLEET_CONFIG_TO_VALIDATE -Raw | ConvertFrom-Json; Write-Output ([string]$value.node)"`) do set "BATTLE_NODE=%%I"
+set "RESULT_FILE=%GALAXY_DIR%\%BATTLE_NODE%.result.json"
+set "SUMMARY_FILE=%GALAXY_DIR%\%BATTLE_NODE%.result.txt"
+set "LOG_FILE=%GALAXY_DIR%\%BATTLE_NODE%.godot.log"
+
+if "%COPY_RESULT%"=="1" (
+  if not exist "%COPY_RESULT_TOOL%" (
+    echo ERROR: result copy tool not found
+    echo Expected: "%COPY_RESULT_TOOL%"
+    exit /b 1
+  )
+  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%COPY_RESULT_TOOL%" -SummaryPath "%SUMMARY_FILE%" -ConfigPath "%CONFIG_FILE%"
+  if errorlevel 1 exit /b 1
+  exit /b 0
+)
 
 set "FLEET_COMMON_TO_VALIDATE=%COMMON_FILE%"
 powershell.exe -NoProfile -Command "try { $value = Get-Content -LiteralPath $env:FLEET_COMMON_TO_VALIDATE -Raw | ConvertFrom-Json -ErrorAction Stop; if ($null -eq $value -or $value.GetType().Name -ne 'PSCustomObject') { throw 'top-level JSON value must be an object' }; exit 0 } catch { [Console]::Error.WriteLine('ERROR: unable to parse common JSON: ' + $env:FLEET_COMMON_TO_VALIDATE + ' - ' + $_.Exception.Message); exit 2 }"
@@ -118,7 +140,7 @@ for %%F in (fleet_test.gd fleet_test_runner.gd friendly_config_resolver.gd fleet
 )
 
 echo Galaxy: %GALAXY%
-echo Node: %NODE%
+echo Node: %BATTLE_NODE%
 echo.
 echo Config: "%CONFIG_FILE%"
 echo Common: "%COMMON_FILE%"

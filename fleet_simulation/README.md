@@ -20,6 +20,12 @@ map/ 是本机输入目录，已加入 Git 忽略；从远端克隆后需在本�
 4. 查看控制台中的输入、解析、搜索预算和最优结果摘要。
 5. 查看 `map/g6/B21.result.txt`，需要完整结构化数据时查看 `map/g6/B21.result.json`；`results/latest.json` 和 `results/latest.txt` 继续作为兼容调试输出。
 
+运行 `run_optimizer.bat g6 B21 --copy`（短别名 `--c`，大小写不敏感）可将 `map/g6/B21.result.txt` 中推荐的阵型和 Mod 配置写回 `map/g6/B21.json` 的 `baseline`。复制模式只更新结果，不启动 Godot 优化器；它同时兼容英文舰种/Mod ID 和数字格式的结果文本。解析或校验失败时不会改写 JSON。
+
+Friendly Config 的舰种既可沿用英文名，也可使用数字：`1=Fighter`、`2=Corvette`、`3=Frigate`、`4=Cruiser`。`baseline.formation`（以及 diagnostic candidate 的 formation）可以把 A1–B5 全部写出，空位使用 `0` 或 `null`。`player_state.ships` 与 `loadouts` 的键也兼容字符串数字键 `"1"`–`"4"`。
+
+`primary` / `secondary` 可以沿用内部 Mod ID，也可使用数字索引：`0` 表示不使用，`1` 表示该槽位在 `poc/optimizer_v2_daily.json` 中的第一个 Mod，未来存在第二个 Mod 时使用 `2`。越界索引会直接报错，不会静默替换。数字格式输入文件可使用 `<node>_num.json`，例如 `run_optimizer.bat g6 B16_num` 会读取 `B16_num.json`，校验其中的 `node: "B16"`，并仍输出 `B16.result.json` / `B16.result.txt`。TXT 中推荐舰种、阵型和两个 Mod 槽位均使用同一数字表示，空阵位显示为 `0`。
+
 日常使用不需要 Codex。模拟和优化完全在本机 Godot 中运行，不会消耗 Codex token。用户只填写 Friendly Config；Fleet Event、Battle、敌舰、Hazard、Support 和 Command Ship 等内部 ID 继续由 Resolver 从原版数据解析。
 
 `run_optimizer.bat` 根据 Galaxy 和 Node 参数读取 `map/<galaxy>/<node>.json`，不写死 G6。Galaxy 公共倍率来自同目录 `common.json`：`permanent` 是长期最终倍率，`temporary` 是手工加算增量，`effective = permanent + temporary`；节点文件不再保存这两个 scale。使用已验证的 Godot 4.7.2 隔离测试工程，并采用当前已确认解锁的 Standard Galaxy Mod 集合。Fast / Balanced 默认使用 `offline_fixed_step`；Runner 通过 Godot 官方 `--fixed-fps 60` 关闭墙钟同步，但仍逐 tick 执行原版 60 Hz physics。可把 `search.simulation_clock` 改为 `realtime` 做 Reference / Debug。配置或 Baseline 验证失败时命令返回非零退出码，且不会覆盖已有的节点 JSON/TXT 或兼容 `latest` 输出。

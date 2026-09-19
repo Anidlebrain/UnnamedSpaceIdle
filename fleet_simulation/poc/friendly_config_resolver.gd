@@ -1,7 +1,14 @@
 extends Node
 
+const SHIP_NUMBER_TO_ID := {
+	1: "Fighter",
+	2: "Corvette",
+	3: "Frigate",
+	4: "Cruiser",
+}
 
-func resolve(friendly: Dictionary, common: Dictionary = {}) -> Dictionary:
+
+func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: Dictionary = {}) -> Dictionary:
 	for required in ["galaxy", "node", "boss", "hazards", "player_state"]:
 		if not friendly.has(required):
 			return _error("Missing Friendly Config field: %s" % required)
@@ -105,13 +112,19 @@ func resolve(friendly: Dictionary, common: Dictionary = {}) -> Dictionary:
 		return scales_result
 	var scales: Dictionary = scales_result.scales
 	var ships := {}
-	for ship_id in player.ships:
-		if str(ship_id) not in db.fleet_ships:
+	for ship_selector in player.ships:
+		var ship_result := _resolve_ship_selector(ship_selector, false)
+		if not bool(ship_result.ok):
+			return _error("Invalid player_state.ships key: %s" % ship_result.error)
+		var ship_id: String = ship_result.ship
+		if ship_id not in db.fleet_ships:
 			return _error("Unknown player ship in original DB: %s" % ship_id)
-		var available := int(player.ships[ship_id])
+		if ship_id in ships:
+			return _error("Duplicate player ship after numeric conversion: %s" % ship_id)
+		var available := int(player.ships[ship_selector])
 		if available < 0:
 			return _error("ships.%s must be non-negative" % ship_id)
-		ships[str(ship_id)] = {"enabled": available > 0, "available": available}
+		ships[ship_id] = {"enabled": available > 0, "available": available}
 
 	var search: Dictionary = friendly.get("search", {}) if friendly.get("search", {}) is Dictionary else {}
 	var profile := str(search.get("profile", "fast"))
@@ -138,6 +151,10 @@ func resolve(friendly: Dictionary, common: Dictionary = {}) -> Dictionary:
 	if goal == "beat_baseline" and not bool(baseline.get("enabled", false)):
 		return _error("search.goal beat_baseline requires baseline.enabled=true")
 	if bool(baseline.get("enabled", false)):
+		var normalized_baseline := _normalize_candidate(baseline, "baseline", allowed_mod_slots)
+		if not bool(normalized_baseline.ok):
+			return _error(str(normalized_baseline.error))
+		baseline = normalized_baseline.candidate
 		var baseline_error := _validate_baseline(baseline, ships)
 		if baseline_error != "":
 			return _error(baseline_error)
@@ -147,7 +164,12 @@ func resolve(friendly: Dictionary, common: Dictionary = {}) -> Dictionary:
 			var candidate = diagnostic[candidate_name]
 			if not candidate is Dictionary:
 				return _error("diagnostic.%s must be an object" % candidate_name)
-			var candidate_error := _validate_candidate(candidate, ships, "diagnostic.%s" % candidate_name)
+			var candidate_label := "diagnostic.%s" % candidate_name
+			var normalized_candidate := _normalize_candidate(candidate, candidate_label, allowed_mod_slots)
+			if not bool(normalized_candidate.ok):
+				return _error(str(normalized_candidate.error))
+			diagnostic[candidate_name] = normalized_candidate.candidate
+			var candidate_error := _validate_candidate(normalized_candidate.candidate, ships, candidate_label)
 			if candidate_error != "":
 				return _error(candidate_error)
 
@@ -251,6 +273,86 @@ func _validate_baseline(baseline: Dictionary, ships: Dictionary) -> String:
 	return _validate_candidate(baseline, ships, "baseline")
 
 
+func _normalize_candidate(candidate: Dictionary, label: String, allowed_mod_slots: Dictionary) -> Dictionary:
+	if not candidate.get("formation", {}) is Dictionary:
+		return _error("%s.formation must be an object keyed by A1..B5" % label)
+	if not candidate.get("loadouts", {}) is Dictionary:
+		return _error("%s.loadouts must be an object" % label)
+	var normalized := candidate.duplicate(true)
+	var formation := {}
+	for position in candidate.formation:
+		var ship_result := _resolve_ship_selector(candidate.formation[position], true)
+		if not bool(ship_result.ok):
+			return _error("%s.formation.%s: %s" % [label, position, ship_result.error])
+		if str(ship_result.ship) != "":
+			formation[position] = ship_result.ship
+	normalized.formation = formation
+
+	var loadouts := {}
+	for ship_selector in candidate.loadouts:
+		var ship_result := _resolve_ship_selector(ship_selector, false)
+		if not bool(ship_result.ok):
+			return _error("Invalid %s.loadouts key: %s" % [label, ship_result.error])
+		var ship_type: String = ship_result.ship
+		if ship_type in loadouts:
+			return _error("Duplicate %s loadout after numeric conversion: %s" % [label, ship_type])
+		var source_loadout = candidate.loadouts[ship_selector]
+		if not source_loadout is Dictionary:
+			return _error("%s.loadouts.%s must be an object" % [label, ship_type])
+		var loadout: Dictionary = source_loadout.duplicate(true)
+		for slot in ["primary", "secondary"]:
+			var mod_result := _resolve_mod_selector(loadout.get(slot), ship_type, slot, allowed_mod_slots)
+			if not bool(mod_result.ok):
+				return _error("%s.loadouts.%s.%s: %s" % [label, ship_type, slot, mod_result.error])
+			loadout[slot] = mod_result.mod
+		loadouts[ship_type] = loadout
+	normalized.loadouts = loadouts
+	return {"ok": true, "candidate": normalized}
+
+
+func _resolve_ship_selector(value, allow_empty: bool) -> Dictionary:
+	if value == null:
+		return {"ok": allow_empty, "ship": "", "error": "null is only valid for an empty formation position"}
+	if typeof(value) in [TYPE_INT, TYPE_FLOAT]:
+		if float(value) != float(int(value)):
+			return {"ok": false, "ship": "", "error": "ship number must be an integer"}
+		var ship_number := int(value)
+		if ship_number == 0 and allow_empty:
+			return {"ok": true, "ship": "", "error": ""}
+		if ship_number not in SHIP_NUMBER_TO_ID:
+			return {"ok": false, "ship": "", "error": "ship number must be 1..4%s" % (" or 0/null" if allow_empty else "")}
+		return {"ok": true, "ship": SHIP_NUMBER_TO_ID[ship_number], "error": ""}
+	var ship_text := str(value).strip_edges()
+	if ship_text.is_valid_int():
+		return _resolve_ship_selector(ship_text.to_int(), allow_empty)
+	if ship_text in SHIP_NUMBER_TO_ID.values():
+		return {"ok": true, "ship": ship_text, "error": ""}
+	return {"ok": false, "ship": "", "error": "unknown ship '%s' (use Fighter/Corvette/Frigate/Cruiser or 1/2/3/4)" % ship_text}
+
+
+func _resolve_mod_selector(value, ship_type: String, slot: String, allowed_mod_slots: Dictionary) -> Dictionary:
+	if value == null:
+		return {"ok": true, "mod": null, "error": ""}
+	var selector = null
+	if typeof(value) in [TYPE_INT, TYPE_FLOAT]:
+		if float(value) != float(int(value)):
+			return {"ok": false, "mod": null, "error": "slot number must be an integer"}
+		selector = int(value)
+	elif value is String and str(value).strip_edges().is_valid_int():
+		selector = str(value).strip_edges().to_int()
+	else:
+		return {"ok": true, "mod": value, "error": ""}
+	if int(selector) == 0:
+		return {"ok": true, "mod": null, "error": ""}
+	var ship_slots = allowed_mod_slots.get(ship_type, {})
+	var options = ship_slots.get(slot, []) if ship_slots is Dictionary else []
+	if not options is Array or options.is_empty():
+		return {"ok": false, "mod": null, "error": "numeric slot selection requires allowed_mod_slots for %s.%s" % [ship_type, slot]}
+	if int(selector) < 0 or int(selector) >= options.size():
+		return {"ok": false, "mod": null, "error": "slot number must be 0..%d" % (options.size() - 1)}
+	return {"ok": true, "mod": options[int(selector)], "error": ""}
+
+
 func _validate_candidate(candidate: Dictionary, ships: Dictionary, label: String) -> String:
 	if not candidate.get("formation", {}) is Dictionary:
 		return "%s.formation must be an object keyed by A1..B5" % label
@@ -276,6 +378,46 @@ func _validate_candidate(candidate: Dictionary, ships: Dictionary, label: String
 			if mod_id != null and str(mod_id) not in db.fleet_mods:
 				return "Unknown %s Mod in original DB: %s" % [label, mod_id]
 	return ""
+
+
+func run_numeric_input_unit_tests(allowed_mod_slots: Dictionary) -> Dictionary:
+	var normalized := _normalize_candidate({
+		"enabled": true,
+		"formation": {
+			"A1": 1, "A2": "2", "A3": 3, "A4": 4, "A5": 0,
+			"B1": null, "B2": 2, "B3": 3, "B4": 0, "B5": 4,
+		},
+		"loadouts": {
+			"1": {"primary": 1, "secondary": 0},
+			"2": {"primary": 1, "secondary": 1},
+			"3": {"primary": 0, "secondary": 1},
+			"4": {"primary": 0, "secondary": 1},
+		},
+	}, "numeric_test", allowed_mod_slots)
+	var invalid_slot := _normalize_candidate({
+		"formation": {"A1": 1},
+		"loadouts": {"1": {"primary": 2, "secondary": 0}},
+	}, "numeric_invalid", allowed_mod_slots)
+	var candidate: Dictionary = normalized.get("candidate", {})
+	var passed: bool = (
+		bool(normalized.get("ok", false))
+		and candidate.get("formation", {}).get("A1") == "Fighter"
+		and candidate.get("formation", {}).get("A2") == "Corvette"
+		and candidate.get("formation", {}).get("A3") == "Frigate"
+		and candidate.get("formation", {}).get("A4") == "Cruiser"
+		and not candidate.get("formation", {}).has("A5")
+		and not candidate.get("formation", {}).has("B1")
+		and candidate.get("loadouts", {}).get("Fighter", {}).get("primary") == "FighterMiniRailgunMod"
+		and candidate.get("loadouts", {}).get("Corvette", {}).get("secondary") == "ShieldMod"
+		and candidate.get("loadouts", {}).get("Frigate", {}).get("secondary") == "ArmorMod"
+		and candidate.get("loadouts", {}).get("Cruiser", {}).get("secondary") == "CruiserSingleArmorTank"
+		and not bool(invalid_slot.get("ok", false))
+	)
+	return {
+		"passed": passed,
+		"normalized": normalized,
+		"invalid_slot": invalid_slot,
+	}
 
 
 func run_regression(probe: Node) -> Dictionary:

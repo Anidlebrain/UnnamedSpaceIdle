@@ -44,6 +44,8 @@ func _run() -> void:
 	var daily_optimizer := _has_argument("--daily-optimizer")
 	var friendly_path := _requested_friendly_config_path()
 	var run_friendly_regression := _has_argument("--friendly-regression")
+	var optimizer_v2_settings_path := _requested_optimizer_v2_settings_path()
+	var optimizer_v2_settings := _load_json(optimizer_v2_settings_path) if optimizer_v2_settings_path != "" else {}
 	var friendly := _load_json(friendly_path) if friendly_path != "" else {}
 	var common := _load_json(DAILY_COMMON_PATH) if daily_optimizer else {}
 	if daily_optimizer:
@@ -77,12 +79,24 @@ func _run() -> void:
 				var unit_optimizer := preload("res://fleet_optimizer_v2.gd").new()
 				add_child(unit_optimizer)
 				var unit_result: Dictionary = unit_optimizer.run_v22_logic_unit_tests()
-				var formation_text := _build_text_summary(_formation_text_fixture())
+				var numeric_resolver := preload("res://friendly_config_resolver.gd").new()
+				add_child(numeric_resolver)
+				unit_result["numeric_input"] = numeric_resolver.run_numeric_input_unit_tests(
+					optimizer_v2_settings.get("allowed_mod_slots", {}),
+				)
+				var formation_text := _build_text_summary(
+					_formation_text_fixture(),
+					optimizer_v2_settings.get("allowed_mod_slots", {}),
+				)
 				unit_result["formation_text"] = {
-					"passed": "A      Fr   Fr   Cr   Cr    .\nB       .    .    .    .    ." in formation_text,
+					"passed": "A       3    3    4    4    0\nB       0    0    0    0    0" in formation_text,
 					"text": formation_text,
 				}
-				unit_result.passed = bool(unit_result.passed) and bool(unit_result.formation_text.passed)
+				unit_result.passed = (
+					bool(unit_result.passed)
+					and bool(unit_result.numeric_input.passed)
+					and bool(unit_result.formation_text.passed)
+				)
 				_finish(unit_result, 0 if bool(unit_result.passed) else 9, V22_UNIT_RESULT_PATH)
 				return
 			if run_friendly_regression:
@@ -101,7 +115,11 @@ func _run() -> void:
 				var resolver := preload("res://friendly_config_resolver.gd").new()
 				add_child(resolver)
 				var resolver_started := Time.get_ticks_usec()
-				var resolution: Dictionary = resolver.resolve(friendly, common)
+				var resolution: Dictionary = resolver.resolve(
+					friendly,
+					common,
+					optimizer_v2_settings.get("allowed_mod_slots", {}),
+				)
 				if not bool(resolution.get("ok", false)):
 					if daily_optimizer:
 						_print_daily_error(str(resolution.get("error", "Friendly Config validation failed")))
@@ -114,11 +132,10 @@ func _run() -> void:
 				if daily_optimizer:
 					_print_daily_resolved(config)
 					_write_daily_resolved_config(config)
-			var optimizer_v2_settings_path := _requested_optimizer_v2_settings_path()
 			if optimizer_v2_settings_path != "":
 				var optimizer_v2 := preload("res://fleet_optimizer_search.gd").new()
 				add_child(optimizer_v2)
-				var optimizer_settings := _load_json(optimizer_v2_settings_path)
+				var optimizer_settings := optimizer_v2_settings.duplicate(true)
 				if config.has("optimizer"):
 					optimizer_settings.objective = config.optimizer.objective
 					optimizer_settings.boss_priority = config.optimizer.boss_priority
@@ -148,7 +165,11 @@ func _run() -> void:
 				)
 				if daily_optimizer:
 					if optimizer_v2_ok:
-						var daily_result_path := _write_daily_optimizer_result(optimizer_v2_summary, config)
+						var daily_result_path := _write_daily_optimizer_result(
+							optimizer_v2_summary,
+							config,
+							optimizer_settings.get("allowed_mod_slots", {}),
+						)
 						_print_daily_finished(optimizer_v2_summary, daily_result_path)
 					else:
 						var failure_message := str(optimizer_v2_summary.get(
@@ -674,7 +695,7 @@ func _write_daily_resolved_config(config: Dictionary) -> void:
 	_write_result(path, config)
 
 
-func _write_daily_optimizer_result(summary: Dictionary, config: Dictionary) -> String:
+func _write_daily_optimizer_result(summary: Dictionary, config: Dictionary, allowed_mod_slots: Dictionary) -> String:
 	var output_dir := _requested_daily_output_dir()
 	DirAccess.make_dir_recursive_absolute(output_dir)
 	var now := Time.get_datetime_dict_from_system()
@@ -712,7 +733,7 @@ func _write_daily_optimizer_result(summary: Dictionary, config: Dictionary) -> S
 	var compact := _build_compact_summary(summary, config)
 	_write_result(compact_path, compact)
 	var format_started := Time.get_ticks_usec()
-	var readable_summary := _build_text_summary(compact)
+	var readable_summary := _build_text_summary(compact, allowed_mod_slots)
 	_output_profile.text_format_ms += (Time.get_ticks_usec() - format_started) / 1000.0
 	_write_text(text_path, readable_summary)
 	if node_result_path != "":
@@ -796,7 +817,7 @@ func _compact_candidate(candidate: Dictionary) -> Dictionary:
 	}
 
 
-func _build_text_summary(compact: Dictionary) -> String:
+func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}) -> String:
 	var lines: Array[String] = []
 	lines.append("Galaxy %s / %s" % [compact.get("galaxy", "?"), compact.get("node", "?")])
 	lines.append("Status: %s" % compact.get("status", "SEARCHED BEST"))
@@ -845,13 +866,17 @@ func _build_text_summary(compact: Dictionary) -> String:
 	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser"]:
 		var count := int(best.get("composition", {}).get(ship_type, 0))
 		if count > 0:
-			lines.append("  %s x%d" % [ship_type, count])
+			lines.append("  %s x%d" % [_ship_number_text(ship_type), count])
 	lines.append("")
 	lines.append("Mods:")
-	for ship_type in best.get("loadouts", {}):
+	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser"]:
+		if ship_type not in best.get("loadouts", {}):
+			continue
 		var loadout: Dictionary = best.loadouts[ship_type]
 		lines.append("  %s: Primary=%s; Secondary=%s" % [
-			ship_type, _mod_text(loadout.get("primary")), _mod_text(loadout.get("secondary")),
+			_ship_number_text(ship_type),
+			_mod_number_text(loadout.get("primary"), ship_type, "primary", allowed_mod_slots),
+			_mod_number_text(loadout.get("secondary"), ship_type, "secondary", allowed_mod_slots),
 		])
 	lines.append("")
 	lines.append("Formation:")
@@ -860,9 +885,9 @@ func _build_text_summary(compact: Dictionary) -> String:
 		var cells: Array[String] = []
 		for column in range(1, 6):
 			var ship_type := str(best.get("formation", {}).get("%s%d" % [row, column], ""))
-			cells.append(_ship_abbreviation(ship_type))
+			cells.append(_ship_number_text(ship_type))
 		lines.append("%s    %4s %4s %4s %4s %4s" % [row, cells[0], cells[1], cells[2], cells[3], cells[4]])
-	lines.append("  Fi=Fighter  Co=Corvette  Fr=Frigate  Cr=Cruiser")
+	lines.append("  0=empty; ship IDs: 1 / 2 / 3 / 4")
 	lines.append("")
 	lines.append("FR: Committed/Battle=%s; Used/Battle=%s" % [best.get("committed_fr", "n/a"), best.get("used_fr", "n/a")])
 	if compact.get("objective") == "boss":
@@ -891,12 +916,20 @@ func _effect_detail_text(detail: Dictionary) -> String:
 	]
 
 
-func _ship_abbreviation(ship_type: String) -> String:
-	return {"Fighter": "Fi", "Corvette": "Co", "Frigate": "Fr", "Cruiser": "Cr"}.get(ship_type, ".")
+func _ship_number_text(ship_type: String) -> String:
+	return {"Fighter": "1", "Corvette": "2", "Frigate": "3", "Cruiser": "4"}.get(ship_type, "0")
 
 
-func _mod_text(value) -> String:
-	return "none" if value == null or str(value) == "" else str(value)
+func _mod_number_text(value, ship_type: String, slot: String, allowed_mod_slots: Dictionary) -> String:
+	if value == null or str(value) == "":
+		return "0"
+	var ship_slots = allowed_mod_slots.get(ship_type, {})
+	var options = ship_slots.get(slot, []) if ship_slots is Dictionary else []
+	if options is Array:
+		for index in range(options.size()):
+			if options[index] == value:
+				return str(index)
+	return "?"
 
 
 func _formation_text_fixture() -> Dictionary:
