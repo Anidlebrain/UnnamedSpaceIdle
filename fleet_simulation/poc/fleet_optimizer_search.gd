@@ -781,6 +781,13 @@ func _replay_field_matches(key: String, search_value, replay_value) -> bool:
 			roundi(float(search_value) * Engine.physics_ticks_per_second)
 			== roundi(float(replay_value) * Engine.physics_ticks_per_second)
 		)
+	if key in ["fleet_resources_used", "fleet_resources_committed", "boss_damage", "player_remaining_health"]:
+		# Worker results cross a JSON/process boundary. Preserve strict null handling,
+		# but do not reject the same native result for a floating-point tail that is
+		# shorter than the value printed in the failure diagnostic.
+		if search_value == null or replay_value == null:
+			return search_value == replay_value
+		return is_equal_approx(float(search_value), float(replay_value))
 	return search_value == replay_value
 
 

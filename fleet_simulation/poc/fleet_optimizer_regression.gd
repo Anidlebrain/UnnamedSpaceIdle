@@ -51,6 +51,9 @@ func run(probe: Node) -> Dictionary:
 	check("normal ranks Used before committed", optimizer._rank_before(a, b))
 	optimizer._settings = {"simulation_clock": "offline_fixed_step"}
 	check("offline replay compares simulation time by physics tick", optimizer._replay_field_matches("simulation_time", 11.23333333333349, 11.23333333333351))
+	check("native replay accepts JSON float tails", optimizer._replay_field_matches("player_remaining_health", 528.5075000000001, 528.5074999999999))
+	check("native replay rejects material numeric differences", not optimizer._replay_field_matches("player_remaining_health", 528.5075, 528.5175))
+	check("native replay keeps null distinct from zero", not optimizer._replay_field_matches("boss_damage", null, 0.0))
 	optimizer.objective = "boss"
 	optimizer.boss_priority = "efficiency"
 	b.outcome = "lose"

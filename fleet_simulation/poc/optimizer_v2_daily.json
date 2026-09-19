@@ -71,7 +71,8 @@
     },
     "HeavyCruiser": {
       "primary": [
-        null
+        null,
+        "HeavyCruiserBeamMod"
       ],
       "secondary": [
         null
