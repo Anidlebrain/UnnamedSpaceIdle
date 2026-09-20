@@ -119,8 +119,8 @@ Kill Cost 最佳序列的实际 HP 为 3500 → 2681 → 1862 → 1043 → 224 �
 复现单轮：
 
 ```powershell
-python fleet_simulation/tools/benchmark_optimizer.py --label my_b13 --case b13
-python fleet_simulation/tools/benchmark_optimizer.py --label my_boss --case boss_kill
+python fleetSimulation/tools/benchmark_optimizer.py --label my_b13 --case b13
+python fleetSimulation/tools/benchmark_optimizer.py --label my_boss --case boss_kill
 ```
 
 label 必须唯一，避免覆盖既有证据。工具只 staging 到隔离 recovered 工程，输出到 results/optimizer_v3；不同轮次不能同时运行，因为使用同一个 staging 目录。`--settings` 可以指定受限搜索空间，`--source` 可以指定已有源码快照。完整原始日志保留在本地；精简可审计结果见 `results/optimizer_v3_benchmark_summary.json`。

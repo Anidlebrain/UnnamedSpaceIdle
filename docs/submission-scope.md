@@ -7,9 +7,9 @@
    - custom.csv、pending.csv、review.csv 和 test_patch.csv 分别保存正式自定义翻译、待处理建议、人工复核项和测试补丁。
    - scripts/validate-translations.ps1 与 scripts/validate-final-translations.ps1 负责技术校验；校验内容包括占位符、标签、换行、转义符、数字和公式。
 
-2. 星系舰队模拟：fleet_simulation/docs/、fleet_simulation/poc/、fleet_simulation/tools/、fleet_simulation/run_optimizer.bat、fleet_simulation/config.json、fleet_simulation/README.md 及选定的稳定回归结果。
+2. 星系舰队模拟：fleetSimulation/docs/、fleetSimulation/poc/、fleetSimulation/tools/、fleetSimulation/run_optimizer.bat、fleetSimulation/config.json、fleetSimulation/README.md 及选定的稳定回归结果。
    - poc/ 是模拟器与优化器源代码，map/ 是面向用户的 Galaxy/Node 输入，tools/ 是 Godot 进程适配器。
-   - fleet_simulation/work/full_recovered/ 是从本机原版 PCK 恢复的隔离运行时，不属于远端提交；模拟器运行仍需要用户在本机准备兼容的 Godot 4.7.2 恢复工程。
+   - fleetSimulation/work/full_recovered/ 是从本机原版 PCK 恢复的隔离运行时，不属于远端提交；模拟器运行仍需要用户在本机准备兼容的 Godot 4.7.2 恢复工程。
    - results/ 只保留稳定、可审计的回归证据；时间戳运行结果、latest.* 和 worker 输出属于本机产物。
 
 ## 不提交的文件
@@ -20,8 +20,8 @@
 - backup/：原版 SpaceIdle.pck 及其备份元数据。
 - translation/work/：提取、转换、批次输入输出和日志。
 - translation/output/：测试/正式 PCK 构建产物及构建元数据。
-- fleet_simulation/work/：原版恢复脚本、数据和运行时文件。
-- fleet_simulation/map/：本机 Galaxy/Node 输入文件，按要求不纳入 Git。
+- fleetSimulation/work/：原版恢复脚本、数据和运行时文件。
+- fleetSimulation/map/：本机 Galaxy/Node 输入文件，按要求不纳入 Git。
 - *.log、地图运行结果、时间戳结果、latest.* 和多 worker 临时结果。
 - 任何 Steam 游戏目录、存档或原版 PCK。项目规则禁止自动安装或替换这些文件。
 
@@ -34,7 +34,7 @@
     .\scripts\init.ps1
     .\scripts\validate-translations.ps1
     .\scripts\validate-final-translations.ps1
-    .\fleet_simulation\run_optimizer.bat g6 B8
+    .\fleetSimulation\run_optimizer.bat g6 B8
 
 翻译脚本只检查项目副本和翻译数据；舰队模拟器把输入和 PoC 脚本复制到隔离 Godot 工程后运行。上述命令不会自动修改 Steam 游戏目录，也不会安装 PCK。
 
@@ -45,4 +45,4 @@
     git diff --cached --stat
     git diff --cached --check
 
-提交前应确认暂存区中没有 SpaceIdle.pck、config.local.json、translation/output/、translation/work/ 或 fleet_simulation/work/。
+提交前应确认暂存区中没有 SpaceIdle.pck、config.local.json、translation/output/、translation/work/ 或 fleetSimulation/work/。

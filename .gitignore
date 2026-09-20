@@ -12,29 +12,29 @@ translation/output/*
 backup/*
 !backup/.gitkeep
 
-fleet_simulation/work/*
+fleetSimulation/work/*
 
-fleet_simulation/map/*
-!fleet_simulation/work/.gitkeep
+fleetSimulation/map/*
+!fleetSimulation/work/.gitkeep
 
-fleet_simulation/map/**/*.result.json
-fleet_simulation/map/**/*.result.txt
+fleetSimulation/map/**/*.result.json
+fleetSimulation/map/**/*.result.txt
 
-fleet_simulation/results/*.json
-fleet_simulation/results/*.txt
-!fleet_simulation/results/determinism_test.json
-!fleet_simulation/results/determinism_offline_fixed_step_bb3_20.json
-!fleet_simulation/results/friendly_config_regression.json
-!fleet_simulation/results/support_config_regression.json
-!fleet_simulation/results/clock_regression_realtime.json
-!fleet_simulation/results/clock_regression_offline_fixed_step.json
-!fleet_simulation/results/fleet_test_result.json
-!fleet_simulation/results/optimizer_v2_boss_objective_regression.json
-!fleet_simulation/results/optimizer_v2_boss_affordability_regression.json
-!fleet_simulation/results/optimizer_v2_overdeploy_tests.json
-!fleet_simulation/results/optimizer_v2_bb3_fixed_regression.json
-!fleet_simulation/results/optimizer_v22_unit_tests.json
-!fleet_simulation/results/performance_benchmark_b35_offline_fixed_step.json
+fleetSimulation/results/*.json
+fleetSimulation/results/*.txt
+!fleetSimulation/results/determinism_test.json
+!fleetSimulation/results/determinism_offline_fixed_step_bb3_20.json
+!fleetSimulation/results/friendly_config_regression.json
+!fleetSimulation/results/support_config_regression.json
+!fleetSimulation/results/clock_regression_realtime.json
+!fleetSimulation/results/clock_regression_offline_fixed_step.json
+!fleetSimulation/results/fleet_test_result.json
+!fleetSimulation/results/optimizer_v2_boss_objective_regression.json
+!fleetSimulation/results/optimizer_v2_boss_affordability_regression.json
+!fleetSimulation/results/optimizer_v2_overdeploy_tests.json
+!fleetSimulation/results/optimizer_v2_bb3_fixed_regression.json
+!fleetSimulation/results/optimizer_v22_unit_tests.json
+!fleetSimulation/results/performance_benchmark_b35_offline_fixed_step.json
 
 output/*
 !output/.gitkeep
@@ -45,8 +45,8 @@ tools/*
 *.log
 *.tmp
 
-fleet_simulation/results/*/
+fleetSimulation/results/*/
 
 backup/.gitkeep
 
-!fleet_simulation/results/optimizer_v3_benchmark_summary.json
+!fleetSimulation/results/optimizer_v3_benchmark_summary.json

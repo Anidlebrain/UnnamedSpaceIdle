@@ -12,7 +12,7 @@ Phase 2：PCK 与本地化结构验证已完成。原版 PCK 已按 SHA-256 备�
 
 - `config/`：本机配置；`config.local.json` 不提交
 - `translation/`：翻译子项目；包含词典、正式数据、工作区、输出、状态和本地化文档
-- `fleet_simulation/`：Fleet Battle 原生模拟复用研究；包含侦察报告、最小 PoC 和本地恢复工作区
+- `fleetSimulation/`：Fleet Battle 原生模拟复用研究；包含侦察报告、最小 PoC 和本地恢复工作区
 - `status/`：游戏/PCK 基础分析等通用状态
 - `docs/`：通用项目文档；翻译报告位于 `translation/docs/`
 - `scripts/`：检测、校验、备份、安装和恢复脚本
@@ -48,4 +48,4 @@ Phase 2：PCK 与本地化结构验证已完成。原版 PCK 已按 SHA-256 备�
 
 ## 提交范围
 
-项目的可提交功能分为两块：translation/ 负责本地化数据、占位符校验和测试 PCK 流程；fleet_simulation/ 负责基于原版 Fleet Battle 场景的参数化模拟与舰队优化。提交边界和本机派生文件的处理方式见 docs/submission-scope.md。
+项目的可提交功能分为两块：translation/ 负责本地化数据、占位符校验和测试 PCK 流程；fleetSimulation/ 负责基于原版 Fleet Battle 场景的参数化模拟与舰队优化。提交边界和本机派生文件的处理方式见 docs/submission-scope.md。

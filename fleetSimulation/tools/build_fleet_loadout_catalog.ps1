@@ -217,7 +217,7 @@ $catalog = [ordered]@{
     catalog_version = 1
     game_version = "0.85.1.0"
     generated_from = [ordered]@{
-        game_data = "fleet_simulation/work/recovered_data/game_data.cdb"
+        game_data = "fleetSimulation/work/recovered_data/game_data.cdb"
         fleet_code = @(
             "fleet/Fleet.gd:get_fleet_ships_available",
             "fleet/Fleet.gd:get_ship_mods",

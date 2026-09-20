@@ -288,10 +288,10 @@ Godot 4.7.2 隔离 Runner
 
 截至本阶段只做了以下变更：
 
-- 新建 `fleet_simulation/` 模块；
-- 从项目内原版 PCK 备份以 `--scripts-only` 恢复 836 个脚本到 `fleet_simulation/work/recovered_scripts/`；
-- 从同一备份只提取 `game_data.cdb` 到 `fleet_simulation/work/recovered_data/`；
-- 从同一项目备份完整恢复到 `fleet_simulation/work/full_recovered/`，并仅在该副本中加入测试 Runner、隔离项目设置和 PoC；
+- 新建 `fleetSimulation/` 模块；
+- 从项目内原版 PCK 备份以 `--scripts-only` 恢复 836 个脚本到 `fleetSimulation/work/recovered_scripts/`；
+- 从同一备份只提取 `game_data.cdb` 到 `fleetSimulation/work/recovered_data/`；
+- 从同一项目备份完整恢复到 `fleetSimulation/work/full_recovered/`，并仅在该副本中加入测试 Runner、隔离项目设置和 PoC；
 - 新增本报告、模块 README、已运行的 PoC 与 `results/fleet_test_result.json`；
 - 在根 README 增加模块目录说明。
 
