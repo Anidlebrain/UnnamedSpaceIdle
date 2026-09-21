@@ -1,6 +1,6 @@
 # Unnamed Space Idle 舰队优化器管理器
 
-这是舰队优化器管理应用的 Phase 2 实现，基于 Electron、React、Vite、TypeScript、Zod 和 Vitest。
+这是舰队优化器管理应用的 APP V1 封板实现（包含 Phase 1、Phase 2 和当前 Phase 4 工作台能力），基于 Electron、React、Vite、TypeScript、Zod 和 Vitest。
 
 ## 已实现范围
 
@@ -14,6 +14,11 @@
 - 人工新建、复制、编辑、重命名、删除、切换 Common，并设置默认 Common。
 - 将当前 Node Version 保存为人工模板，并从模板或任意当前 Node Version 创建新 Node；创建时仅重写 Galaxy/Node 身份。
 - 复用现有 `run_optimizer.bat <galaxy> <node> --c` 应用 Best Found；只有 BAT 成功且修改后的 Node JSON 通过结构与身份校验后，才原子覆盖当前 Manager Version。
+- 串行重跑当前 Galaxy 的全部 Node 默认 Version，并统一使用该 Galaxy 的默认 Common；整批任务持有现有全局 Optimizer 锁。
+- 批量结果按 `formation_key`（缺失时回退到结构化 Formation/Loadout diff）过滤，仅重点列出需要重新配置的节点；失败节点独立显示且不会复用旧 Result。
+- Galaxy 重跑只做变化发现，不执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found。
+- Phase 4 工作台 UI：结构化 Formation / Loadout / Common 编辑、选择上下文、保存状态、Best Found / Diff、模板与 Galaxy 重跑均以中文日常操作为主，Raw JSON 收入高级区。
+- Renderer 同时支持 Electron preload 和标准浏览器运行时。浏览器工作区使用 `localStorage` 持久化配置，可用于网页部署与 UI 工作流；真实本地 Optimizer 执行仍由桌面 Main 进程负责，后续网页部署需要受控的本地服务或服务端执行器。
 
 应用层不重新实现战斗模拟、搜索算法或结果复制逻辑，也不会自动安装 PCK、修改 Steam 游戏目录或覆盖已有正式配置。
 

@@ -174,6 +174,37 @@ export class DataRepository {
     }
   }
 
+  async galaxyDefaultSelections(galaxy: string): Promise<Selection[]> {
+    const root = this.galaxyPath(galaxy)
+    let commonMeta
+    let nodeDirs
+    try {
+      commonMeta = commonMetaSchema.parse(await readJson(join(root, 'common', 'meta.json')))
+      nodeDirs = await readdir(join(root, 'nodes'), { withFileTypes: true })
+    } catch (error) {
+      if (missing(error)) throw new Error(`Galaxy ${galaxy} does not exist or is incomplete in Manager data.`)
+      throw error
+    }
+    if (!commonMeta.profiles.some(item => item.id === commonMeta.default_profile))
+      throw new Error(`${galaxy} has no valid default Common configuration.`)
+    commonConfigSchema.parse(await readJson(join(root, 'common', 'versions', `${commonMeta.default_profile}.json`)))
+    const nodes = nodeDirs.filter(item => item.isDirectory())
+    nodes.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }))
+    return Promise.all(
+      nodes.map(async node => {
+        const meta = versionMetaSchema.parse(await readJson(join(root, 'nodes', node.name, 'meta.json')))
+        if (!meta.versions.some(item => item.id === meta.default_version))
+          throw new Error(`${galaxy}/${node.name} has no valid default Version.`)
+        return {
+          galaxy,
+          node: node.name,
+          version: meta.default_version,
+          common: commonMeta.default_profile,
+        }
+      }),
+    )
+  }
+
   async load(selection: Selection): Promise<{ node: NodeConfig; common: CommonConfig }> {
     this.validateSelection(selection)
     const node = nodeConfigSchema.parse(

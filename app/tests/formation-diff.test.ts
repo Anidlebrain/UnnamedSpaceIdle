@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { diffFormation } from '../src/shared/formation-diff'
+import { diffFormation, hasFormationOrLoadoutChange } from '../src/shared/formation-diff'
 type Entry = {
   position: string
   ship: string
@@ -30,4 +30,21 @@ describe('diffFormation', () => {
       ).length,
     ).toBeGreaterThan(0),
   )
+})
+
+describe('hasFormationOrLoadoutChange', () => {
+  it('prefers standardized formation_key and ignores FR-only changes', () => {
+    const baseline = { ...candidate({ position: 'A1', ship: 'Fighter' }, 10), formation_key: 'same-key' }
+    const best = { ...candidate({ position: 'A1', ship: 'Fighter' }, 5), formation_key: 'same-key' }
+    expect(hasFormationOrLoadoutChange(baseline, best)).toBe(false)
+    expect(hasFormationOrLoadoutChange(baseline, { ...best, formation_key: 'changed-key' })).toBe(true)
+  })
+  it('falls back to structured Formation and Loadout fields when keys are absent', () => {
+    expect(
+      hasFormationOrLoadoutChange(
+        candidate({ position: 'A1', ship: 'Fighter', secondary_mod: null }),
+        candidate({ position: 'A1', ship: 'Fighter', secondary_mod: 'Shield' }),
+      ),
+    ).toBe(true)
+  })
 })

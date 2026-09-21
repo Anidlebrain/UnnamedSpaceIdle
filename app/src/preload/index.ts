@@ -5,6 +5,7 @@ import { FLEET_MANAGER_BRIDGE_NAME } from '../shared/bridge'
 const isDevelopment = process.env.NODE_ENV === 'development'
 if (isDevelopment) console.info('[preload] started')
 const api: FleetManagerApi = {
+  runtime: 'desktop',
   previewImport: () => ipcRenderer.invoke('data:preview-import'),
   importMap: () => ipcRenderer.invoke('data:import'),
   catalog: () => ipcRenderer.invoke('data:catalog'),
@@ -24,11 +25,17 @@ const api: FleetManagerApi = {
   deleteTemplate: id => ipcRenderer.invoke('template:delete', id),
   createNode: request => ipcRenderer.invoke('node:create', request),
   run: selection => ipcRenderer.invoke('optimizer:run', selection),
+  rerunGalaxy: galaxy => ipcRenderer.invoke('optimizer:rerun-galaxy', galaxy),
   useBest: selection => ipcRenderer.invoke('optimizer:use-best', selection),
   onOutput: listener => {
     const handler = (_: Electron.IpcRendererEvent, line: string) => listener(line)
     ipcRenderer.on('optimizer:output', handler)
     return () => ipcRenderer.removeListener('optimizer:output', handler)
+  },
+  onGalaxyProgress: listener => {
+    const handler = (_: Electron.IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress)
+    ipcRenderer.on('galaxy-rerun:progress', handler)
+    return () => ipcRenderer.removeListener('galaxy-rerun:progress', handler)
   },
 }
 contextBridge.exposeInMainWorld(FLEET_MANAGER_BRIDGE_NAME, api)

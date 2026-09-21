@@ -18,7 +18,12 @@ describe('preload bridge contract', () => {
     await import('../src/preload/index')
     expect(exposeInMainWorld).toHaveBeenCalledWith(
       FLEET_MANAGER_BRIDGE_NAME,
-      expect.objectContaining({ catalog: expect.any(Function), onOutput: expect.any(Function) }),
+      expect.objectContaining({
+        catalog: expect.any(Function),
+        rerunGalaxy: expect.any(Function),
+        onOutput: expect.any(Function),
+        onGalaxyProgress: expect.any(Function),
+      }),
     )
     const api = exposeInMainWorld.mock.calls[0][1] as { onOutput: (listener: (line: string) => void) => () => void }
     const unsubscribe = api.onOutput(vi.fn())

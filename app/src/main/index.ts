@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { is } from '@electron-toolkit/utils'
 import { DataRepository } from './services/data-repository'
 import { OptimizerRunner } from './services/optimizer-runner'
+import { GalaxyRerunService } from './services/galaxy-rerun'
 import type { CreateNodeRequest, Selection } from '../shared/contracts'
 import { commonConfigSchema, nodeConfigSchema } from '../shared/schemas'
 
@@ -22,6 +23,9 @@ const repo = new DataRepository(dataRoot, join(projectRoot, '..', 'fleetSimulati
 let window: BrowserWindow | undefined
 const runner = new OptimizerRunner(repo, join(projectRoot, '..', 'fleetSimulation'), line =>
   window?.webContents.send('optimizer:output', line),
+)
+const galaxyRerun = new GalaxyRerunService(repo, runner, progress =>
+  window?.webContents.send('galaxy-rerun:progress', progress),
 )
 function createWindow() {
   if (is.dev) console.info('[preload-path]', { preloadPath, exists: existsSync(preloadPath), mainUrl, mainDirectory })
@@ -69,6 +73,7 @@ app.whenReady().then(() => {
   ipcMain.handle('template:delete', (_, id: string) => repo.deleteTemplate(id))
   ipcMain.handle('node:create', (_, request: CreateNodeRequest) => repo.createNode(request))
   ipcMain.handle('optimizer:run', (_, selection: Selection) => runner.run(selection))
+  ipcMain.handle('optimizer:rerun-galaxy', (_, galaxy: string) => galaxyRerun.run(galaxy))
   ipcMain.handle('optimizer:use-best', (_, selection: Selection) => runner.useBest(selection))
   createWindow()
   app.on('activate', () => {

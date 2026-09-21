@@ -15,71 +15,40 @@ export class OptimizerRunner {
     private readonly executor?: (selection: Selection, mode: 'search' | 'copy') => Promise<number>,
   ) {}
   async run(selection: Selection): Promise<RunResult> {
-    if (this.running)
-      throw new Error('An Optimizer task is already running. Wait for it to finish before starting another task.')
-    this.running = true
-    const startedAt = new Date().toISOString()
-    const map = join(this.optimizerRoot, 'map', selection.galaxy)
-    const resultPath = join(map, `${selection.node.replace(/_num$/i, '')}.result.json`)
+    this.acquire()
     try {
-      const staged = await this.repo.stage(selection)
-      const before = await this.snapshot(resultPath)
-      const nodeHash = this.hash(staged.node)
-      const commonHash = this.hash(staged.common)
-      await this.taskSnapshot(selection, startedAt, nodeHash, commonHash, before)
-      this.emit(
-        `Staged ${selection.galaxy}/${selection.node}; node ${nodeHash.slice(0, 12)}, common ${commonHash.slice(0, 12)}\n`,
-      )
-      const exitCode = await (this.executor ? this.executor(selection, 'search') : this.execute(selection, 'search'))
-      if (exitCode !== 0)
-        return {
-          exitCode,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          error: `Optimizer exited with code ${exitCode}.`,
+      return await this.runUnlocked(selection)
+    } finally {
+      this.running = false
+    }
+  }
+  async runQueue(
+    selections: Selection[],
+    onStart: (selection: Selection) => void,
+    onComplete: (selection: Selection, result: RunResult) => void,
+  ): Promise<RunResult[]> {
+    this.acquire()
+    const results: RunResult[] = []
+    try {
+      for (const selection of selections) {
+        onStart(selection)
+        let result: RunResult
+        try {
+          result = await this.runUnlocked(selection)
+        } catch (error) {
+          const time = new Date().toISOString()
+          result = { exitCode: -1, startedAt: time, finishedAt: time, error: (error as Error).message }
         }
-      const after = await this.snapshot(resultPath)
-      if (!after || (before !== undefined && (after.mtimeMs <= before.mtimeMs || after.hash === before.hash)))
-        return {
-          exitCode,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          error: 'Optimizer exited successfully but did not create changed result content for this task.',
-        }
-      let result: OptimizerResult
-      try {
-        result = optimizerResultSchema.parse(JSON.parse(await readFile(resultPath, 'utf8')))
-      } catch (error) {
-        return {
-          exitCode,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          error: `New result is invalid: ${(error as Error).message}`,
-        }
+        results.push(result)
+        onComplete(selection, result)
       }
-      const base = result.base_config as
-        { resolver?: { friendly_input?: { galaxy?: number; node?: string } } } | undefined
-      const identity = base?.resolver?.friendly_input
-      if (
-        identity &&
-        (identity.galaxy !== Number(selection.galaxy.slice(1)) ||
-          identity.node?.toLowerCase() !== selection.node.toLowerCase())
-      )
-        return {
-          exitCode,
-          startedAt,
-          finishedAt: new Date().toISOString(),
-          error: 'New result identity does not match selected Galaxy / Node.',
-        }
-      return { exitCode, startedAt, finishedAt: new Date().toISOString(), result }
+      return results
     } finally {
       this.running = false
     }
   }
   async useBest(selection: Selection): Promise<CopyResult> {
-    if (this.running)
-      throw new Error('An Optimizer task is already running. Wait for it to finish before starting another task.')
-    this.running = true
+    this.acquire()
     const startedAt = new Date().toISOString()
     try {
       await this.repo.stage(selection)
@@ -108,6 +77,66 @@ export class OptimizerRunner {
     } finally {
       this.running = false
     }
+  }
+  private acquire() {
+    if (this.running)
+      throw new Error('An Optimizer task is already running. Wait for it to finish before starting another task.')
+    this.running = true
+  }
+  private async runUnlocked(selection: Selection): Promise<RunResult> {
+    const startedAt = new Date().toISOString()
+    const map = join(this.optimizerRoot, 'map', selection.galaxy)
+    const resultPath = join(map, `${selection.node.replace(/_num$/i, '')}.result.json`)
+    const staged = await this.repo.stage(selection)
+    const before = await this.snapshot(resultPath)
+    const nodeHash = this.hash(staged.node)
+    const commonHash = this.hash(staged.common)
+    await this.taskSnapshot(selection, startedAt, nodeHash, commonHash, before)
+    this.emit(
+      `Staged ${selection.galaxy}/${selection.node}; node ${nodeHash.slice(0, 12)}, common ${commonHash.slice(0, 12)}\n`,
+    )
+    const exitCode = await (this.executor ? this.executor(selection, 'search') : this.execute(selection, 'search'))
+    if (exitCode !== 0)
+      return {
+        exitCode,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        error: `Optimizer exited with code ${exitCode}.`,
+      }
+    const after = await this.snapshot(resultPath)
+    if (!after || (before !== undefined && (after.mtimeMs <= before.mtimeMs || after.hash === before.hash)))
+      return {
+        exitCode,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        error: 'Optimizer exited successfully but did not create changed result content for this task.',
+      }
+    let result: OptimizerResult
+    try {
+      result = optimizerResultSchema.parse(JSON.parse(await readFile(resultPath, 'utf8')))
+    } catch (error) {
+      return {
+        exitCode,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        error: `New result is invalid: ${(error as Error).message}`,
+      }
+    }
+    const base = result.base_config as
+      { resolver?: { friendly_input?: { galaxy?: number; node?: string } } } | undefined
+    const identity = base?.resolver?.friendly_input
+    if (
+      identity &&
+      (identity.galaxy !== Number(selection.galaxy.slice(1)) ||
+        identity.node?.toLowerCase() !== selection.node.toLowerCase())
+    )
+      return {
+        exitCode,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        error: 'New result identity does not match selected Galaxy / Node.',
+      }
+    return { exitCode, startedAt, finishedAt: new Date().toISOString(), result }
   }
   private hash(value: unknown) {
     return createHash('sha256').update(JSON.stringify(value)).digest('hex')

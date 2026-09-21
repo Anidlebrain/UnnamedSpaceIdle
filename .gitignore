@@ -1,5 +1,9 @@
 config/config.local.json
 
+# Codex/local design-tool resources; never part of the project submission.
+.agents/
+app/.hallmark/
+
 work/*
 !work/.gitkeep
 

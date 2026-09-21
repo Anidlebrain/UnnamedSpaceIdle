@@ -19,6 +19,27 @@ export type RunResult = {
   result?: OptimizerResult
   error?: string
 }
+export type GalaxyRerunNode = {
+  node: string
+  version: string
+  common: string
+  status: 'queued' | 'running' | 'succeeded' | 'failed'
+  startedAt?: string
+  finishedAt?: string
+  changed?: boolean
+  run?: RunResult
+  error?: string
+}
+export type GalaxyRerunProgress = {
+  galaxy: string
+  status: 'running' | 'completed'
+  total: number
+  completed: number
+  currentNode?: string
+  startedAt: string
+  finishedAt?: string
+  nodes: GalaxyRerunNode[]
+}
 export type CopyResult = { exitCode: number; startedAt: string; finishedAt: string; node?: NodeConfig; error?: string }
 export type CreateNodeRequest = {
   galaxy: string
@@ -27,6 +48,7 @@ export type CreateNodeRequest = {
   source: { type: 'selection'; selection: Selection } | { type: 'template'; template: string }
 }
 export type FleetManagerApi = {
+  runtime?: 'desktop' | 'web'
   previewImport(): Promise<ImportPreview>
   importMap(): Promise<void>
   catalog(): Promise<Catalog>
@@ -46,6 +68,8 @@ export type FleetManagerApi = {
   deleteTemplate(id: string): Promise<void>
   createNode(request: CreateNodeRequest): Promise<{ node: string; version: string }>
   run(selection: Selection): Promise<RunResult>
+  rerunGalaxy(galaxy: string): Promise<GalaxyRerunProgress>
   useBest(selection: Selection): Promise<CopyResult>
   onOutput(listener: (line: string) => void): () => void
+  onGalaxyProgress(listener: (progress: GalaxyRerunProgress) => void): () => void
 }

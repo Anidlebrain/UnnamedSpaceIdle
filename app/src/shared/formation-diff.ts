@@ -31,3 +31,13 @@ export function diffFormation(
   }
   return changes
 }
+
+export function hasFormationOrLoadoutChange(
+  baseline: Candidate | null | undefined,
+  best: Candidate | null | undefined,
+): boolean {
+  if (!baseline || !best) return false
+  if (baseline.formation_key !== undefined && best.formation_key !== undefined)
+    return baseline.formation_key !== best.formation_key
+  return diffFormation(baseline, best).length > 0
+}

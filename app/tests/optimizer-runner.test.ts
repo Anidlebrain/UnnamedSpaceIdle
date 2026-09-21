@@ -103,6 +103,37 @@ describe('OptimizerRunner', () => {
     expect(out.join()).toContain('stderr')
     await rm(x.root, { recursive: true, force: true })
   })
+  it('holds the same global lock for an entire serial queue', async () => {
+    const x = await setup()
+    let release!: () => void
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      () =>
+        new Promise(resolve => {
+          release = () => resolve(3)
+        }),
+    )
+    const queue = runner.runQueue(
+      [x.s],
+      () => {},
+      () => {},
+    )
+    await new Promise(resolve => setTimeout(resolve, 20))
+    await expect(runner.run(x.s)).rejects.toThrow('already running')
+    await expect(runner.useBest(x.s)).rejects.toThrow('already running')
+    await expect(
+      runner.runQueue(
+        [x.s],
+        () => {},
+        () => {},
+      ),
+    ).rejects.toThrow('already running')
+    release()
+    await queue
+    await rm(x.root, { recursive: true, force: true })
+  })
 })
 
 describe('Best Found copy transaction', () => {
