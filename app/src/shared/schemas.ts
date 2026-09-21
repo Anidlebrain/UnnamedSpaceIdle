@@ -15,6 +15,7 @@ export const nodeConfigSchema = jsonObject.extend({
 export const commonConfigSchema = jsonObject.extend({ permanent: scaleSchema, temporary: scaleSchema })
 export const versionMetaSchema = z.object({ default_version: z.string().min(1), versions: z.array(z.object({ id: z.string().min(1), name: z.string().min(1) })) })
 export const commonMetaSchema = z.object({ default_profile: z.string().min(1), profiles: z.array(z.object({ id: z.string().min(1), name: z.string().min(1) })) })
+export const templateMetaSchema = z.object({ templates: z.array(z.object({ id: z.string().min(1), name: z.string().min(1) })) })
 export const formationEntrySchema = z.object({ position: z.string(), ship: z.string(), primary_mod: z.string().nullable().optional(), secondary_mod: z.string().nullable().optional(), tertiary_mods: z.array(z.string()).optional() }).passthrough()
 export const candidateSchema = z.object({ formation_key: z.string().optional(), formation: z.array(formationEntrySchema).default([]), fleet_resources_used: z.number().nullable().optional(), outcome: z.string().optional() }).passthrough()
 export const optimizerResultSchema = jsonObject.extend({ best_result: candidateSchema.nullable().optional(), verified_baseline: candidateSchema.nullable().optional(), improvement_vs_baseline: jsonObject.optional(), objective: z.string().optional(), recommendation_status: z.string().optional(), base_config: jsonObject.optional() })

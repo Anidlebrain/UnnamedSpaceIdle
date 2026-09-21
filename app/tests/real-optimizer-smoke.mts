@@ -54,6 +54,7 @@ try {
   await mkdir(join(managerGalaxy, 'nodes', node, 'versions'), { recursive: true })
   await mkdir(join(managerGalaxy, 'common', 'versions'), { recursive: true })
   await writeFile(join(managerGalaxy, 'nodes', node, 'versions', 'smoke.json'), `${JSON.stringify(smokeNode, null, 2)}\n`)
+  await writeFile(join(managerGalaxy, 'nodes', node, 'versions', 'control.json'), `${JSON.stringify(smokeNode, null, 2)}\n`)
   await writeFile(join(managerGalaxy, 'common', 'versions', 'smoke.json'), `${JSON.stringify(originalCommon, null, 2)}\n`)
 
   const output: string[] = []
@@ -74,6 +75,14 @@ try {
   const combinedOutput = output.join('')
   if (!combinedOutput.includes('Initializing Fleet Optimizer')) throw new Error('BAT invocation was not observed in Runner output.')
   if (!combinedOutput.includes('Godot log:')) throw new Error('Godot process completion was not observed in Runner output.')
+  const controlBeforeCopy = await readFile(join(managerGalaxy, 'nodes', node, 'versions', 'control.json'))
+  const copy = await runner.useBest({ galaxy, node, version: 'smoke', common: 'smoke' })
+  if (copy.exitCode !== 0 || copy.error || !copy.node) throw new Error(copy.error ?? `Optimizer copy returned exit code ${copy.exitCode}`)
+  const managerAfterCopy = JSON.parse(await readFile(join(managerGalaxy, 'nodes', node, 'versions', 'smoke.json'), 'utf8'))
+  const workspaceAfterCopy = JSON.parse(await readFile(join(mapGalaxy, `${node}.json`), 'utf8'))
+  const controlAfterCopy = await readFile(join(managerGalaxy, 'nodes', node, 'versions', 'control.json'))
+  if (JSON.stringify(managerAfterCopy) !== JSON.stringify(workspaceAfterCopy)) throw new Error('Manager selected Version does not match --c workspace output.')
+  if (hash(controlBeforeCopy) !== hash(controlAfterCopy)) throw new Error('Unselected Manager Version was modified by --c copy.')
   report = {
     ...report,
     runnerExitCode: run.exitCode,
@@ -85,7 +94,8 @@ try {
     resultSchemaParsed: true,
     resultIdentity: identity,
     bestFound: { outcome: run.result.best_result.outcome, fleetResourcesUsed: run.result.best_result.fleet_resources_used, formationKey: run.result.best_result.formation_key, formationEntries: run.result.best_result.formation.length },
-    formationLoadoutDiff: changes
+    formationLoadoutDiff: changes,
+    copyBestFound: { exitCode: copy.exitCode, selectedVersionMatchesWorkspace: true, unselectedVersionUnchanged: true, managerSchemaParsed: true }
   }
 } finally {
   await Promise.all(backups.map(restore))

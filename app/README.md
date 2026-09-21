@@ -1,8 +1,8 @@
 # Unnamed Space Idle 舰队优化器管理器
 
-这是舰队优化器管理应用的 Phase 1 实现，基于 Electron、React、Vite、TypeScript、Zod 和 Vitest。
+这是舰队优化器管理应用的 Phase 2 实现，基于 Electron、React、Vite、TypeScript、Zod 和 Vitest。
 
-## Phase 1 范围
+## 已实现范围
 
 - 从 `fleetSimulation/map/` 扫描并一次性导入 Galaxy/Node 配置到 `app/data/`；已有 Manager 数据不会被导入覆盖。
 - 以 Galaxy、Node、版本和 Common Profile 选择正式配置，并通过 Zod 校验后原子保存。
@@ -10,6 +10,10 @@
 - 将选定配置安全暂存到 `fleetSimulation/map/`，启动现有 `run_optimizer.bat`，实时显示 stdout/stderr。
 - 检查退出码、结果文件时间和内容变化、结果 JSON 结构以及 Galaxy/Node 身份，避免误读旧结果。
 - 展示本次搜索的 Best Found 结果，并比较 Verified Baseline 与最佳阵型/Mod 配置的差异。
+- 人工新建、复制、重命名、删除、切换 Node Version，并设置默认 Version；各 Version 使用独立 JSON 文件。
+- 人工新建、复制、编辑、重命名、删除、切换 Common，并设置默认 Common。
+- 将当前 Node Version 保存为人工模板，并从模板或任意当前 Node Version 创建新 Node；创建时仅重写 Galaxy/Node 身份。
+- 复用现有 `run_optimizer.bat <galaxy> <node> --c` 应用 Best Found；只有 BAT 成功且修改后的 Node JSON 通过结构与身份校验后，才原子覆盖当前 Manager Version。
 
 应用层不重新实现战斗模拟、搜索算法或结果复制逻辑，也不会自动安装 PCK、修改 Steam 游戏目录或覆盖已有正式配置。
 
@@ -29,6 +33,8 @@ pnpm typecheck
 pnpm build
 pnpm test
 ```
+
+`tests/real-optimizer-smoke.mts` 是真实 Optimizer + `--c` 安全 Smoke；它会先备份所有触及的工作区文件，并在 `finally` 中按原始字节恢复。
 
 开发模式默认把正式配置保存在 `app/data/`。打包运行时使用 Electron 的 `userData/fleet-manager-data`，避免把可写数据放入 asar。
 

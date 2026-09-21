@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url'
 import { is } from '@electron-toolkit/utils'
 import { DataRepository } from './services/data-repository'
 import { OptimizerRunner } from './services/optimizer-runner'
-import type { Selection } from '../shared/contracts'
-import { nodeConfigSchema } from '../shared/schemas'
+import type { CreateNodeRequest, Selection } from '../shared/contracts'
+import { commonConfigSchema, nodeConfigSchema } from '../shared/schemas'
 
 if (process.env.FLEET_MANAGER_USER_DATA_DIR) { app.setPath('userData', process.env.FLEET_MANAGER_USER_DATA_DIR); app.disableHardwareAcceleration() }
 
@@ -26,4 +26,28 @@ function createWindow() {
   if (is.dev && process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL)
   else void window.loadFile(join(mainDirectory, '../renderer/index.html'))
 }
-app.whenReady().then(() => { ipcMain.handle('data:preview-import', () => repo.previewImport()); ipcMain.handle('data:import', () => repo.importMap()); ipcMain.handle('data:catalog', () => repo.catalog()); ipcMain.handle('data:load', (_, selection: Selection) => repo.load(selection)); ipcMain.handle('data:save', (_, selection: Selection, node: unknown) => repo.save(selection, nodeConfigSchema.parse(node))); ipcMain.handle('optimizer:run', (_, selection: Selection) => runner.run(selection)); createWindow(); app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() }) }); app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
+app.whenReady().then(() => {
+  ipcMain.handle('data:preview-import', () => repo.previewImport())
+  ipcMain.handle('data:import', () => repo.importMap())
+  ipcMain.handle('data:catalog', () => repo.catalog())
+  ipcMain.handle('data:load', (_, selection: Selection) => repo.load(selection))
+  ipcMain.handle('data:save', (_, selection: Selection, node: unknown) => repo.save(selection, nodeConfigSchema.parse(node)))
+  ipcMain.handle('data:save-common', (_, selection: Selection, common: unknown) => repo.saveCommon(selection, commonConfigSchema.parse(common)))
+  ipcMain.handle('version:create', (_, selection: Selection, name: string) => repo.createVersion(selection, name))
+  ipcMain.handle('version:rename', (_, selection: Selection, name: string) => repo.renameVersion(selection, name))
+  ipcMain.handle('version:delete', (_, selection: Selection) => repo.deleteVersion(selection))
+  ipcMain.handle('version:set-default', (_, selection: Selection) => repo.setDefaultVersion(selection))
+  ipcMain.handle('common:create', (_, selection: Selection, name: string) => repo.createCommon(selection, name))
+  ipcMain.handle('common:rename', (_, selection: Selection, name: string) => repo.renameCommon(selection, name))
+  ipcMain.handle('common:delete', (_, selection: Selection) => repo.deleteCommon(selection))
+  ipcMain.handle('common:set-default', (_, selection: Selection) => repo.setDefaultCommon(selection))
+  ipcMain.handle('template:create', (_, selection: Selection, name: string) => repo.createTemplate(selection, name))
+  ipcMain.handle('template:rename', (_, id: string, name: string) => repo.renameTemplate(id, name))
+  ipcMain.handle('template:delete', (_, id: string) => repo.deleteTemplate(id))
+  ipcMain.handle('node:create', (_, request: CreateNodeRequest) => repo.createNode(request))
+  ipcMain.handle('optimizer:run', (_, selection: Selection) => runner.run(selection))
+  ipcMain.handle('optimizer:use-best', (_, selection: Selection) => runner.useBest(selection))
+  createWindow()
+  app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
+})
+app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
