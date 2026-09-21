@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type {
   Catalog,
   FleetManagerApi,
@@ -32,8 +32,27 @@ const emptySelection: Selection = { galaxy: '', node: '', version: '', common: '
 const emptyCatalog: Catalog = { galaxies: [], templates: [] }
 const format = (value: unknown) => JSON.stringify(value, null, 2)
 const keyOf = (selection: Selection) => `${selection.galaxy}/${selection.node}/${selection.version}/${selection.common}`
-type Workspace = 'node' | 'rerun' | 'templates'
-type EditorTab = 'formation' | 'loadout' | 'common' | 'optimizer'
+type Workspace = 'node' | 'common' | 'search' | 'rerun' | 'templates'
+type EditorTab = 'basic' | 'formation' | 'loadout'
+type CommonTab = 'galaxy' | 'optimizer'
+const LAST_SEARCH_KEY = 'fleet-manager-last-search-v1'
+
+function storedSearchSelection(catalog: Catalog): Selection | null {
+  try {
+    const stored = JSON.parse(localStorage.getItem(LAST_SEARCH_KEY) ?? 'null') as Partial<Selection> | null
+    const galaxy = catalog.galaxies.find(item => item.id === stored?.galaxy)
+    const node = galaxy?.nodes.find(item => item.id === stored?.node)
+    if (!galaxy || !node) return null
+    return {
+      galaxy: galaxy.id,
+      node: node.id,
+      version: node.versions.some(item => item.id === stored?.version) ? stored!.version! : node.defaultVersion,
+      common: galaxy.commons.some(item => item.id === stored?.common) ? stored!.common! : galaxy.defaultCommon,
+    }
+  } catch {
+    return null
+  }
+}
 type DialogState =
   | {
       kind: 'input'
@@ -89,8 +108,11 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const [newNodeGalaxy, setNewNodeGalaxy] = useState('')
   const [newVersionName, setNewVersionName] = useState('默认')
   const [workspace, setWorkspace] = useState<Workspace>('node')
-  const [editorTab, setEditorTab] = useState<EditorTab>('formation')
+  const [editorTab, setEditorTab] = useState<EditorTab>('basic')
+  const [commonTab, setCommonTab] = useState<CommonTab>('galaxy')
   const [dialog, setDialog] = useState<DialogState | null>(null)
+  const [runStartedAt, setRunStartedAt] = useState<number | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
 
   const currentGalaxy = catalog.galaxies.find(g => g.id === selection.galaxy)
   const currentNode = currentGalaxy?.nodes.find(n => n.id === selection.node)
@@ -123,7 +145,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         setOptimizerConfig(optimizer)
         setOptimizerSource(source)
         setSavedOptimizerSource(source)
-        setSelection(current => (current.galaxy ? current : chooseInitial(next)))
+        setSelection(current => (current.galaxy ? current : (storedSearchSelection(next) ?? chooseInitial(next))))
       })
       .catch(error => setMessage(`无法读取 Manager / Optimizer 配置：${(error as Error).message}`))
     const stopOutput = api.onOutput(line => setLogs(previous => `${previous}${line}`))
@@ -133,6 +155,13 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       stopProgress()
     }
   }, [api])
+  useEffect(() => {
+    if (runStartedAt === null || !busy) return
+    const updateElapsed = () => setElapsedSeconds(Math.max(0, Math.floor((Date.now() - runStartedAt) / 1000)))
+    updateElapsed()
+    const timer = window.setInterval(updateElapsed, 1000)
+    return () => window.clearInterval(timer)
+  }, [busy, runStartedAt])
   useEffect(() => {
     if (!selection.galaxy || !selection.node || !selection.version || !selection.common) {
       setNode(null)
@@ -323,6 +352,10 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       setRunKey('')
       setGalaxyDetail(null)
       setMessage('Optimizer 正在运行…')
+      const startedAt = Date.now()
+      setRunStartedAt(startedAt)
+      setElapsedSeconds(0)
+      localStorage.setItem(LAST_SEARCH_KEY, JSON.stringify(selection))
       const result = await api.run(selection)
       setRun(result)
       if (result.error) throw new Error(result.error)
@@ -368,7 +401,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     switchOrConfirm(() => {
       setMessage('')
       setGalaxyDetail(item)
-      setWorkspace('node')
+      setWorkspace('search')
       setRun(null)
       setRunKey('')
       setSelection({ galaxy: galaxyRerun!.galaxy, node: item.node, version: item.version, common: item.common })
@@ -463,6 +496,16 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     setNode(next)
     setNodeSource(format(next))
   }
+  const pageCopy: Record<Workspace, { title: string; description: string }> = {
+    node: { title: '节点配置', description: '维护 Boss、环境、阵型与舰种装配' },
+    common: { title: '公共配置', description: '管理 Galaxy 公共和全局 Optimizer 配置' },
+    search: { title: '搜索', description: '配置、运行并在同一页面采用 Best Found' },
+    rerun: { title: 'Galaxy 重跑', description: '串行检查当前 Galaxy 的默认配置' },
+    templates: { title: '模板与复制', description: '从稳定配置快速创建 Node' },
+  }
+  const optimizerGlobalContext = workspace === 'common' && commonTab === 'optimizer'
+  const showNodeContext = workspace === 'node' || workspace === 'search' || workspace === 'templates'
+  const showCommonContext = showNodeContext || (workspace === 'common' && commonTab === 'galaxy')
   return (
     <main className="app">
       <aside className="sidebar" aria-label="主工作区">
@@ -476,6 +519,14 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           <button className={workspace === 'node' ? 'active' : ''} onClick={() => setWorkspace('node')}>
             <Icon name="node" />
             节点配置
+          </button>
+          <button className={workspace === 'common' ? 'active' : ''} onClick={() => setWorkspace('common')}>
+            <Icon name="settings" />
+            公共配置
+          </button>
+          <button className={workspace === 'search' ? 'active' : ''} onClick={() => setWorkspace('search')}>
+            <Icon name="search" />
+            搜索
           </button>
           <button className={workspace === 'rerun' ? 'active' : ''} onClick={() => setWorkspace('rerun')}>
             <Icon name="play" />
@@ -493,28 +544,30 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       </aside>
       <header className="topbar">
         <div>
-          <h1>{workspace === 'node' ? '节点配置' : workspace === 'rerun' ? 'Galaxy 重跑' : '模板与复制'}</h1>
-          <span>
-            {workspace === 'node'
-              ? '编辑阵型、装配与搜索参数'
-              : workspace === 'rerun'
-                ? '串行检查当前 Galaxy 的默认配置'
-                : '从稳定配置快速创建 Node'}
-          </span>
+          <h1>{pageCopy[workspace].title}</h1>
+          <span>{pageCopy[workspace].description}</span>
         </div>
         <div className="actions">
           {workspace === 'node' ? (
-            <>
-              <button onClick={() => void saveNode()} disabled={busy || !nodeDirty}>
-                保存节点
-              </button>
-              <button onClick={() => void saveCommon()} disabled={busy || !commonDirty}>
+            <button className="primary" onClick={() => void saveNode()} disabled={busy || !nodeDirty}>
+              保存节点
+            </button>
+          ) : null}
+          {workspace === 'common' ? (
+            commonTab === 'galaxy' ? (
+              <button className="primary" onClick={() => void saveCommon()} disabled={busy || !commonDirty}>
                 保存 Galaxy 公共
               </button>
-              <button onClick={() => void saveOptimizerConfig()} disabled={busy || !optimizerDirty}>
+            ) : (
+              <button className="primary" onClick={() => void saveOptimizerConfig()} disabled={busy || !optimizerDirty}>
                 保存 Optimizer 公共
               </button>
-            </>
+            )
+          ) : null}
+          {workspace === 'search' ? (
+            <button onClick={() => void saveNode()} disabled={busy || !nodeDirty}>
+              保存搜索参数
+            </button>
           ) : null}
           {workspace === 'rerun' ? (
             <button className="primary" onClick={() => void rerunCurrentGalaxy()} disabled={busy}>
@@ -524,92 +577,107 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         </div>
       </header>
       <section className="contextbar" aria-label="当前配置上下文">
-        <Label text="Galaxy">
-          <select value={selection.galaxy} onChange={e => update('galaxy', e.target.value)}>
-            {catalog.galaxies.map(g => (
-              <option key={g.id} value={g.id}>
-                {g.id.toUpperCase()}
-              </option>
-            ))}
-          </select>
-        </Label>
-        <Label text="节点">
-          <select value={selection.node} onChange={e => update('node', e.target.value)}>
-            {currentGalaxy?.nodes.map(n => (
-              <option key={n.id} value={n.id}>
-                {n.id}
-              </option>
-            ))}
-          </select>
-        </Label>
-        <Label text="版本">
-          <select value={selection.version} onChange={e => update('version', e.target.value)}>
-            {currentNode?.versions.map(v => (
-              <option key={v.id} value={v.id}>
-                {v.name}
-                {v.isDefault ? ' ★' : ''}
-              </option>
-            ))}
-          </select>
-          <ActionMenu
-            label="管理版本"
-            actions={[
-              { label: '新建版本', onClick: () => createVersion(false) },
-              { label: '复制当前版本', onClick: () => createVersion(true) },
-              { label: '重命名', onClick: renameVersion },
-              {
-                label: '设为默认',
-                disabled: currentVersion?.isDefault,
-                onClick: () =>
-                  void act('已设为默认版本。', async () => {
-                    await api.setDefaultVersion(selection)
-                    await refresh()
-                  }),
-              },
-              {
-                label: '删除版本',
-                danger: true,
-                disabled: currentVersion?.isDefault || (currentNode?.versions.length ?? 0) <= 1,
-                onClick: deleteVersion,
-              },
-            ]}
-            disabled={busy}
-          />
-        </Label>
-        <Label text="公共配置">
-          <select value={selection.common} onChange={e => update('common', e.target.value)}>
-            {currentGalaxy?.commons.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-                {c.isDefault ? ' ★' : ''}
-              </option>
-            ))}
-          </select>
-          <ActionMenu
-            label="管理公共配置"
-            actions={[
-              { label: '新建配置', onClick: () => createCommon(false) },
-              { label: '复制当前配置', onClick: () => createCommon(true) },
-              { label: '重命名', onClick: renameCommon },
-              {
-                label: '设为默认',
-                disabled: currentCommon?.isDefault,
-                onClick: () =>
-                  void act('已设为默认公共配置。', async () => {
-                    await api.setDefaultCommon(selection)
-                    await refresh()
-                  }),
-              },
-              {
-                label: '删除配置',
-                danger: true,
-                disabled: currentCommon?.isDefault || (currentGalaxy?.commons.length ?? 0) <= 1,
-                onClick: deleteCommon,
-              },
-            ]}
-            disabled={busy}
-          />
-        </Label>
+        {optimizerGlobalContext ? (
+          <div className="global-context">
+            <span>作用范围</span>
+            <strong>全局 / 所有 Galaxy</strong>
+          </div>
+        ) : (
+          <Label text="Galaxy">
+            <select value={selection.galaxy} onChange={e => update('galaxy', e.target.value)}>
+              {catalog.galaxies.map(g => (
+                <option key={g.id} value={g.id}>
+                  {g.id.toUpperCase()}
+                </option>
+              ))}
+            </select>
+          </Label>
+        )}
+        {showNodeContext ? (
+          <Label text="节点">
+            <select value={selection.node} onChange={e => update('node', e.target.value)}>
+              {currentGalaxy?.nodes.map(n => (
+                <option key={n.id} value={n.id}>
+                  {n.id}
+                </option>
+              ))}
+            </select>
+          </Label>
+        ) : null}
+        {showNodeContext ? (
+          <Label text="版本">
+            <select value={selection.version} onChange={e => update('version', e.target.value)}>
+              {currentNode?.versions.map(v => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                  {v.isDefault ? ' ★' : ''}
+                </option>
+              ))}
+            </select>
+            <ActionMenu
+              label="管理版本"
+              resetKey={`${workspace}/${selection.galaxy}/${selection.node}`}
+              actions={[
+                { label: '新建版本', onClick: () => createVersion(false) },
+                { label: '复制当前版本', onClick: () => createVersion(true) },
+                { label: '重命名', onClick: renameVersion },
+                {
+                  label: '设为默认',
+                  disabled: currentVersion?.isDefault,
+                  onClick: () =>
+                    void act('已设为默认版本。', async () => {
+                      await api.setDefaultVersion(selection)
+                      await refresh()
+                    }),
+                },
+                {
+                  label: '删除版本',
+                  danger: true,
+                  disabled: currentVersion?.isDefault || (currentNode?.versions.length ?? 0) <= 1,
+                  onClick: deleteVersion,
+                },
+              ]}
+              disabled={busy}
+            />
+          </Label>
+        ) : null}
+        {showCommonContext ? (
+          <Label text="公共配置">
+            <select value={selection.common} onChange={e => update('common', e.target.value)}>
+              {currentGalaxy?.commons.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                  {c.isDefault ? ' ★' : ''}
+                </option>
+              ))}
+            </select>
+            <ActionMenu
+              label="管理公共配置"
+              resetKey={`${workspace}/${selection.galaxy}/${selection.node}`}
+              actions={[
+                { label: '新建配置', onClick: () => createCommon(false) },
+                { label: '复制当前配置', onClick: () => createCommon(true) },
+                { label: '重命名', onClick: renameCommon },
+                {
+                  label: '设为默认',
+                  disabled: currentCommon?.isDefault,
+                  onClick: () =>
+                    void act('已设为默认公共配置。', async () => {
+                      await api.setDefaultCommon(selection)
+                      await refresh()
+                    }),
+                },
+                {
+                  label: '删除配置',
+                  danger: true,
+                  disabled: currentCommon?.isDefault || (currentGalaxy?.commons.length ?? 0) <= 1,
+                  onClick: deleteCommon,
+                },
+              ]}
+              disabled={busy}
+            />
+          </Label>
+        ) : null}
         <div className={`save-state ${dirty ? 'dirty' : 'saved'}`} role="status">
           <span aria-hidden="true">{dirty ? '●' : '✓'}</span>
           <div>
@@ -707,8 +775,78 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           </div>
         </section>
       ) : null}
+      {workspace === 'common' ? (
+        <section className="panel public-config workspace-view">
+          <div className="panel-heading">
+            <div>
+              <h2>公共配置</h2>
+              <p>Galaxy 公共按 Galaxy 独立保存；Optimizer 公共直接管理跨 Galaxy 的 daily 配置。</p>
+            </div>
+          </div>
+          <div className="tabs" role="tablist" aria-label="公共配置区域">
+            <button
+              role="tab"
+              aria-selected={commonTab === 'galaxy'}
+              className={commonTab === 'galaxy' ? 'active' : ''}
+              onClick={() => setCommonTab('galaxy')}
+            >
+              Galaxy 公共
+            </button>
+            <button
+              role="tab"
+              aria-selected={commonTab === 'optimizer'}
+              className={commonTab === 'optimizer' ? 'active' : ''}
+              onClick={() => setCommonTab('optimizer')}
+            >
+              Optimizer 公共
+            </button>
+          </div>
+          {common && commonTab === 'galaxy' ? (
+            <CommonEditor
+              config={common}
+              onChange={next => {
+                setCommon(next)
+                setCommonSource(format(next))
+              }}
+            />
+          ) : null}
+          {optimizerConfig && commonTab === 'optimizer' ? (
+            <OptimizerConfigEditor
+              config={optimizerConfig}
+              onChange={next => {
+                setOptimizerConfig(next)
+                setOptimizerSource(format(next))
+              }}
+            />
+          ) : null}
+          <details className="advanced">
+            <summary>高级：原始 JSON</summary>
+            <div className="advanced-grid">
+              {commonTab === 'galaxy' ? (
+                <Label text="Common JSON">
+                  <textarea
+                    value={commonSource}
+                    onChange={event => setCommonSource(event.target.value)}
+                    spellCheck={false}
+                    aria-label="Common JSON 编辑器"
+                  />
+                </Label>
+              ) : (
+                <Label text="Optimizer JSON">
+                  <textarea
+                    value={optimizerSource}
+                    onChange={event => setOptimizerSource(event.target.value)}
+                    spellCheck={false}
+                    aria-label="Optimizer JSON 编辑器"
+                  />
+                </Label>
+              )}
+            </div>
+          </details>
+        </section>
+      ) : null}
       {workspace === 'node' ? (
-        <section className="workspace workspace-view">
+        <section className="workspace node-workspace workspace-view">
           <section className="editor panel">
             <div className="panel-heading">
               <div>
@@ -722,10 +860,9 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             <div className="tabs" role="tablist" aria-label="节点配置区域">
               {(
                 [
+                  ['basic', '基础配置'],
                   ['formation', '阵型'],
                   ['loadout', '装配'],
-                  ['common', 'Galaxy 公共'],
-                  ['optimizer', 'Optimizer 公共'],
                 ] as const
               ).map(([id, label]) => (
                 <button
@@ -739,33 +876,16 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 </button>
               ))}
             </div>
+            {node && editorTab === 'basic' ? <NodeBasicsEditor config={node} onChange={tableChange} /> : null}
             {node && editorTab === 'formation' ? (
               <FormationEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
             ) : null}
             {node && optimizerConfig && editorTab === 'loadout' ? (
               <LoadoutEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
             ) : null}
-            {common && editorTab === 'common' ? (
-              <CommonEditor
-                config={common}
-                onChange={next => {
-                  setCommon(next)
-                  setCommonSource(format(next))
-                }}
-              />
-            ) : null}
-            {optimizerConfig && editorTab === 'optimizer' ? (
-              <OptimizerConfigEditor
-                config={optimizerConfig}
-                onChange={next => {
-                  setOptimizerConfig(next)
-                  setOptimizerSource(format(next))
-                }}
-              />
-            ) : null}
             <details className="advanced">
               <summary>高级：原始 JSON</summary>
-              <div className="advanced-grid">
+              <div>
                 <Label text="Node JSON">
                   <textarea
                     value={nodeSource}
@@ -774,112 +894,27 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                     aria-label="Node JSON 编辑器"
                   />
                 </Label>
-                <Label text="Common JSON">
-                  <textarea
-                    value={commonSource}
-                    onChange={e => setCommonSource(e.target.value)}
-                    spellCheck={false}
-                    aria-label="Common JSON 编辑器"
-                  />
-                </Label>
-                <Label text="Optimizer JSON">
-                  <textarea
-                    value={optimizerSource}
-                    onChange={e => setOptimizerSource(e.target.value)}
-                    spellCheck={false}
-                    aria-label="Optimizer JSON 编辑器"
-                  />
-                </Label>
               </div>
             </details>
           </section>
-          <aside className="results" aria-label="搜索与结果">
-            <section className="panel search-panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>搜索设置</h2>
-                  <p>使用当前保存的节点与公共配置。</p>
-                </div>
-              </div>
-              {node ? <SearchSettings config={node} onChange={tableChange} /> : null}
-              <button className="primary start-search" onClick={() => void start()} disabled={busy || dirty}>
-                <Icon name="play" />
-                {busy ? '正在搜索…' : '开始搜索'}
-              </button>
-              {dirty ? <small className="button-help">保存修改后即可搜索。</small> : null}
-            </section>
-            <section className="panel run-status">
-              <div className="panel-heading compact">
-                <h2>搜索状态</h2>
-                <span className={`run-dot ${busy ? 'running' : activeRun ? 'done' : ''}`} />
-              </div>
-              <dl>
-                <dt>状态</dt>
-                <dd>{busy ? '搜索中' : activeRun ? '已完成' : '空闲'}</dd>
-                <dt>选择</dt>
-                <dd>
-                  {selection.node} / {currentVersion?.name}
-                </dd>
-              </dl>
-              <details className="console">
-                <summary>Optimizer 输出</summary>
-                <pre className="logs">{logs || '尚未启动任务。'}</pre>
-              </details>
-            </section>
-            <section className="panel result-panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>搜索结果</h2>
-                  <p>当前配置与本次 Best Found。</p>
-                </div>
-              </div>
-              {activeRun?.result?.best_result ? (
-                <>
-                  <div className="candidate-comparison">
-                    <CandidateTable title="当前配置" candidate={activeRun.result.verified_baseline} />
-                    <CandidateTable title="最优配置" candidate={activeRun.result.best_result} best />
-                  </div>
-                  <h3>差异</h3>
-                  {changes.length ? (
-                    <table className="diff-table">
-                      <thead>
-                        <tr>
-                          <th>位置</th>
-                          <th>字段</th>
-                          <th>当前</th>
-                          <th>最优</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {changes.map((c, i) => (
-                          <tr key={i}>
-                            <td>{c.position}</td>
-                            <td>{c.field}</td>
-                            <td>{c.field === 'ship' ? shipDisplayName(c.before, false) : String(c.before ?? '—')}</td>
-                            <td>{c.field === 'ship' ? shipDisplayName(c.after, false) : String(c.after ?? '—')}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : (
-                    <p className="no-change">✓ 阵型与装配没有变化。</p>
-                  )}
-                  <button className="success use-best" onClick={useBest} disabled={busy || !changes.length}>
-                    <Icon name="check" />
-                    使用最优配置
-                  </button>
-                  <small className="button-help">写入当前版本，不会创建新版本。</small>
-                </>
-              ) : (
-                <div className="result-empty">
-                  <span aria-hidden="true">◎</span>
-                  <strong>还没有搜索结果</strong>
-                  <p>{activeRun?.error ?? '开始搜索后，这里会显示当前配置、Best Found 和具体差异。'}</p>
-                </div>
-              )}
-            </section>
-          </aside>
         </section>
+      ) : null}
+      {workspace === 'search' ? (
+        <SearchWorkspace
+          node={node}
+          commonName={currentCommon?.name ?? selection.common}
+          versionName={currentVersion?.name ?? selection.version}
+          selection={selection}
+          busy={busy}
+          dirty={dirty}
+          logs={logs}
+          elapsedSeconds={elapsedSeconds}
+          activeRun={activeRun}
+          changes={changes.length}
+          onNodeChange={tableChange}
+          onStart={() => void start()}
+          onUseBest={useBest}
+        />
       ) : null}
       {dialog ? <AppDialog dialog={dialog} onClose={() => setDialog(null)} /> : null}
     </main>
@@ -936,30 +971,305 @@ function AppDialog({ dialog, onClose }: { dialog: DialogState; onClose: () => vo
   )
 }
 
-function CandidateTable({
-  title,
-  candidate,
-  best = false,
-}: {
-  title: string
-  candidate: NonNullable<RunResult['result']>['best_result']
-  best?: boolean
-}) {
+function NodeBasicsEditor({ config, onChange }: { config: NodeConfig; onChange: (value: NodeConfig) => void }) {
+  const boss = (config.boss ?? {}) as Record<string, unknown>
+  const alive = Boolean(boss.alive)
+  const updateBoss = (field: string, value: unknown) => onChange({ ...config, boss: { ...boss, [field]: value } })
+  const updateNodes = (field: 'hazards' | 'supports', value: string) =>
+    onChange({
+      ...config,
+      [field]: value
+        .split(/[\n,，]+/)
+        .map(item => item.trim().toUpperCase())
+        .filter(Boolean),
+    })
   return (
-    <div className={`candidate ${best ? 'best' : ''}`}>
-      <h3>{title}</h3>
-      <dl>
-        <dt>结果</dt>
-        <dd>{candidate?.outcome ?? '—'}</dd>
-        <dt>舰队资源</dt>
-        <dd>{candidate?.fleet_resources_used ?? '—'}</dd>
+    <section className="config-section node-basics">
+      <div className="section-heading">
+        <div>
+          <h3>战斗与环境</h3>
+          <p>填写游戏中的节点名；Resolver 会校验它们是否真实影响当前战斗。</p>
+        </div>
+      </div>
+      <fieldset className="boss-config">
+        <legend>Boss</legend>
+        <label className="switch-field">
+          <input type="checkbox" checked={alive} onChange={event => updateBoss('alive', event.target.checked)} />
+          <span>Boss 存活</span>
+        </label>
+        <Label text="剩余生命 remaining_hp">
+          <input
+            aria-label="Boss 剩余生命"
+            type="number"
+            min="0"
+            disabled={!alive}
+            value={Number(boss.remaining_hp ?? 0)}
+            onChange={event => updateBoss('remaining_hp', Number(event.target.value))}
+          />
+        </Label>
+        <Label text="Boss 搜索优先级">
+          <select
+            aria-label="Boss 搜索优先级"
+            disabled={!alive}
+            value={String(boss.priority ?? 'efficiency')}
+            onChange={event => updateBoss('priority', event.target.value)}
+          >
+            <option value="efficiency">效率（efficiency）</option>
+            <option value="kill_cost">击杀总成本（kill_cost）</option>
+          </select>
+        </Label>
+      </fieldset>
+      <div className="environment-config">
+        <Label text="Hazards（每行或逗号分隔）">
+          <textarea
+            aria-label="Hazards"
+            value={config.hazards.map(String).join('\n')}
+            onChange={event => updateNodes('hazards', event.target.value)}
+            placeholder="例如 B10"
+          />
+        </Label>
+        <Label text="Supports（每行或逗号分隔）">
+          <textarea
+            aria-label="Supports"
+            value={config.supports.map(String).join('\n')}
+            onChange={event => updateNodes('supports', event.target.value)}
+            placeholder="例如 F2"
+          />
+        </Label>
+      </div>
+    </section>
+  )
+}
+
+function SearchWorkspace({
+  node,
+  commonName,
+  versionName,
+  selection,
+  busy,
+  dirty,
+  logs,
+  elapsedSeconds,
+  activeRun,
+  changes,
+  onNodeChange,
+  onStart,
+  onUseBest,
+}: {
+  node: NodeConfig | null
+  commonName: string
+  versionName: string
+  selection: Selection
+  busy: boolean
+  dirty: boolean
+  logs: string
+  elapsedSeconds: number
+  activeRun: RunResult | null | undefined
+  changes: number
+  onNodeChange: (value: NodeConfig) => void
+  onStart: () => void
+  onUseBest: () => void
+}) {
+  const runSeconds = activeRun
+    ? Math.max(0, Math.round((Date.parse(activeRun.finishedAt) - Date.parse(activeRun.startedAt)) / 1000))
+    : elapsedSeconds
+  const progress = logs
+    .split(/\r?\n/)
+    .reverse()
+    .find(line => /(\d+\/\d+|Evaluated:|Best updated|Final|Initializing|完成)/i.test(line))
+  return (
+    <section className="search-workspace workspace-view">
+      <div className="search-context panel" aria-label="本次搜索上下文">
+        <div>
+          <span>Galaxy</span>
+          <strong>{selection.galaxy.toUpperCase()}</strong>
+        </div>
+        <div>
+          <span>Node</span>
+          <strong>{selection.node}</strong>
+        </div>
+        <div>
+          <span>Version</span>
+          <strong>{versionName}</strong>
+        </div>
+        <div>
+          <span>Common</span>
+          <strong>{commonName}</strong>
+        </div>
+      </div>
+      <section className="panel search-command">
+        <div className="panel-heading">
+          <div>
+            <h2>搜索参数</h2>
+            <p>本页字段是日常搜索最终生效值；全局同名预算只作为非 Friendly Config 回退。</p>
+          </div>
+        </div>
+        {node ? <SearchSettings config={node} onChange={onNodeChange} /> : null}
+        <button className="primary start-search" onClick={onStart} disabled={busy || dirty}>
+          <Icon name="play" />
+          {busy ? '正在搜索…' : '开始搜索'}
+        </button>
+        {dirty ? <small className="button-help">保存搜索参数后即可启动。</small> : null}
+      </section>
+      <section className="panel run-status">
+        <div className="panel-heading compact">
+          <div>
+            <h2>运行状态</h2>
+            <p>{progress?.trim() || '尚未启动任务。'}</p>
+          </div>
+          <span className={`run-dot ${busy ? 'running' : activeRun ? 'done' : ''}`} />
+        </div>
+        <dl>
+          <dt>状态</dt>
+          <dd>{busy ? '搜索中' : activeRun ? (activeRun.error ? '失败' : '已完成') : '空闲'}</dd>
+          <dt>时间</dt>
+          <dd>{runSeconds}s</dd>
+          <dt>进度</dt>
+          <dd>{busy ? progress?.trim() || '准备中' : activeRun ? '完成' : '—'}</dd>
+        </dl>
+        <details className="console" open={busy}>
+          <summary>Optimizer 输出 / 日志</summary>
+          <pre className="logs">{logs || '尚未启动任务。'}</pre>
+        </details>
+      </section>
+      <section className="panel best-found-panel">
+        {activeRun?.result?.best_result ? (
+          <BestFound result={activeRun.result} changes={changes} busy={busy} onUseBest={onUseBest} />
+        ) : (
+          <div className="result-empty">
+            <span aria-hidden="true">◎</span>
+            <strong>还没有搜索结果</strong>
+            <p>{activeRun?.error ?? '搜索完成后，Best Found 会直接显示在这里。'}</p>
+          </div>
+        )}
+      </section>
+    </section>
+  )
+}
+
+function BestFound({
+  result,
+  changes,
+  busy,
+  onUseBest,
+}: {
+  result: NonNullable<RunResult['result']>
+  changes: number
+  busy: boolean
+  onUseBest: () => void
+}) {
+  const best = result.best_result!
+  const baseline = result.verified_baseline
+  const improvement = (result.improvement_vs_baseline ?? {}) as Record<string, unknown>
+  const saved =
+    typeof baseline?.fleet_resources_used === 'number' && typeof best.fleet_resources_used === 'number'
+      ? baseline.fleet_resources_used - best.fleet_resources_used
+      : null
+  const positions = ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'B2', 'B3', 'B4', 'B5']
+  const byPosition = new Map(best.formation.map(entry => [entry.position, entry]))
+  const loadouts = new Map<string, { primary?: unknown; secondary?: unknown; tertiary?: unknown }>()
+  for (const [ship, value] of Object.entries(best.ship_loadouts ?? {})) {
+    loadouts.set(shipSelectorToId(ship) || ship, {
+      primary: value.primary,
+      secondary: value.secondary,
+      tertiary: value.tertiary_mods ?? value.tertiary,
+    })
+  }
+  for (const entry of best.formation) {
+    const ship = shipSelectorToId(entry.ship) || String(entry.ship)
+    if (!loadouts.has(ship))
+      loadouts.set(ship, {
+        primary: entry.primary_mod,
+        secondary: entry.secondary_mod,
+        tertiary: entry.tertiary_mods,
+      })
+  }
+  const orderedLoadouts = [...loadouts.entries()].sort(
+    ([a], [b]) => SHIP_TYPES.findIndex(ship => ship.id === a) - SHIP_TYPES.findIndex(ship => ship.id === b),
+  )
+  const modText = (value: unknown) =>
+    value === null || value === undefined || value === '' ? '无' : modDisplayName(String(value), true)
+  return (
+    <div className="best-found">
+      <div className="best-found-heading">
+        <div>
+          <h2>Best Found</h2>
+          <p>{changes ? `相对当前配置有 ${changes} 项阵型或装配变化。` : 'Best Found 与当前配置一致。'}</p>
+        </div>
+        <button className="success use-best" onClick={onUseBest} disabled={busy || changes === 0}>
+          <Icon name="check" />
+          使用最优配置
+        </button>
+      </div>
+      <dl className="result-metrics">
+        <div>
+          <dt>Outcome</dt>
+          <dd>{best.outcome ?? '—'}</dd>
+        </div>
+        <div>
+          <dt>Committed FR</dt>
+          <dd>{best.fleet_resources_committed ?? '—'}</dd>
+        </div>
+        <div>
+          <dt>Used FR</dt>
+          <dd>{best.fleet_resources_used ?? '—'}</dd>
+        </div>
+        {typeof best.boss_damage === 'number' && best.boss_damage > 0 ? (
+          <div>
+            <dt>Boss Damage</dt>
+            <dd>{best.boss_damage}</dd>
+          </div>
+        ) : null}
+        {saved !== null && saved > 0 ? (
+          <div>
+            <dt>节省 FR</dt>
+            <dd>{saved.toFixed(2)}</dd>
+          </div>
+        ) : null}
+        {typeof improvement.percent === 'number' ? (
+          <div>
+            <dt>改善</dt>
+            <dd>{improvement.percent.toFixed(2)}%</dd>
+          </div>
+        ) : null}
       </dl>
-      <div className="candidate-ships">
-        {(candidate?.formation ?? []).map(entry => (
-          <span key={entry.position}>
-            <b>{entry.position}</b> {shipDisplayName(entry.ship, false)}
-          </span>
-        ))}
+      <div className="best-grid">
+        <section>
+          <h3>Best Found Formation</h3>
+          <div className="best-formation">
+            {positions.map(position => {
+              const entry = byPosition.get(position)
+              return (
+                <div key={position}>
+                  <b>{position}</b>
+                  <span>{entry ? shipDisplayName(entry.ship) : '空位'}</span>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+        <section>
+          <h3>Best Found Loadout</h3>
+          <div className="best-loadouts">
+            {orderedLoadouts.map(([ship, loadout]) => (
+              <div key={ship}>
+                <strong>{shipDisplayName(ship)}</strong>
+                <dl>
+                  <dt>Primary</dt>
+                  <dd>{modText(loadout.primary)}</dd>
+                  <dt>Secondary</dt>
+                  <dd>{modText(loadout.secondary)}</dd>
+                  {Array.isArray(loadout.tertiary) && loadout.tertiary.length ? (
+                    <>
+                      <dt>Tertiary</dt>
+                      <dd>{loadout.tertiary.map(modText).join('、')}</dd>
+                    </>
+                  ) : null}
+                </dl>
+              </div>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   )
@@ -974,12 +1284,14 @@ function Label({ text, children }: { text: string; children: React.ReactNode }) 
   )
 }
 
-function Icon({ name }: { name: 'node' | 'play' | 'copy' | 'check' }) {
+function Icon({ name }: { name: 'node' | 'play' | 'copy' | 'check' | 'settings' | 'search' }) {
   const paths = {
     node: <path d="M5 5h14v14H5zM9 9h6v6H9z" />,
     play: <path d="m8 5 11 7-11 7z" />,
     copy: <path d="M9 9h10v10H9zM5 5h10v2H7v8H5z" />,
     check: <path d="m5 12 4 4L19 6" />,
+    settings: <path d="M4 7h10M18 7h2M4 17h2M10 17h10M14 4v6M8 14v6" />,
+    search: <path d="m20 20-4.5-4.5M18 11a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />,
   }
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
@@ -992,32 +1304,61 @@ function ActionMenu({
   label,
   actions,
   disabled,
+  resetKey,
 }: {
   label: string
   actions: Array<{ label: string; onClick: () => void; disabled?: boolean; danger?: boolean }>
   disabled?: boolean
+  resetKey: string
 }) {
+  const [open, setOpen] = useState(false)
+  const root = useRef<HTMLDivElement>(null)
+  useEffect(() => setOpen(false), [resetKey])
+  useEffect(() => {
+    if (!open) return
+    const closeOutside = (event: PointerEvent) => {
+      if (!root.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const closeEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('pointerdown', closeOutside)
+    document.addEventListener('keydown', closeEscape)
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside)
+      document.removeEventListener('keydown', closeEscape)
+    }
+  }, [open])
   return (
-    <details className="action-menu">
-      <summary aria-label={label} aria-disabled={disabled}>
+    <div className="action-menu" ref={root}>
+      <button
+        type="button"
+        className="action-menu-trigger"
+        aria-label={label}
+        aria-expanded={open}
+        disabled={disabled}
+        onClick={() => setOpen(value => !value)}
+      >
         <span aria-hidden="true">•••</span>
-      </summary>
-      <div className="action-menu-popover">
-        {actions.map(action => (
-          <button
-            key={action.label}
-            className={action.danger ? 'danger' : ''}
-            disabled={disabled || action.disabled}
-            onClick={event => {
-              action.onClick()
-              event.currentTarget.closest('details')?.removeAttribute('open')
-            }}
-          >
-            {action.label}
-          </button>
-        ))}
-      </div>
-    </details>
+      </button>
+      {open ? (
+        <div className="action-menu-popover" role="menu">
+          {actions.map(action => (
+            <button
+              key={action.label}
+              className={action.danger ? 'danger' : ''}
+              disabled={disabled || action.disabled}
+              onClick={() => {
+                action.onClick()
+                setOpen(false)
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
   )
 }
 
@@ -1312,19 +1653,17 @@ function OptimizerConfigEditor({
       <div className="section-heading">
         <div>
           <h3>Optimizer 公共配置</h3>
-          <p>直接管理 poc/optimizer_v2_daily.json；未知字段会原样保留。</p>
+          <p>跨 Galaxy 的搜索空间与精炼规则。Node 搜索页覆盖 objective、时钟、workers 和日常总预算。</p>
         </div>
-        <span className="format-hint">搜索权威配置</span>
+        <span className="format-hint">poc/optimizer_v2_daily.json</span>
       </div>
+      <p className="source-note">
+        daily JSON 中的 objective、max_simulations、max_wall_seconds 是非 Friendly Config 回退值；Manager
+        日常运行一定由当前 Node 的 Boss / search 覆盖，避免在这里重复编辑。
+      </p>
       <div className="optimizer-groups">
         <fieldset>
-          <legend>运行模式</legend>
-          <Label text="默认目标 objective">
-            <select value={config.objective} onChange={event => onChange({ ...config, objective: event.target.value })}>
-              <option value="normal">普通战（normal）</option>
-              <option value="boss">Boss</option>
-            </select>
-          </Label>
+          <legend>部署与搜索空间</legend>
           <Label text="部署模式 mode">
             <select value={config.mode} onChange={event => onChange({ ...config, mode: event.target.value })}>
               <option value="realistic">真实部署（realistic）</option>
@@ -1341,11 +1680,9 @@ function OptimizerConfigEditor({
           </Label>
         </fieldset>
         <fieldset>
-          <legend>搜索预算</legend>
+          <legend>结果与 Boss 精炼</legend>
           {(
             [
-              ['max_simulations', '最大模拟次数'],
-              ['max_wall_seconds', '最长时间（秒）'],
               ['top_n', '保留 Top N'],
               ['kill_refine_top_n', '击杀精炼 Top N'],
               ['kill_sequence_max_battles', '连续击杀最大场数'],
@@ -1465,10 +1802,17 @@ function SearchSettings({ config, onChange }: { config: NodeConfig; onChange: (v
   return (
     <div className="search-settings">
       <Label text="搜索档位">
-        <input value={config.search.profile} onChange={event => update('profile', event.target.value)} />
+        <select value={config.search.profile} onChange={event => update('profile', event.target.value)}>
+          <option value="fast">快速（fast）</option>
+          <option value="balanced">均衡（balanced）</option>
+          <option value="exhaustive">穷举（exhaustive）</option>
+        </select>
       </Label>
-      <Label text="目标">
-        <input value={config.search.goal} onChange={event => update('goal', event.target.value)} />
+      <Label text="Baseline 策略 goal">
+        <select value={config.search.goal} onChange={event => update('goal', event.target.value)}>
+          <option value="best">寻找最佳（best）</option>
+          <option value="beat_baseline">必须严格改善（beat_baseline）</option>
+        </select>
       </Label>
       <Label text="模拟时钟">
         <select
@@ -1480,7 +1824,7 @@ function SearchSettings({ config, onChange }: { config: NodeConfig; onChange: (v
         </select>
       </Label>
       <div className="numeric-settings">
-        <Label text="最大模拟次数">
+        <Label text="本次最大模拟次数">
           <input
             type="number"
             min="1"
@@ -1488,7 +1832,7 @@ function SearchSettings({ config, onChange }: { config: NodeConfig; onChange: (v
             onChange={event => update('max_simulations', Number(event.target.value))}
           />
         </Label>
-        <Label text="线程数">
+        <Label text="Worker 数（仅 Node 控制）">
           <input
             type="number"
             min="1"
@@ -1497,7 +1841,7 @@ function SearchSettings({ config, onChange }: { config: NodeConfig; onChange: (v
           />
         </Label>
       </div>
-      <Label text="最长时间（秒）">
+      <Label text="本次最长时间（秒）">
         <input
           type="number"
           min="1"

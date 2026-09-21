@@ -84,7 +84,11 @@ export const candidateSchema = z
   .object({
     formation_key: z.string().optional(),
     formation: z.array(formationEntrySchema).default([]),
+    ship_loadouts: z.record(loadoutSchema).optional(),
+    fleet_resources_committed: z.number().nullable().optional(),
     fleet_resources_used: z.number().nullable().optional(),
+    boss_damage: z.number().nullable().optional(),
+    boss_damage_per_fr: z.number().nullable().optional(),
     outcome: z.string().optional(),
   })
   .passthrough()

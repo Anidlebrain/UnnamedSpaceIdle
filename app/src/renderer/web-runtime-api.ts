@@ -183,7 +183,17 @@ function sampleRun(selection: Selection): RunResult {
   const current = nodes.get(key(selection))!
   const formation = Object.entries(current.baseline.formation)
     .filter(([, ship]) => ship !== 0 && ship !== null && ship !== '')
-    .map(([position, ship]) => ({ position, ship: String(ship) }))
+    .map(([position, ship]) => {
+      const shipId = shipSelectorToId(ship) || String(ship)
+      const loadout = current.baseline.loadouts[shipId] ?? {}
+      return {
+        position,
+        ship: String(ship),
+        primary_mod: typeof loadout.primary === 'string' ? loadout.primary : null,
+        secondary_mod: typeof loadout.secondary === 'string' ? loadout.secondary : null,
+        tertiary_mods: loadout.tertiary_mods ?? [],
+      }
+    })
   const best = formation.map(entry => ({ ...entry }))
   if (best[0]) best[0].ship = best[0].ship === '2' || best[0].ship === 'Corvette' ? 'Cruiser' : 'Corvette'
   const now = new Date().toISOString()
@@ -192,8 +202,21 @@ function sampleRun(selection: Selection): RunResult {
     startedAt: now,
     finishedAt: now,
     result: {
-      verified_baseline: { formation, fleet_resources_used: 88.4, outcome: 'victory' },
-      best_result: { formation: best, fleet_resources_used: 82.7, outcome: 'victory' },
+      verified_baseline: {
+        formation,
+        ship_loadouts: clone(current.baseline.loadouts),
+        fleet_resources_committed: 96,
+        fleet_resources_used: 88.4,
+        outcome: 'victory',
+      },
+      best_result: {
+        formation: best,
+        ship_loadouts: clone(current.baseline.loadouts),
+        fleet_resources_committed: 92,
+        fleet_resources_used: 82.7,
+        outcome: 'victory',
+      },
+      improvement_vs_baseline: { available: true, fleet_resources_saved_per_battle: 5.7, percent: 6.45 },
       objective: 'efficiency',
       recommendation_status: 'improved',
     },

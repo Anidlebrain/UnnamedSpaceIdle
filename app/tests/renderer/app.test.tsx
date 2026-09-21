@@ -135,12 +135,14 @@ describe('Renderer preload contract', () => {
   beforeEach(() => {
     window[FLEET_MANAGER_BRIDGE_NAME] = api
     vi.clearAllMocks()
+    localStorage.clear()
   })
   it('mounts with the preload API, calls catalog, and renders the main UI', async () => {
     render(<App />)
     await screen.findByText('当前节点')
     expect(api.catalog).toHaveBeenCalled()
     expect(screen.getByRole('tab', { name: '阵型' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
     expect(screen.getByRole('button', { name: '开始搜索' })).toBeTruthy()
   })
   it('renders a clear startup error when the preload API is missing', () => {
@@ -190,8 +192,9 @@ describe('Renderer preload contract', () => {
     render(<App />)
     await screen.findByText('当前节点')
     fireEvent.change(screen.getByLabelText('Node JSON 编辑器'), { target: { value: '{}' } })
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
     expect((screen.getByRole('button', { name: '开始搜索' }) as HTMLButtonElement).disabled).toBe(true)
-    expect(screen.getByText('保存修改后即可搜索。')).toBeTruthy()
+    expect(screen.getByText('保存搜索参数后即可启动。')).toBeTruthy()
     const source = await import('node:fs/promises').then(x => x.readFile('src/renderer/App.tsx', 'utf8'))
     expect(source).not.toMatch(/from ['"]node:(fs|child_process)/)
   })
@@ -207,10 +210,9 @@ describe('Renderer preload contract', () => {
     expect(changed).toBeTruthy()
     expect(screen.getByText('Optimizer exited with code 9.')).toBeTruthy()
     fireEvent.click(changed)
-    await screen.findByText('当前配置')
+    await screen.findByText('Best Found')
     expect(api.load).toHaveBeenLastCalledWith({ galaxy: 'g6', node: 'B3', version: 'default', common: 'default' })
-    expect(screen.getByText('最优配置')).toBeTruthy()
-    expect(screen.getAllByText('护卫舰').length).toBeGreaterThan(0)
+    expect(screen.getByText('Best Found Formation')).toBeTruthy()
   })
   it('shows numeric Formation values and preserves numeric storage when edited', async () => {
     api.load.mockResolvedValueOnce({
@@ -230,6 +232,8 @@ describe('Renderer preload contract', () => {
       common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
     })
     render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '阵型' }))
     const numericSlot = await screen.findByLabelText('A2 舰种')
     expect((numericSlot as HTMLSelectElement).value).toBe('Cruiser')
     expect(screen.getByText('巡洋舰（Cruiser · 4）')).toBeTruthy()
@@ -277,5 +281,147 @@ describe('Renderer preload contract', () => {
       '"primary": "FighterAltMod"',
     )
     expect(screen.getAllByText('自动 / 无手选槽位').length).toBeGreaterThan(0)
+  })
+
+  it('edits Boss, Hazards, and Supports without Raw JSON', async () => {
+    render(<App />)
+    await screen.findByText('战斗与环境')
+    fireEvent.click(screen.getByText('Boss 存活'))
+    fireEvent.change(screen.getByLabelText('Boss 剩余生命'), { target: { value: '3500' } })
+    fireEvent.change(screen.getByLabelText('Boss 搜索优先级'), { target: { value: 'kill_cost' } })
+    fireEvent.change(screen.getByLabelText('Hazards'), { target: { value: 'b10, b11' } })
+    fireEvent.change(screen.getByLabelText('Supports'), { target: { value: 'f2\nF3' } })
+    const raw = (screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value
+    expect(raw).toContain('"alive": true')
+    expect(raw).toContain('"remaining_hp": 3500')
+    expect(raw).toContain('"priority": "kill_cost"')
+    expect(raw).toContain('"B10"')
+    expect(raw).toContain('"F3"')
+  })
+
+  it('keeps public configuration on its own page and does not mutate Node JSON', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    const before = (screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value
+    fireEvent.click(screen.getByRole('button', { name: '公共配置' }))
+    expect(screen.getByRole('tab', { name: 'Galaxy 公共' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('tab', { name: 'Optimizer 公共' }))
+    expect(screen.getByText(/Node 搜索页覆盖 objective/)).toBeTruthy()
+    expect(screen.getByText('全局 / 所有 Galaxy')).toBeTruthy()
+    expect(screen.queryByLabelText('节点')).toBeNull()
+    expect(screen.queryByLabelText('默认目标 objective')).toBeNull()
+    fireEvent.change(screen.getByLabelText('舰队总组数上限'), { target: { value: '9' } })
+    fireEvent.click(screen.getByRole('button', { name: '节点配置' }))
+    expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toBe(before)
+  })
+
+  it('closes Version and Common menus on outside click, Escape, and page change', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    const versionMenu = screen.getByLabelText('管理版本')
+    fireEvent.click(versionMenu)
+    expect(screen.getByRole('button', { name: '新建版本' })).toBeTruthy()
+    fireEvent.pointerDown(document.body)
+    expect(screen.queryByRole('button', { name: '新建版本' })).toBeNull()
+
+    fireEvent.click(versionMenu)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(screen.queryByRole('button', { name: '新建版本' })).toBeNull()
+
+    fireEvent.click(screen.getByLabelText('管理公共配置'))
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    expect(screen.queryByRole('button', { name: '新建配置' })).toBeNull()
+  })
+
+  it('shows the complete Best Found formation and ship-level loadout on the search page', async () => {
+    api.run.mockResolvedValueOnce({
+      exitCode: 0,
+      startedAt: '2026-01-01T00:00:00.000Z',
+      finishedAt: '2026-01-01T00:00:04.000Z',
+      result: {
+        verified_baseline: {
+          formation: [{ position: 'A1', ship: 'Fighter' }],
+          fleet_resources_committed: 100,
+          fleet_resources_used: 90,
+          outcome: 'victory',
+        },
+        best_result: {
+          formation: [
+            {
+              position: 'A1',
+              ship: 'Corvette',
+              primary_mod: 'CorvetteChargeLaserMod',
+              secondary_mod: 'ShieldMod',
+              tertiary_mods: [],
+            },
+          ],
+          ship_loadouts: {
+            Corvette: { primary: 'CorvetteChargeLaserMod', secondary: 'ShieldMod', tertiary_mods: [] },
+          },
+          fleet_resources_committed: 92,
+          fleet_resources_used: 80,
+          boss_damage: 650,
+          outcome: 'victory',
+        },
+        improvement_vs_baseline: { available: true, percent: 11.11 },
+      },
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '开始搜索' }))
+    await screen.findByText('Best Found Formation')
+    expect(JSON.parse(localStorage.getItem('fleet-manager-last-search-v1')!)).toMatchObject({
+      galaxy: 'g6',
+      node: 'B1',
+    })
+    expect(screen.getByText('Committed FR')).toBeTruthy()
+    expect(screen.getByText('Used FR')).toBeTruthy()
+    expect(screen.getByText('Boss Damage')).toBeTruthy()
+    expect(screen.getByText('节省 FR')).toBeTruthy()
+    expect(screen.getByText('A5')).toBeTruthy()
+    expect(screen.getByText('B5')).toBeTruthy()
+    expect(screen.getByText('Best Found Loadout')).toBeTruthy()
+    expect(screen.getByText(/充能激光/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: '使用最优配置' })).toBeTruthy()
+  })
+
+  it('restores the last actually searched Galaxy and Node from Manager local state', async () => {
+    const twoGalaxyCatalog = {
+      galaxies: [
+        {
+          id: 'g5',
+          nodes: [
+            { id: 'B35', defaultVersion: 'default', versions: [{ id: 'default', name: '默认', isDefault: true }] },
+          ],
+          defaultCommon: 'default',
+          commons: [{ id: 'default', name: '默认', isDefault: true }],
+        },
+        {
+          id: 'g6',
+          nodes: [
+            { id: 'B1', defaultVersion: 'default', versions: [{ id: 'default', name: '默认', isDefault: true }] },
+          ],
+          defaultCommon: 'default',
+          commons: [{ id: 'default', name: '默认', isDefault: true }],
+        },
+      ],
+      templates: [],
+    }
+    localStorage.setItem(
+      'fleet-manager-last-search-v1',
+      JSON.stringify({ galaxy: 'g5', node: 'B35', version: 'default', common: 'default' }),
+    )
+    api.catalog.mockResolvedValueOnce(twoGalaxyCatalog)
+    api.load.mockResolvedValueOnce({
+      node: { ...node, galaxy: 5, node: 'B35' },
+      common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
+    })
+    render(<App />)
+    await waitFor(() =>
+      expect(api.load).toHaveBeenCalledWith({ galaxy: 'g5', node: 'B35', version: 'default', common: 'default' }),
+    )
+    expect((screen.getByLabelText('Galaxy') as HTMLSelectElement).value).toBe('g5')
+    expect((screen.getByLabelText('节点') as HTMLSelectElement).value).toBe('B35')
   })
 })
