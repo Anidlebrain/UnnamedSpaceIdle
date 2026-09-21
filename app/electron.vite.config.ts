@@ -6,7 +6,13 @@ export default defineConfig({
   main: { plugins: [externalizeDepsPlugin()] },
   preload: {
     plugins: [externalizeDepsPlugin()],
-    build: { lib: { entry: fileURLToPath(new URL('./src/preload/index.ts', import.meta.url)), formats: ['cjs'] }, rollupOptions: { output: { entryFileNames: '[name].cjs' } } }
+    build: {
+      lib: { entry: fileURLToPath(new URL('./src/preload/index.ts', import.meta.url)), formats: ['cjs'] },
+      rollupOptions: { output: { entryFileNames: '[name].cjs' } },
+    },
   },
-  renderer: { resolve: { alias: { '@renderer': new URL('./src/renderer', import.meta.url).pathname } }, plugins: [react()] }
+  renderer: {
+    resolve: { alias: { '@renderer': new URL('./src/renderer', import.meta.url).pathname } },
+    plugins: [react()],
+  },
 })

@@ -29,10 +29,14 @@ pnpm dev
 常用检查命令：
 
 ```powershell
+pnpm format
+pnpm format:check
 pnpm typecheck
 pnpm build
 pnpm test
 ```
+
+`pnpm format` 通过 `scripts/format.ps1` 使用仓库固定版本的 Prettier，格式化 `src/`、`tests/` 和 TypeScript/JSON 配置；`pnpm format:check` 只检查格式，不修改文件。
 
 `tests/real-optimizer-smoke.mts` 是真实 Optimizer + `--c` 安全 Smoke；它会先备份所有触及的工作区文件，并在 `finally` 中按原始字节恢复。
 

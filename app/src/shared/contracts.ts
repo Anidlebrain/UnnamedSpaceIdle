@@ -12,7 +12,13 @@ export type Catalog = {
   }>
   templates: Array<{ id: string; name: string }>
 }
-export type RunResult = { exitCode: number; startedAt: string; finishedAt: string; result?: OptimizerResult; error?: string }
+export type RunResult = {
+  exitCode: number
+  startedAt: string
+  finishedAt: string
+  result?: OptimizerResult
+  error?: string
+}
 export type CopyResult = { exitCode: number; startedAt: string; finishedAt: string; node?: NodeConfig; error?: string }
 export type CreateNodeRequest = {
   galaxy: string

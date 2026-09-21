@@ -53,6 +53,8 @@
 cd app
 pnpm install
 pnpm dev
+pnpm format
+pnpm format:check
 pnpm typecheck
 pnpm build
 pnpm test
