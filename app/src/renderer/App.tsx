@@ -8,7 +8,7 @@ import type {
   RunResult,
   Selection,
 } from '../shared/contracts'
-import type { CommonConfig, NodeConfig } from '../shared/schemas'
+import type { CommonConfig, NodeConfig, OptimizerConfig } from '../shared/schemas'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../shared/bridge'
 import { diffFormation } from '../shared/formation-diff'
 import {
@@ -18,6 +18,14 @@ import {
   shipSelectorToId,
   type ShipId,
 } from '../shared/ship-selectors'
+import {
+  catalogMods,
+  modDisplayName,
+  preserveModSelectorFormat,
+  resolveModSelector,
+  slotOptions,
+  type ModSlot,
+} from '../shared/mod-catalog'
 import { GalaxyRerunPanel } from './GalaxyRerunPanel'
 
 const emptySelection: Selection = { galaxy: '', node: '', version: '', common: '' }
@@ -25,7 +33,7 @@ const emptyCatalog: Catalog = { galaxies: [], templates: [] }
 const format = (value: unknown) => JSON.stringify(value, null, 2)
 const keyOf = (selection: Selection) => `${selection.galaxy}/${selection.node}/${selection.version}/${selection.common}`
 type Workspace = 'node' | 'rerun' | 'templates'
-type EditorTab = 'formation' | 'loadout' | 'common'
+type EditorTab = 'formation' | 'loadout' | 'common' | 'optimizer'
 type DialogState =
   | {
       kind: 'input'
@@ -60,10 +68,13 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const [selection, setSelection] = useState<Selection>(emptySelection)
   const [node, setNode] = useState<NodeConfig | null>(null)
   const [common, setCommon] = useState<CommonConfig | null>(null)
+  const [optimizerConfig, setOptimizerConfig] = useState<OptimizerConfig | null>(null)
   const [nodeSource, setNodeSource] = useState('')
   const [commonSource, setCommonSource] = useState('')
   const [savedNodeSource, setSavedNodeSource] = useState('')
   const [savedCommonSource, setSavedCommonSource] = useState('')
+  const [optimizerSource, setOptimizerSource] = useState('')
+  const [savedOptimizerSource, setSavedOptimizerSource] = useState('')
   const [logs, setLogs] = useState('')
   const [run, setRun] = useState<RunResult | null>(null)
   const [runKey, setRunKey] = useState('')
@@ -87,7 +98,8 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const currentCommon = currentGalaxy?.commons.find(c => c.id === selection.common)
   const nodeDirty = Boolean(node && nodeSource !== savedNodeSource)
   const commonDirty = Boolean(common && commonSource !== savedCommonSource)
-  const dirty = nodeDirty || commonDirty
+  const optimizerDirty = Boolean(optimizerConfig && optimizerSource !== savedOptimizerSource)
+  const dirty = nodeDirty || commonDirty || optimizerDirty
 
   const chooseInitial = (next: Catalog): Selection => {
     const galaxy = next.galaxies[0],
@@ -105,9 +117,15 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     return next
   }
   useEffect(() => {
-    void refresh()
-      .then(next => setSelection(current => (current.galaxy ? current : chooseInitial(next))))
-      .catch(error => setMessage(`无法读取 Manager 数据：${(error as Error).message}`))
+    void Promise.all([refresh(), api.loadOptimizerConfig()])
+      .then(([next, optimizer]) => {
+        const source = format(optimizer)
+        setOptimizerConfig(optimizer)
+        setOptimizerSource(source)
+        setSavedOptimizerSource(source)
+        setSelection(current => (current.galaxy ? current : chooseInitial(next)))
+      })
+      .catch(error => setMessage(`无法读取 Manager / Optimizer 配置：${(error as Error).message}`))
     const stopOutput = api.onOutput(line => setLogs(previous => `${previous}${line}`))
     const stopProgress = api.onGalaxyProgress(setGalaxyRerun)
     return () => {
@@ -207,6 +225,15 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       await api.saveCommon(selection, parsed)
       setCommon(parsed)
       setSavedCommonSource(format(parsed))
+    })
+  const saveOptimizerConfig = () =>
+    act('Optimizer 公共配置已原子保存；后续搜索将直接使用该文件。', async () => {
+      const parsed = JSON.parse(optimizerSource)
+      await api.saveOptimizerConfig(parsed)
+      const source = format(parsed)
+      setOptimizerConfig(parsed)
+      setOptimizerSource(source)
+      setSavedOptimizerSource(source)
     })
   const createVersion = (copyCurrent: boolean) => {
     if (!requireSaved()) return
@@ -482,7 +509,10 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 保存节点
               </button>
               <button onClick={() => void saveCommon()} disabled={busy || !commonDirty}>
-                保存公共配置
+                保存 Galaxy 公共
+              </button>
+              <button onClick={() => void saveOptimizerConfig()} disabled={busy || !optimizerDirty}>
+                保存 Optimizer 公共
               </button>
             </>
           ) : null}
@@ -694,7 +724,8 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 [
                   ['formation', '阵型'],
                   ['loadout', '装配'],
-                  ['common', '公共配置'],
+                  ['common', 'Galaxy 公共'],
+                  ['optimizer', 'Optimizer 公共'],
                 ] as const
               ).map(([id, label]) => (
                 <button
@@ -708,14 +739,27 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 </button>
               ))}
             </div>
-            {node && editorTab === 'formation' ? <FormationEditor config={node} onChange={tableChange} /> : null}
-            {node && editorTab === 'loadout' ? <LoadoutEditor config={node} onChange={tableChange} /> : null}
+            {node && editorTab === 'formation' ? (
+              <FormationEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
+            ) : null}
+            {node && optimizerConfig && editorTab === 'loadout' ? (
+              <LoadoutEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
+            ) : null}
             {common && editorTab === 'common' ? (
               <CommonEditor
                 config={common}
                 onChange={next => {
                   setCommon(next)
                   setCommonSource(format(next))
+                }}
+              />
+            ) : null}
+            {optimizerConfig && editorTab === 'optimizer' ? (
+              <OptimizerConfigEditor
+                config={optimizerConfig}
+                onChange={next => {
+                  setOptimizerConfig(next)
+                  setOptimizerSource(format(next))
                 }}
               />
             ) : null}
@@ -736,6 +780,14 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                     onChange={e => setCommonSource(e.target.value)}
                     spellCheck={false}
                     aria-label="Common JSON 编辑器"
+                  />
+                </Label>
+                <Label text="Optimizer JSON">
+                  <textarea
+                    value={optimizerSource}
+                    onChange={e => setOptimizerSource(e.target.value)}
+                    spellCheck={false}
+                    aria-label="Optimizer JSON 编辑器"
                   />
                 </Label>
               </div>
@@ -969,10 +1021,22 @@ function ActionMenu({
   )
 }
 
-function FormationEditor({ config, onChange }: { config: NodeConfig; onChange: (n: NodeConfig) => void }) {
+function FormationEditor({
+  config,
+  optimizer,
+  onChange,
+}: {
+  config: NodeConfig
+  optimizer: OptimizerConfig | null
+  onChange: (n: NodeConfig) => void
+}) {
   const slots = ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'B2', 'B3', 'B4', 'B5']
   const available = new Set(Object.keys(config.player_state.ships))
-  const options = SHIP_TYPES.filter(item => available.has(item.id))
+  const searchable = new Set(optimizer?.ship_types ?? SHIP_TYPES.map(item => item.id))
+  const selected = new Set(Object.values(config.baseline.formation).map(shipSelectorToId))
+  const options = SHIP_TYPES.filter(
+    item => (available.has(item.id) && searchable.has(item.id)) || selected.has(item.id),
+  )
   const update = (position: string, ship: ShipId | '') => {
     const previous = config.baseline.formation[position]
     onChange({
@@ -1031,20 +1095,22 @@ function FormationEditor({ config, onChange }: { config: NodeConfig; onChange: (
   )
 }
 
-function LoadoutEditor({ config, onChange }: { config: NodeConfig; onChange: (n: NodeConfig) => void }) {
-  const load = (ship: string, field: 'primary' | 'secondary' | 'tertiary_mods', value: string) => {
+function LoadoutEditor({
+  config,
+  optimizer,
+  onChange,
+}: {
+  config: NodeConfig
+  optimizer: OptimizerConfig
+  onChange: (n: NodeConfig) => void
+}) {
+  const ships = Array.from(new Set([...optimizer.ship_types, ...Object.keys(config.baseline.loadouts)]))
+  const load = (ship: string, field: 'primary' | 'secondary', value: string | null) => {
     const old = config.baseline.loadouts[ship] ?? {}
     const oldValue = old[field]
-    const scalar = value || null
-    const nextValue =
-      field === 'tertiary_mods'
-        ? value
-            .split(',')
-            .map(x => x.trim())
-            .filter(Boolean)
-        : typeof oldValue === 'number' && /^\d+$/.test(value)
-          ? Number(value)
-          : scalar
+    const canonicalShip = shipSelectorToId(ship) || ship
+    const options = slotOptions(optimizer, canonicalShip, field)
+    const nextValue = preserveModSelectorFormat(oldValue, value, options)
     onChange({
       ...config,
       baseline: {
@@ -1078,30 +1144,91 @@ function LoadoutEditor({ config, onChange }: { config: NodeConfig; onChange: (n:
             </tr>
           </thead>
           <tbody>
-            {Object.entries(config.baseline.loadouts).map(([ship, l]) => (
-              <tr key={ship}>
-                <td>
-                  <strong>{shipDisplayName(ship, false)}</strong>
-                  <small>{ship}</small>
-                </td>
-                <td>
-                  <input value={l.primary ?? ''} onChange={e => load(ship, 'primary', e.target.value)} />
-                </td>
-                <td>
-                  <input value={l.secondary ?? ''} onChange={e => load(ship, 'secondary', e.target.value)} />
-                </td>
-                <td>
-                  <input
-                    value={(l.tertiary_mods ?? []).join(', ')}
-                    onChange={e => load(ship, 'tertiary_mods', e.target.value)}
-                  />
-                </td>
-              </tr>
-            ))}
+            {ships.map(ship => {
+              const l = config.baseline.loadouts[ship] ?? {}
+              const canonicalShip = shipSelectorToId(ship) || ship
+              return (
+                <tr key={ship}>
+                  <td>
+                    <strong>{shipDisplayName(ship, false)}</strong>
+                    <small>{ship}</small>
+                  </td>
+                  <td>
+                    <ModSlotControl
+                      ship={canonicalShip}
+                      slot="primary"
+                      value={l.primary}
+                      options={slotOptions(optimizer, canonicalShip, 'primary')}
+                      onChange={value => load(ship, 'primary', value)}
+                    />
+                  </td>
+                  <td>
+                    <ModSlotControl
+                      ship={canonicalShip}
+                      slot="secondary"
+                      value={l.secondary}
+                      options={slotOptions(optimizer, canonicalShip, 'secondary')}
+                      onChange={value => load(ship, 'secondary', value)}
+                    />
+                  </td>
+                  <td>
+                    <span className="slot-unavailable" title="Standard Galaxy 的 Tertiary 由原版 Fleet 作用域自动附加">
+                      自动 / 无手选槽位
+                    </span>
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
     </section>
+  )
+}
+
+function ModSlotControl({
+  ship,
+  slot,
+  value,
+  options,
+  onChange,
+}: {
+  ship: string
+  slot: ModSlot
+  value: unknown
+  options: Array<string | null>
+  onChange: (value: string | null) => void
+}) {
+  const concrete = Array.from(new Set(options.filter((option): option is string => typeof option === 'string')))
+  const allowsNone = options.includes(null)
+  const resolved = resolveModSelector(value, options)
+  const label = `${ship} ${slot}`
+  if (concrete.length === 0) return <span className="slot-unavailable">不可用</span>
+  if (concrete.length === 1) {
+    const id = concrete[0]
+    if (!allowsNone) return <span title={id}>{modDisplayName(id)}（必选）</span>
+    return (
+      <label className="mod-toggle">
+        <input
+          type="checkbox"
+          aria-label={`${label} ${modDisplayName(id)}`}
+          checked={resolved === id}
+          onChange={event => onChange(event.target.checked ? id : null)}
+        />
+        <span>{modDisplayName(id)}</span>
+      </label>
+    )
+  }
+  return (
+    <select aria-label={label} value={resolved ?? ''} onChange={event => onChange(event.target.value || null)}>
+      {allowsNone ? <option value="">无</option> : null}
+      {concrete.map(id => (
+        <option key={id} value={id}>
+          {modDisplayName(id, true)}
+        </option>
+      ))}
+      {resolved && !concrete.includes(resolved) ? <option value={resolved}>不兼容：{resolved}</option> : null}
+    </select>
   )
 }
 
@@ -1137,6 +1264,197 @@ function CommonEditor({ config, onChange }: { config: CommonConfig; onChange: (v
           </Label>
         </fieldset>
       ))}
+    </section>
+  )
+}
+
+function OptimizerConfigEditor({
+  config,
+  onChange,
+}: {
+  config: OptimizerConfig
+  onChange: (value: OptimizerConfig) => void
+}) {
+  const updateNumber = (field: keyof OptimizerConfig, value: string) => onChange({ ...config, [field]: Number(value) })
+  const setShipEnabled = (ship: string, enabled: boolean) => {
+    const shipTypes = enabled ? [...config.ship_types, ship] : config.ship_types.filter(item => item !== ship)
+    onChange({ ...config, ship_types: Array.from(new Set(shipTypes)) })
+  }
+  const setRange = (ship: string, field: 'min' | 'max', value: string) =>
+    onChange({
+      ...config,
+      group_ranges: {
+        ...config.group_ranges,
+        [ship]: { ...(config.group_ranges[ship] ?? { min: 0, max: 0 }), [field]: Number(value) },
+      },
+    })
+  const setShipMaximum = (ship: string, value: string) =>
+    onChange({
+      ...config,
+      max_groups_per_ship: { ...config.max_groups_per_ship, [ship]: Number(value) },
+    })
+  const setAllowed = (ship: string, slot: 'primary' | 'secondary', option: string | null, enabled: boolean) => {
+    const slots = config.allowed_mod_slots[ship] ?? { primary: [null], secondary: [null] }
+    const current = slotOptions(config, ship, slot)
+    const next = enabled ? [...current, option] : current.filter(item => item !== option)
+    const normalized = Array.from(new Set(next)).sort((a, b) => (a === null ? -1 : b === null ? 1 : 0))
+    if (normalized.length === 0) return
+    onChange({
+      ...config,
+      allowed_mod_slots: {
+        ...config.allowed_mod_slots,
+        [ship]: { ...slots, [slot]: normalized },
+      },
+    })
+  }
+  return (
+    <section className="config-section optimizer-config-form">
+      <div className="section-heading">
+        <div>
+          <h3>Optimizer 公共配置</h3>
+          <p>直接管理 poc/optimizer_v2_daily.json；未知字段会原样保留。</p>
+        </div>
+        <span className="format-hint">搜索权威配置</span>
+      </div>
+      <div className="optimizer-groups">
+        <fieldset>
+          <legend>运行模式</legend>
+          <Label text="默认目标 objective">
+            <select value={config.objective} onChange={event => onChange({ ...config, objective: event.target.value })}>
+              <option value="normal">普通战（normal）</option>
+              <option value="boss">Boss</option>
+            </select>
+          </Label>
+          <Label text="部署模式 mode">
+            <select value={config.mode} onChange={event => onChange({ ...config, mode: event.target.value })}>
+              <option value="realistic">真实部署（realistic）</option>
+              <option value="practice">练习（practice）</option>
+            </select>
+          </Label>
+          <Label text="舰队总组数上限">
+            <input
+              type="number"
+              min="1"
+              value={config.max_total_groups}
+              onChange={event => updateNumber('max_total_groups', event.target.value)}
+            />
+          </Label>
+        </fieldset>
+        <fieldset>
+          <legend>搜索预算</legend>
+          {(
+            [
+              ['max_simulations', '最大模拟次数'],
+              ['max_wall_seconds', '最长时间（秒）'],
+              ['top_n', '保留 Top N'],
+              ['kill_refine_top_n', '击杀精炼 Top N'],
+              ['kill_sequence_max_battles', '连续击杀最大场数'],
+            ] as const
+          ).map(([field, label]) => (
+            <Label text={label} key={field}>
+              <input
+                type="number"
+                min="1"
+                value={Number(config[field])}
+                onChange={event => updateNumber(field, event.target.value)}
+              />
+            </Label>
+          ))}
+        </fieldset>
+      </div>
+      <div className="table-scroll">
+        <table className="optimizer-ship-table">
+          <thead>
+            <tr>
+              <th>舰种</th>
+              <th>参与搜索</th>
+              <th>组数范围</th>
+              <th>单舰种上限</th>
+              <th>允许 Primary</th>
+              <th>允许 Secondary</th>
+              <th>Tertiary</th>
+            </tr>
+          </thead>
+          <tbody>
+            {SHIP_TYPES.map(ship => (
+              <tr key={ship.id}>
+                <td>
+                  <strong>{ship.name}</strong>
+                  <small>{ship.id}</small>
+                </td>
+                <td>
+                  <input
+                    type="checkbox"
+                    aria-label={`${ship.id} 参与搜索`}
+                    checked={config.ship_types.includes(ship.id)}
+                    onChange={event => setShipEnabled(ship.id, event.target.checked)}
+                  />
+                </td>
+                <td className="range-inputs">
+                  <input
+                    aria-label={`${ship.id} 最少组数`}
+                    type="number"
+                    min="0"
+                    value={config.group_ranges[ship.id]?.min ?? 0}
+                    onChange={event => setRange(ship.id, 'min', event.target.value)}
+                  />
+                  <span>–</span>
+                  <input
+                    aria-label={`${ship.id} 最多组数`}
+                    type="number"
+                    min="0"
+                    value={config.group_ranges[ship.id]?.max ?? 0}
+                    onChange={event => setRange(ship.id, 'max', event.target.value)}
+                  />
+                </td>
+                <td>
+                  <input
+                    aria-label={`${ship.id} 单舰种上限`}
+                    type="number"
+                    min="0"
+                    value={config.max_groups_per_ship[ship.id] ?? 0}
+                    onChange={event => setShipMaximum(ship.id, event.target.value)}
+                  />
+                </td>
+                {(['primary', 'secondary'] as const).map(slot => {
+                  const active = slotOptions(config, ship.id, slot)
+                  const candidates = Array.from(
+                    new Set([
+                      ...catalogMods(ship.id, slot).map(mod => mod.id),
+                      ...active.filter((item): item is string => typeof item === 'string'),
+                    ]),
+                  )
+                  return (
+                    <td key={slot} className="allowed-mods">
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={active.includes(null)}
+                          onChange={event => setAllowed(ship.id, slot, null, event.target.checked)}
+                        />
+                        无
+                      </label>
+                      {candidates.map(id => (
+                        <label key={id} title={id}>
+                          <input
+                            type="checkbox"
+                            checked={active.includes(id)}
+                            onChange={event => setAllowed(ship.id, slot, id, event.target.checked)}
+                          />
+                          {modDisplayName(id)}
+                        </label>
+                      ))}
+                    </td>
+                  )
+                })}
+                <td>
+                  <span className="slot-unavailable">原版自动附加</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   )
 }

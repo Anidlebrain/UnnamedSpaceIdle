@@ -542,10 +542,91 @@ th {
   font-family: var(--font-mono);
 }
 
-.loadout-table input {
+.loadout-table input:not([type='checkbox']) {
   min-height: 2.5rem;
   font-family: var(--font-mono);
   font-size: var(--text-xs);
+}
+
+.mod-toggle,
+.allowed-mods label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--color-ink-2);
+  font-weight: 600;
+}
+
+.mod-toggle input,
+.allowed-mods input {
+  width: 1rem;
+  min-height: 1rem;
+  accent-color: var(--color-accent);
+}
+
+.slot-unavailable {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+}
+
+.optimizer-config-form {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.optimizer-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: var(--space-md);
+}
+
+.optimizer-groups fieldset {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: var(--space-sm);
+  margin: 0;
+  padding: var(--space-md);
+  border: var(--rule);
+  border-radius: var(--radius-sm);
+}
+
+.optimizer-groups legend {
+  padding-inline: var(--space-xs);
+  font-weight: 700;
+}
+
+.optimizer-ship-table {
+  min-width: 72rem;
+}
+
+.optimizer-ship-table td:first-child {
+  display: grid;
+}
+
+.optimizer-ship-table td:first-child small {
+  color: var(--color-muted);
+  font-family: var(--font-mono);
+}
+
+.optimizer-ship-table input[type='number'] {
+  width: 5rem;
+}
+
+.range-inputs {
+  white-space: nowrap;
+}
+
+.range-inputs input {
+  width: 4rem !important;
+}
+
+.allowed-mods {
+  min-width: 13rem;
+}
+
+.allowed-mods label + label {
+  margin-block-start: var(--space-xs);
 }
 
 .common-form {

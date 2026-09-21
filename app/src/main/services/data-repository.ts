@@ -1,14 +1,17 @@
 import { randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { isDeepStrictEqual } from 'node:util'
 import {
   commonConfigSchema,
   commonMetaSchema,
   nodeConfigSchema,
+  optimizerConfigSchema,
   templateMetaSchema,
   versionMetaSchema,
   type CommonConfig,
   type NodeConfig,
+  type OptimizerConfig,
 } from '../../shared/schemas'
 import type { Catalog, CreateNodeRequest, ImportPreview, Selection } from '../../shared/contracts'
 
@@ -39,10 +42,33 @@ export async function atomicJson(path: string, value: unknown): Promise<void> {
   await rename(tmp, path)
 }
 
+async function atomicText(path: string, value: string): Promise<void> {
+  await mkdir(dirname(path), { recursive: true })
+  const tmp = `${path}.${process.pid}.${Date.now()}.tmp`
+  await writeFile(tmp, value, 'utf8')
+  await rename(tmp, path)
+}
+
+function preserveObjectOrder(current: unknown, next: unknown): unknown {
+  if (Array.isArray(next)) return next
+  if (!current || !next || typeof current !== 'object' || typeof next !== 'object') return next
+  const currentObject = current as Record<string, unknown>
+  const nextObject = next as Record<string, unknown>
+  const merged: Record<string, unknown> = {}
+  for (const key of Object.keys(currentObject)) {
+    if (key in nextObject) merged[key] = preserveObjectOrder(currentObject[key], nextObject[key])
+  }
+  for (const key of Object.keys(nextObject)) {
+    if (!(key in merged)) merged[key] = nextObject[key]
+  }
+  return merged
+}
+
 export class DataRepository {
   constructor(
     private readonly dataRoot: string,
     private readonly mapRoot: string,
+    private readonly optimizerConfigPath = join(dirname(mapRoot), 'poc', 'optimizer_v2_daily.json'),
   ) {}
   private validateSelection(s: Selection) {
     if (!/^g\d+$/i.test(s.galaxy)) throw new Error('Invalid Galaxy.')
@@ -215,6 +241,24 @@ export class DataRepository {
     )
     this.assertIdentity(selection, node)
     return { node, common }
+  }
+
+  async loadOptimizerConfig(): Promise<OptimizerConfig> {
+    return optimizerConfigSchema.parse(await readJson(this.optimizerConfigPath))
+  }
+
+  async saveOptimizerConfig(config: OptimizerConfig): Promise<void> {
+    const parsed = optimizerConfigSchema.parse(config)
+    const source = await readFile(this.optimizerConfigPath, 'utf8')
+    const sourceObject = JSON.parse(source)
+    const current = optimizerConfigSchema.parse(sourceObject)
+    if (isDeepStrictEqual(current, parsed)) return
+    const newline = source.includes('\r\n') ? '\r\n' : '\n'
+    const indent = source.match(/\r?\n([ \t]+)"/)?.[1] ?? '  '
+    const trailingNewline = /\r?\n$/.test(source)
+    const nextValue = preserveObjectOrder(sourceObject, parsed)
+    const next = JSON.stringify(nextValue, null, indent).replace(/\n/g, newline) + (trailingNewline ? newline : '')
+    await atomicText(this.optimizerConfigPath, next)
   }
 
   private assertIdentity(selection: Pick<Selection, 'galaxy' | 'node'>, node: NodeConfig) {

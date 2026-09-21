@@ -6,7 +6,7 @@ import type {
   RunResult,
   Selection,
 } from '../shared/contracts'
-import type { CommonConfig, NodeConfig } from '../shared/schemas'
+import type { CommonConfig, NodeConfig, OptimizerConfig } from '../shared/schemas'
 import { preserveShipSelectorFormat, shipSelectorToId } from '../shared/ship-selectors'
 
 const clone = <T>(value: T): T => structuredClone(value)
@@ -50,6 +50,31 @@ const makeNode = (galaxy: number, node: string, numeric = false): NodeConfig => 
 const defaultCommon: CommonConfig = {
   permanent: { damage_scale: 3.25, health_scale: 3.25 },
   temporary: { damage_scale: 0, health_scale: 0 },
+}
+
+let optimizerConfig: OptimizerConfig = {
+  objective: 'normal',
+  mode: 'realistic',
+  ship_types: ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'],
+  group_ranges: Object.fromEntries(
+    ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'].map(ship => [ship, { min: 0, max: 10 }]),
+  ),
+  allowed_mod_slots: {
+    Fighter: { primary: [null, 'FighterMiniRailgunMod'], secondary: [null] },
+    Corvette: { primary: [null, 'CorvetteChargeLaserMod'], secondary: [null, 'ShieldMod'] },
+    Frigate: { primary: [null, 'FrigateMissileMod'], secondary: [null, 'ArmorMod'] },
+    Cruiser: { primary: [null], secondary: [null, 'CruiserSingleArmorTank'] },
+    HeavyCruiser: { primary: [null, 'HeavyCruiserBeamMod'], secondary: [null] },
+  },
+  max_total_groups: 10,
+  max_groups_per_ship: Object.fromEntries(
+    ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'].map(ship => [ship, 10]),
+  ),
+  max_simulations: 1_000_000,
+  max_wall_seconds: 300,
+  top_n: 10,
+  kill_refine_top_n: 3,
+  kill_sequence_max_battles: 100,
 }
 
 const catalog: Catalog = {
@@ -112,6 +137,7 @@ type BrowserWorkspaceSnapshot = {
   catalog: Catalog
   nodes: [string, NodeConfig][]
   commons: [string, CommonConfig][]
+  optimizerConfig?: OptimizerConfig
 }
 
 function restoreWorkspace() {
@@ -126,6 +152,7 @@ function restoreWorkspace() {
     commons.clear()
     for (const [entryKey, node] of snapshot.nodes) nodes.set(entryKey, node)
     for (const [entryKey, common] of snapshot.commons) commons.set(entryKey, common)
+    if (snapshot.optimizerConfig) optimizerConfig = snapshot.optimizerConfig
   } catch {
     localStorage.removeItem(STORAGE_KEY)
   }
@@ -137,6 +164,7 @@ function persistWorkspace() {
     catalog,
     nodes: [...nodes.entries()],
     commons: [...commons.entries()],
+    optimizerConfig,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
 }
@@ -184,12 +212,17 @@ export function createBrowserApi(): FleetManagerApi {
       node: clone(nodes.get(key(selection)) ?? makeNode(Number(selection.galaxy.slice(1)), selection.node)),
       common: clone(commons.get(commonKey(selection)) ?? defaultCommon),
     }),
+    loadOptimizerConfig: async () => clone(optimizerConfig),
     save: async (selection, node) => {
       nodes.set(key(selection), clone(node))
       persistWorkspace()
     },
     saveCommon: async (selection, common) => {
       commons.set(commonKey(selection), clone(common))
+      persistWorkspace()
+    },
+    saveOptimizerConfig: async config => {
+      optimizerConfig = clone(config)
       persistWorkspace()
     },
     createVersion: async (selection, name) => {

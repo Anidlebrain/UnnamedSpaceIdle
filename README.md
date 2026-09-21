@@ -8,6 +8,7 @@
 - app-Phase 1：舰队优化器管理桌面应用已完成。`app/` 提供 Electron + React + TypeScript 界面，负责配置导入、版本化保存、JSON 校验、Optimizer 启动、实时输出和 Baseline/Best Found 差异展示；实际战斗与搜索仍复用 `fleetSimulation/`，应用不会自行重实现或自动安装 PCK。
 - app-Phase 2：配置生命周期和结果应用流程已完成。支持 Node Version/Common 的新建、复制、重命名、删除、默认项切换，模板管理和从模板/版本创建 Node；支持通过现有 `run_optimizer.bat --c` 安全应用 Best Found，并在校验失败、退出码非零或结果身份不匹配时保护 Manager 数据。
 - APP V1 暂时封板：在上述能力基础上完成 Galaxy 全局默认配置重跑、网页运行时兼容、舰种选择器和中文工作台 UI；全局重跑只发现变化，不自动写回配置，后续迭代另行开启。
+- APP V1 的 Optimizer 公共配置直接管理 `fleetSimulation/poc/optimizer_v2_daily.json`，包括搜索范围、全局预算和按舰种/槽位排列的 Mod 候选；应用不会在 `app/data/` 另建运行配置副本。
 
 测试 PCK **尚未安装**，Steam 游戏目录未被修改。
 

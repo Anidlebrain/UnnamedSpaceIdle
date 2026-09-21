@@ -22,14 +22,31 @@ const node = {
   },
 }
 const common = { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } }
+const optimizer = {
+  objective: 'normal',
+  future_field: { preserved: true },
+  mode: 'realistic',
+  ship_types: ['Fighter'],
+  group_ranges: { Fighter: { min: 0, max: 10 } },
+  allowed_mod_slots: { Fighter: { primary: [null, 'FighterMiniRailgunMod'], secondary: [null] } },
+  max_total_groups: 10,
+  max_groups_per_ship: { Fighter: 10 },
+  max_simulations: 100,
+  max_wall_seconds: 30,
+  top_n: 10,
+  kill_refine_top_n: 3,
+  kill_sequence_max_battles: 100,
+}
 async function fixture() {
   const root = await mkdtemp(join(tmpdir(), 'fleet-manager-'))
   roots.push(root)
   const map = join(root, 'map')
   await writeFile(join(root, 'placeholder'), '')
   await (await import('node:fs/promises')).mkdir(join(map, 'g6'), { recursive: true })
+  await (await import('node:fs/promises')).mkdir(join(root, 'poc'), { recursive: true })
   await writeFile(join(map, 'g6', 'B1.json'), JSON.stringify(node))
   await writeFile(join(map, 'g6', 'common.json'), JSON.stringify(common))
+  await writeFile(join(root, 'poc', 'optimizer_v2_daily.json'), `${JSON.stringify(optimizer, null, 4)}\n`)
   return { root, map, repo: new DataRepository(join(root, 'data'), map) }
 }
 afterEach(async () => {
@@ -53,6 +70,19 @@ describe('DataRepository', () => {
     const { repo } = await fixture()
     await repo.importMap()
     await expect(repo.importMap()).rejects.toThrow('will not overwrite')
+  })
+  it('round-trips Optimizer public config without no-op drift and preserves unknown fields', async () => {
+    const { repo, root } = await fixture()
+    const path = join(root, 'poc', 'optimizer_v2_daily.json')
+    const before = await readFile(path, 'utf8')
+    const loaded = await repo.loadOptimizerConfig()
+    await repo.saveOptimizerConfig(loaded)
+    expect(await readFile(path, 'utf8')).toBe(before)
+    await repo.saveOptimizerConfig({ ...loaded, max_wall_seconds: 45 })
+    const after = await readFile(path, 'utf8')
+    expect(after).toContain('\n    "mode"')
+    expect(after.indexOf('"future_field"')).toBeLessThan(after.indexOf('"mode"'))
+    expect(JSON.parse(after)).toMatchObject({ max_wall_seconds: 45, future_field: { preserved: true } })
   })
   it('keeps Node Versions isolated and safely manages names and defaults', async () => {
     const { repo } = await fixture()

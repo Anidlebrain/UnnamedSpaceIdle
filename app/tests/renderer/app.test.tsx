@@ -24,6 +24,32 @@ const node: NodeConfig = {
     workers: 1,
   },
 }
+const optimizerConfig = {
+  objective: 'normal',
+  mode: 'realistic',
+  ship_types: ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'],
+  group_ranges: {
+    Fighter: { min: 0, max: 10 },
+    Corvette: { min: 0, max: 10 },
+    Frigate: { min: 0, max: 10 },
+    Cruiser: { min: 0, max: 10 },
+    HeavyCruiser: { min: 0, max: 10 },
+  },
+  allowed_mod_slots: {
+    Fighter: { primary: [null, 'FighterMiniRailgunMod'], secondary: [null] },
+    Corvette: { primary: [null, 'CorvetteChargeLaserMod'], secondary: [null, 'ShieldMod'] },
+    Frigate: { primary: [null, 'FrigateMissileMod'], secondary: [null, 'ArmorMod'] },
+    Cruiser: { primary: [null], secondary: [null, 'CruiserSingleArmorTank'] },
+    HeavyCruiser: { primary: [null, 'HeavyCruiserBeamMod'], secondary: [null] },
+  },
+  max_total_groups: 10,
+  max_groups_per_ship: { Fighter: 10, Corvette: 10, Frigate: 10, Cruiser: 10, HeavyCruiser: 10 },
+  max_simulations: 1_000_000,
+  max_wall_seconds: 300,
+  top_n: 10,
+  kill_refine_top_n: 3,
+  kill_sequence_max_battles: 100,
+}
 const unsubscribe = vi.fn()
 const unsubscribeProgress = vi.fn()
 const galaxyResult = {
@@ -76,8 +102,10 @@ const api = {
     node,
     common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
   })),
+  loadOptimizerConfig: vi.fn(async () => optimizerConfig),
   save: vi.fn(async () => {}),
   saveCommon: vi.fn(async () => {}),
+  saveOptimizerConfig: vi.fn(async () => {}),
   createVersion: vi.fn(),
   renameVersion: vi.fn(),
   deleteVersion: vi.fn(),
@@ -209,5 +237,45 @@ describe('Renderer preload contract', () => {
     await waitFor(() =>
       expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain('"A2": 3'),
     )
+  })
+  it('renders one-Mod slots as toggles, multi-Mod slots as selects, and writes compatible values', async () => {
+    api.loadOptimizerConfig.mockResolvedValueOnce({
+      ...optimizerConfig,
+      allowed_mod_slots: {
+        ...optimizerConfig.allowed_mod_slots,
+        Fighter: { primary: [null, 'FighterMiniRailgunMod', 'FighterAltMod'], secondary: [null] },
+      },
+    })
+    api.load.mockResolvedValueOnce({
+      node: {
+        ...node,
+        player_state: { fleet_resources: 1, ships: { Fighter: 1, Corvette: 1 } },
+        baseline: {
+          ...node.baseline,
+          loadouts: {
+            Fighter: { primary: null, secondary: null, tertiary_mods: [] },
+            Corvette: { primary: null, secondary: 'ShieldMod', tertiary_mods: [] },
+          },
+        },
+      },
+      common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '装配' }))
+
+    const secondaryToggle = (await screen.findByLabelText(/Corvette secondary.*护盾强化/)) as HTMLInputElement
+    expect(secondaryToggle.type).toBe('checkbox')
+    expect(secondaryToggle.checked).toBe(true)
+    fireEvent.click(secondaryToggle)
+    expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain('"secondary": null')
+
+    const primarySelect = screen.getByLabelText('Fighter primary') as HTMLSelectElement
+    expect(primarySelect.tagName).toBe('SELECT')
+    fireEvent.change(primarySelect, { target: { value: 'FighterAltMod' } })
+    expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain(
+      '"primary": "FighterAltMod"',
+    )
+    expect(screen.getAllByText('自动 / 无手选槽位').length).toBeGreaterThan(0)
   })
 })

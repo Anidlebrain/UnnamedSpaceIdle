@@ -16,6 +16,7 @@
    - APP V1 暂时封板：提供 Electron 主进程、context-isolated preload bridge、React 配置界面、正式配置导入与版本化保存、Zod 校验、Optimizer 进程管理、实时输出、结果差异展示和 Galaxy 全局默认配置重跑。
    - Phase 2 增加 Node Version/Common 的生命周期管理、默认项切换、模板管理、从模板或版本创建 Node，以及经 `--c` 校验后将 Best Found 安全写回当前 Manager Version 的事务流程。
    - 当前 V1 还包含标准浏览器运行时、舰种选择器、中文工作台样式和对应概念图；网页运行时不执行真实本地 Optimizer。
+   - Optimizer 公共配置继续以 `fleetSimulation/poc/optimizer_v2_daily.json` 为唯一运行来源；Manager 只对该文件做结构校验、保留未知字段的原子编辑，不复制为第二份配置。
    - 应用只负责管理和调用已有 fleetSimulation Optimizer；不会重新实现战斗/搜索算法，也不会自动安装 PCK 或修改 Steam 游戏目录。
 
 ## 不提交的文件

@@ -106,6 +106,10 @@ describe('OptimizerRunner', () => {
   it('holds the same global lock for an entire serial queue', async () => {
     const x = await setup()
     let release!: () => void
+    let signalStarted!: () => void
+    const started = new Promise<void>(resolve => {
+      signalStarted = resolve
+    })
     const runner = new OptimizerRunner(
       x.repo,
       x.root,
@@ -113,6 +117,7 @@ describe('OptimizerRunner', () => {
       () =>
         new Promise(resolve => {
           release = () => resolve(3)
+          signalStarted()
         }),
     )
     const queue = runner.runQueue(
@@ -120,7 +125,7 @@ describe('OptimizerRunner', () => {
       () => {},
       () => {},
     )
-    await new Promise(resolve => setTimeout(resolve, 20))
+    await started
     await expect(runner.run(x.s)).rejects.toThrow('already running')
     await expect(runner.useBest(x.s)).rejects.toThrow('already running')
     await expect(

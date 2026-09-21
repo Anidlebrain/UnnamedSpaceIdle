@@ -7,7 +7,7 @@ import { DataRepository } from './services/data-repository'
 import { OptimizerRunner } from './services/optimizer-runner'
 import { GalaxyRerunService } from './services/galaxy-rerun'
 import type { CreateNodeRequest, Selection } from '../shared/contracts'
-import { commonConfigSchema, nodeConfigSchema } from '../shared/schemas'
+import { commonConfigSchema, nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
 
 if (process.env.FLEET_MANAGER_USER_DATA_DIR) {
   app.setPath('userData', process.env.FLEET_MANAGER_USER_DATA_DIR)
@@ -54,11 +54,15 @@ app.whenReady().then(() => {
   ipcMain.handle('data:import', () => repo.importMap())
   ipcMain.handle('data:catalog', () => repo.catalog())
   ipcMain.handle('data:load', (_, selection: Selection) => repo.load(selection))
+  ipcMain.handle('data:load-optimizer-config', () => repo.loadOptimizerConfig())
   ipcMain.handle('data:save', (_, selection: Selection, node: unknown) =>
     repo.save(selection, nodeConfigSchema.parse(node)),
   )
   ipcMain.handle('data:save-common', (_, selection: Selection, common: unknown) =>
     repo.saveCommon(selection, commonConfigSchema.parse(common)),
+  )
+  ipcMain.handle('data:save-optimizer-config', (_, config: unknown) =>
+    repo.saveOptimizerConfig(optimizerConfigSchema.parse(config)),
   )
   ipcMain.handle('version:create', (_, selection: Selection, name: string) => repo.createVersion(selection, name))
   ipcMain.handle('version:rename', (_, selection: Selection, name: string) => repo.renameVersion(selection, name))

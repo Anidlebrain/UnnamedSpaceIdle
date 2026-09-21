@@ -1,4 +1,4 @@
-import type { CommonConfig, NodeConfig, OptimizerResult } from './schemas'
+import type { CommonConfig, NodeConfig, OptimizerConfig, OptimizerResult } from './schemas'
 
 export type ImportPreview = { galaxies: Array<{ id: string; nodes: string[]; common: boolean }> }
 export type Selection = { galaxy: string; node: string; version: string; common: string }
@@ -53,8 +53,10 @@ export type FleetManagerApi = {
   importMap(): Promise<void>
   catalog(): Promise<Catalog>
   load(selection: Selection): Promise<{ node: NodeConfig; common: CommonConfig }>
+  loadOptimizerConfig(): Promise<OptimizerConfig>
   save(selection: Selection, node: NodeConfig): Promise<void>
   saveCommon(selection: Selection, common: CommonConfig): Promise<void>
+  saveOptimizerConfig(config: OptimizerConfig): Promise<void>
   createVersion(selection: Selection, name: string): Promise<string>
   renameVersion(selection: Selection, name: string): Promise<void>
   deleteVersion(selection: Selection): Promise<void>

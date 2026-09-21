@@ -18,6 +18,8 @@
 - 批量结果按 `formation_key`（缺失时回退到结构化 Formation/Loadout diff）过滤，仅重点列出需要重新配置的节点；失败节点独立显示且不会复用旧 Result。
 - Galaxy 重跑只做变化发现，不执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found。
 - Phase 4 工作台 UI：结构化 Formation / Loadout / Common 编辑、选择上下文、保存状态、Best Found / Diff、模板与 Galaxy 重跑均以中文日常操作为主，Raw JSON 收入高级区。
+- 将 `fleetSimulation/poc/optimizer_v2_daily.json` 作为唯一的 Optimizer 公共配置直接管理；可视化编辑搜索舰种、组数范围、允许 Mod 和全局预算，未知字段保留。单节点与 Galaxy 重跑均继续通过既有 BAT 读取这同一文件，不建立第二份运行配置。
+- Loadout 选择由当前 `allowed_mod_slots` 有序数组驱动：`None + 1 Mod` 显示开关，多个 Mod 显示下拉，无合法 Mod 显示不可用；保存仍保持既有字符串 ID 或数字索引表示。
 - Renderer 同时支持 Electron preload 和标准浏览器运行时。浏览器工作区使用 `localStorage` 持久化配置，可用于网页部署与 UI 工作流；真实本地 Optimizer 执行仍由桌面 Main 进程负责，后续网页部署需要受控的本地服务或服务端执行器。
 
 应用层不重新实现战斗模拟、搜索算法或结果复制逻辑，也不会自动安装 PCK、修改 Steam 游戏目录或覆盖已有正式配置。
@@ -52,5 +54,6 @@ pnpm test
 - `app/data/`：个人本地正式配置、Galaxy/Node 版本和 Common Profile；整个目录已加入 Git 忽略，不提交任何个人数据。
 - `app/runtime/`：最近一次任务快照等运行时状态；已加入 Git 忽略。
 - `fleetSimulation/map/`：Optimizer 工作区，只有用户明确导入或启动任务时才写入。
+- `fleetSimulation/poc/optimizer_v2_daily.json`：跨 Galaxy 的 Optimizer 公共配置，也是 BAT 的直接输入。Manager 原子编辑该权威文件；它不复制进 `app/data/`。
 
 架构细节见 [`docs/architecture.md`](docs/architecture.md)，产品范围见 [`docs/Unnamed Space Idle 舰队优化器管理界面 PRD v1.0.md`](docs/Unnamed%20Space%20Idle%20舰队优化器管理界面%20PRD%20v1.0.md)。
