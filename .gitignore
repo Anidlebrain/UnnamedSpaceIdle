@@ -20,6 +20,13 @@ fleetSimulation/map/*
 fleetSimulation/map/**/*.result.json
 fleetSimulation/map/**/*.result.txt
 
+app/data/
+app/runtime/*
+!app/runtime/.gitkeep
+app/node_modules/
+app/out/
+.pnpm-store/
+
 fleetSimulation/results/*.json
 fleetSimulation/results/*.txt
 !fleetSimulation/results/determinism_test.json

@@ -1,0 +1,2124 @@
+{
+  "average_wall_time_per_simulation_seconds": 31.374,
+  "base_config": {
+    "battle_id": "galaxy5_battle35",
+    "boss_health": 3500.0,
+    "enemy_difficulty": 3.0,
+    "enemy_fleet": [
+      {
+        "difficulty_override": 10.0,
+        "grid_position": [
+          1.0,
+          2.0
+        ],
+        "mods": [],
+        "ship": "EnemyCommandShip"
+      },
+      {
+        "difficulty_override": 1.5,
+        "grid_position": [
+          0.0,
+          0.0
+        ],
+        "mods": [
+          "DoubleDamage"
+        ],
+        "ship": "EnemyMediumShield"
+      },
+      {
+        "difficulty_override": 1.5,
+        "grid_position": [
+          0.0,
+          1.0
+        ],
+        "mods": [
+          "DoubleDamage"
+        ],
+        "ship": "EnemyMediumShield"
+      },
+      {
+        "difficulty_override": 1.5,
+        "grid_position": [
+          0.0,
+          3.0
+        ],
+        "mods": [
+          "DoubleDamage"
+        ],
+        "ship": "EnemyMediumArmor"
+      },
+      {
+        "difficulty_override": 1.5,
+        "grid_position": [
+          0.0,
+          4.0
+        ],
+        "mods": [
+          "DoubleDamage"
+        ],
+        "ship": "EnemyMediumArmor"
+      }
+    ],
+    "fight_enemy_command_ship": false,
+    "fleet_event_id": "g5_b35",
+    "fleet_resources": 2627.3,
+    "fleet_resources_retention": 0.5,
+    "formation": [],
+    "galaxy_id": "galaxy5",
+    "grid_size": [
+      2.0,
+      5.0
+    ],
+    "hazards": [],
+    "optimizer": {
+      "baseline": {
+        "enabled": true,
+        "formation": {
+          "A1": "Cruiser",
+          "A2": "Cruiser",
+          "A3": "Cruiser",
+          "A4": "Cruiser",
+          "A5": "Cruiser"
+        },
+        "loadouts": {
+          "Cruiser": {
+            "primary": null,
+            "secondary": "CruiserSingleArmorTank"
+          }
+        },
+        "observed": {
+          "boss_damage": -1.0,
+          "fleet_resources_used": -1.0
+        }
+      },
+      "boss_priority": "kill_cost",
+      "boss_remaining_hp": 3500.0,
+      "objective": "boss",
+      "search": {
+        "goal": "beat_baseline",
+        "max_simulations": 1,
+        "max_wall_seconds": 60.0,
+        "profile": "fast",
+        "simulation_clock": "offline_fixed_step",
+        "workers": 1
+      }
+    },
+    "player_damage_scale": 3.25,
+    "player_health_scale": 3.25,
+    "resolver": {
+      "boss": {
+        "alive": true,
+        "command_ship_id": "EnemyCommandShip",
+        "command_ship_name": "Enemy Base",
+        "max_hp": 5000.0,
+        "priority": "kill_cost",
+        "remaining_hp": 3500.0
+      },
+      "friendly_input": {
+        "baseline": {
+          "enabled": true,
+          "formation": {
+            "A1": "Cruiser",
+            "A2": "Cruiser",
+            "A3": "Cruiser",
+            "A4": "Cruiser",
+            "A5": "Cruiser"
+          },
+          "loadouts": {
+            "Cruiser": {
+              "primary": null,
+              "secondary": "CruiserSingleArmorTank"
+            }
+          },
+          "observed": {
+            "boss_damage": -1.0,
+            "fleet_resources_used": -1.0
+          }
+        },
+        "boss": {
+          "alive": true,
+          "priority": "kill_cost",
+          "remaining_hp": 3500.0
+        },
+        "galaxy": 5.0,
+        "hazards": [],
+        "node": "B35",
+        "player_state": {
+          "fleet_resources": 2627.3,
+          "ships": {
+            "Corvette": 1.0,
+            "Cruiser": 1.0,
+            "Fighter": 1.0,
+            "Frigate": 1.0
+          }
+        },
+        "search": {
+          "goal": "beat_baseline",
+          "max_simulations": 1.0,
+          "max_wall_seconds": 60.0,
+          "profile": "fast",
+          "simulation_clock": "offline_fixed_step",
+          "workers": 1.0
+        },
+        "supports": []
+      },
+      "game_version": "0.85.1.0",
+      "hazard_details": [],
+      "node": "B35",
+      "resolver_ms": 0.515,
+      "source": "original runtime DB / FleetEvent / Fleet.fleet_battles",
+      "support_details": []
+    },
+    "scales": {
+      "effective": {
+        "damage_scale": 3.25,
+        "health_scale": 3.25
+      },
+      "permanent": {
+        "damage_scale": 3.25,
+        "health_scale": 3.25
+      },
+      "temporary": {
+        "damage_scale": 0.0,
+        "health_scale": 0.0
+      }
+    },
+    "ships_available": {
+      "Corvette": {
+        "available": 1,
+        "enabled": true
+      },
+      "Cruiser": {
+        "available": 1,
+        "enabled": true
+      },
+      "Fighter": {
+        "available": 1,
+        "enabled": true
+      },
+      "Frigate": {
+        "available": 1,
+        "enabled": true
+      }
+    },
+    "simulation_clock": "offline_fixed_step",
+    "supports": [],
+    "temporary_events": []
+  },
+  "baseline_remains_recommended": true,
+  "baseline_warning": "BASELINE OBSERVED RESULT DIFFERS FROM SIMULATION",
+  "battle_analysis": {
+    "active_hazard_types": [],
+    "armor_enemies": 4,
+    "boss": true,
+    "defense_totals": {
+      "armor": 1800.0,
+      "hull": 5180.0,
+      "shield": 1620.0
+    },
+    "enemy_count": 9,
+    "enemy_deployment_groups": 5,
+    "enemy_details": [
+      {
+        "armor": 0.0,
+        "command_ship": true,
+        "count": 1,
+        "difficulty": 10.0,
+        "hull": 5000.0,
+        "mods": [],
+        "name": "Enemy Base",
+        "position": [
+          1.0,
+          2.0
+        ],
+        "shield": 0.0,
+        "ship_id": "EnemyCommandShip",
+        "weapons": [
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 10000.0,
+            "fire_rate": 0.02,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 5000.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          }
+        ]
+      },
+      {
+        "armor": 0.0,
+        "command_ship": false,
+        "count": 2,
+        "difficulty": 1.5,
+        "hull": 45.0,
+        "mods": [
+          "DoubleDamage"
+        ],
+        "name": "Medium Shielded",
+        "position": [
+          0.0,
+          0.0
+        ],
+        "shield": 405.0,
+        "ship_id": "EnemyMediumShield",
+        "weapons": [
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 67.5,
+            "fire_rate": 1.0,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 600.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          },
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 67.5,
+            "fire_rate": 1.0,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 600.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          }
+        ]
+      },
+      {
+        "armor": 0.0,
+        "command_ship": false,
+        "count": 2,
+        "difficulty": 1.5,
+        "hull": 45.0,
+        "mods": [
+          "DoubleDamage"
+        ],
+        "name": "Medium Shielded",
+        "position": [
+          0.0,
+          1.0
+        ],
+        "shield": 405.0,
+        "ship_id": "EnemyMediumShield",
+        "weapons": [
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 67.5,
+            "fire_rate": 1.0,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 600.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          },
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 67.5,
+            "fire_rate": 1.0,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 600.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          }
+        ]
+      },
+      {
+        "armor": 450.0,
+        "command_ship": false,
+        "count": 2,
+        "difficulty": 1.5,
+        "hull": 0.0,
+        "mods": [
+          "DoubleDamage"
+        ],
+        "name": "Medium Armored",
+        "position": [
+          0.0,
+          3.0
+        ],
+        "shield": 0.0,
+        "ship_id": "EnemyMediumArmor",
+        "weapons": [
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 67.5,
+            "fire_rate": 1.0,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 600.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          },
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 67.5,
+            "fire_rate": 1.0,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 600.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          }
+        ]
+      },
+      {
+        "armor": 450.0,
+        "command_ship": false,
+        "count": 2,
+        "difficulty": 1.5,
+        "hull": 0.0,
+        "mods": [
+          "DoubleDamage"
+        ],
+        "name": "Medium Armored",
+        "position": [
+          0.0,
+          4.0
+        ],
+        "shield": 0.0,
+        "ship_id": "EnemyMediumArmor",
+        "weapons": [
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 67.5,
+            "fire_rate": 1.0,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 600.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          },
+          {
+            "armor_multiplier": 1.0,
+            "burst_fire": 1.0,
+            "damage": 67.5,
+            "fire_rate": 1.0,
+            "hull_multiplier": 1.0,
+            "id": "",
+            "max_targets": 1.0,
+            "num_ticks": 0.0,
+            "range": 600.0,
+            "shield_multiplier": 1.0,
+            "tick_rate": 0.0
+          }
+        ]
+      }
+    ],
+    "enemy_ship_types": [
+      "EnemyCommandShip",
+      "EnemyMediumShield",
+      "EnemyMediumShield",
+      "EnemyMediumArmor",
+      "EnemyMediumArmor"
+    ],
+    "enemy_weapon_characteristics": {
+      "armor": 1280.0,
+      "hull": 1280.0,
+      "shield": 1280.0
+    },
+    "grid": [
+      2.0,
+      5.0
+    ],
+    "hazard_mechanics": [],
+    "hazard_tags": [],
+    "loadout_counter_analysis": {
+      "Corvette": [
+        {
+          "counter_score": 11.8837209302326,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 30.0,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "none",
+          "mods": [],
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 10.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 2.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "counter_score": 11.8837209302326,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 37.5,
+            "shield_ratio": 0.9
+          },
+          "loadout_id": "ShieldMod",
+          "mods": [
+            "ShieldMod"
+          ],
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 9.5,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 2.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "counter_score": 10.1011627906977,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 30.0,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "CorvetteChargeLaserMod",
+          "mods": [
+            "CorvetteChargeLaserMod"
+          ],
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 17.0,
+              "fire_rate": 0.5,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 800.0,
+              "shield_multiplier": 2.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "counter_score": 10.1011627906977,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 37.5,
+            "shield_ratio": 0.9
+          },
+          "loadout_id": "CorvetteChargeLaserMod+ShieldMod",
+          "mods": [
+            "CorvetteChargeLaserMod",
+            "ShieldMod"
+          ],
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 16.15,
+              "fire_rate": 0.5,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 800.0,
+              "shield_multiplier": 2.0,
+              "tick_rate": 0.0
+            }
+          ]
+        }
+      ],
+      "Cruiser": [
+        {
+          "counter_score": 36.2790697674419,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 150.0,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "none",
+          "mods": [],
+          "weapons": [
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 16.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 16.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 16.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "counter_score": 36.2790697674419,
+          "durability": {
+            "armored": 1.0,
+            "damage_block_health_percent": 0.01,
+            "health_scale": 300.0,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "CruiserSingleArmorTank",
+          "mods": [
+            "CruiserSingleArmorTank"
+          ],
+          "weapons": [
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 28.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 28.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 28.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        }
+      ],
+      "Fighter": [
+        {
+          "counter_score": 12.0627906976744,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 13.0,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "FighterMiniRailgunMod",
+          "mods": [
+            "FighterMiniRailgunMod"
+          ],
+          "weapons": [
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 3.375,
+              "fire_rate": 1.33,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 450.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "counter_score": 11.8837209302326,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 13.0,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "none",
+          "mods": [],
+          "weapons": [
+            {
+              "armor_multiplier": 1.0,
+              "burst_fire": 1.0,
+              "damage": 2.25,
+              "fire_rate": 2.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 400.0,
+              "shield_multiplier": 2.0,
+              "tick_rate": 0.0
+            }
+          ]
+        }
+      ],
+      "Frigate": [
+        {
+          "counter_score": 24.1860465116279,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 55.0,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "none",
+          "mods": [],
+          "weapons": [
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 10.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 10.0,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "counter_score": 24.1860465116279,
+          "durability": {
+            "armored": 1.0,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 68.75,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "ArmorMod",
+          "mods": [
+            "ArmorMod"
+          ],
+          "weapons": [
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 9.5,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 9.5,
+              "fire_rate": 1.0,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 1.0,
+              "num_ticks": 0.0,
+              "range": 600.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "counter_score": 17.4139534883721,
+          "durability": {
+            "armored": false,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 55.0,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "FrigateMissileMod",
+          "mods": [
+            "FrigateMissileMod"
+          ],
+          "weapons": [
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 3.0,
+              "fire_rate": 0.8,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 3.0,
+              "num_ticks": 0.0,
+              "range": 550.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 3.0,
+              "fire_rate": 0.8,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 3.0,
+              "num_ticks": 0.0,
+              "range": 550.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        },
+        {
+          "counter_score": 17.4139534883721,
+          "durability": {
+            "armored": 1.0,
+            "damage_block_health_percent": 0.0,
+            "health_scale": 68.75,
+            "shield_ratio": 0.0
+          },
+          "loadout_id": "FrigateMissileMod+ArmorMod",
+          "mods": [
+            "FrigateMissileMod",
+            "ArmorMod"
+          ],
+          "weapons": [
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 2.85,
+              "fire_rate": 0.8,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 3.0,
+              "num_ticks": 0.0,
+              "range": 550.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            },
+            {
+              "armor_multiplier": 2.0,
+              "burst_fire": 1.0,
+              "damage": 2.85,
+              "fire_rate": 0.8,
+              "hull_multiplier": 1.0,
+              "id": "",
+              "max_targets": 3.0,
+              "num_ticks": 0.0,
+              "range": 550.0,
+              "shield_multiplier": 1.0,
+              "tick_rate": 0.0
+            }
+          ]
+        }
+      ]
+    },
+    "preferred_defense_tags": [
+      "shield",
+      "armor",
+      "hull"
+    ],
+    "preferred_offense_tags": [
+      "hull",
+      "armor",
+      "shield"
+    ],
+    "reinforcement": false,
+    "shield_enemies": 4,
+    "source": "original runtime DB via Fleet.get_fleet_ship/apply_ship_mods/get_ship_stats_based_on_galaxy",
+    "support_details": [],
+    "support_mechanics": [],
+    "support_tags": []
+  },
+  "best_result": {
+    "battles_run": 1,
+    "battles_to_kill": null,
+    "boss_damage": 1365.0,
+    "boss_damage_per_battle": 1365.0,
+    "boss_damage_per_fr": 4.55,
+    "boss_damage_per_fr_is_infinite": false,
+    "boss_final_hp": 2135.0,
+    "boss_starting_hp": 3500.0,
+    "candidate_hash": "06aaececa0eeb32352ea44789f53220c806ecf46cfbd23d44f1d0b69841cd665",
+    "candidate_index": 1,
+    "canonical_sha256": "0a9d989637fae4dd12098a949b2c7311fdd9bb4e917c76012135aed6fe98fdea",
+    "composition": {
+      "Cruiser": {
+        "available": 1,
+        "deployed": 5,
+        "normal_groups": 1,
+        "overdeployed_groups": 4
+      }
+    },
+    "composition_counts": {
+      "Cruiser": 5
+    },
+    "deployment_quote_committed_fr": 300.0,
+    "enemy_destroyed": 8,
+    "enemy_remaining": 1,
+    "error": "",
+    "failed_before_battle": 2,
+    "finalist_rank": 1,
+    "fleet_resources_committed": 300.0,
+    "fleet_resources_used": 300.0,
+    "fleet_resources_used_per_battle": 300.0,
+    "formation": [
+      {
+        "grid_position": [
+          0,
+          0
+        ],
+        "position": "A1",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0,
+          1
+        ],
+        "position": "A2",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0,
+          2
+        ],
+        "position": "A3",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0,
+          3
+        ],
+        "position": "A4",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0,
+          4
+        ],
+        "position": "A5",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      }
+    ],
+    "formation_key": "[\"Cruiser\",\"\",\"CruiserSingleArmorTank\",[]]:A1,A2,A3,A4,A5",
+    "is_verified_baseline": true,
+    "kill_refined": true,
+    "kill_sequence": [
+      {
+        "battle": 1,
+        "boss_damage": 1365.0,
+        "boss_hp_after": 2135.0,
+        "boss_hp_before": 3500.0,
+        "committed_fr": 300.0,
+        "fr_remaining": 2327.3,
+        "used_fr": 300.0
+      }
+    ],
+    "kill_sequence_stop_reason": "search_budget_exhausted",
+    "killable_with_current_fr": false,
+    "minimum_possible_used_fr": 250.0,
+    "mode": "realistic",
+    "observed": {
+      "boss_damage": -1.0,
+      "fleet_resources_used": -1.0
+    },
+    "outcome": "lose",
+    "performance_breakdown": {
+      "battle_start_ms": 525.351,
+      "battle_wall_ms": 353.641,
+      "log_report_ms": 0.002,
+      "result_extract_ms": 0.149,
+      "run_battle_total_ms_before_cleanup": 1720.97,
+      "scene_creation_ms": 707.232,
+      "scene_setup_ms": 134.582
+    },
+    "player_remaining_health": 0.0,
+    "player_survivors": 0,
+    "projected_battles_to_kill": 3,
+    "projected_kill_fr": 900.0,
+    "rank": 1,
+    "refined_battles_to_kill": null,
+    "refined_fr_spent": 300.0,
+    "refined_total_kill_fr": null,
+    "remaining_fr_after_kill": null,
+    "ship_loadouts": {
+      "Cruiser": {
+        "id": "CruiserSingleArmorTank",
+        "primary": null,
+        "secondary": "CruiserSingleArmorTank"
+      }
+    },
+    "simulation_clock": {
+      "engine_fixed_fps": 60,
+      "fallback_warning": "",
+      "mode": "offline_fixed_step",
+      "physics_hz": 60,
+      "requested_mode": "offline_fixed_step",
+      "simulated_seconds": 8.45,
+      "step_seconds": 0.0166666666666667,
+      "wall_seconds": 0.353641,
+      "wall_speedup": 23.8942882753979
+    },
+    "simulation_time": 8.45,
+    "total_kill_fr": null
+  },
+  "boss_priority": "kill_cost",
+  "boss_ranking_unit_test": {
+    "candidate_a": {
+      "battles_to_kill": null,
+      "boss_damage": 650.0,
+      "boss_damage_per_battle": 650.0,
+      "boss_damage_per_fr": 13.0,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_final_hp": null,
+      "boss_starting_hp": 2000.0,
+      "error": "",
+      "failed_before_battle": null,
+      "fleet_resources_committed": 50.0,
+      "fleet_resources_used": 50.0,
+      "fleet_resources_used_per_battle": 50.0,
+      "formation_key": "A",
+      "kill_refined": false,
+      "kill_sequence": [],
+      "killable_with_current_fr": null,
+      "outcome": "lose",
+      "projected_battles_to_kill": 4,
+      "projected_kill_fr": 200.0,
+      "refined_battles_to_kill": null,
+      "refined_fr_spent": null,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null,
+      "total_kill_fr": null
+    },
+    "candidate_b": {
+      "battles_to_kill": null,
+      "boss_damage": 670.0,
+      "boss_damage_per_battle": 670.0,
+      "boss_damage_per_fr": 11.1666666666667,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_final_hp": null,
+      "boss_starting_hp": 2000.0,
+      "error": "",
+      "failed_before_battle": null,
+      "fleet_resources_committed": 60.0,
+      "fleet_resources_used": 60.0,
+      "fleet_resources_used_per_battle": 60.0,
+      "formation_key": "B",
+      "kill_refined": false,
+      "kill_sequence": [],
+      "killable_with_current_fr": null,
+      "outcome": "lose",
+      "projected_battles_to_kill": 3,
+      "projected_kill_fr": 180.0,
+      "refined_battles_to_kill": null,
+      "refined_fr_spent": null,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null,
+      "total_kill_fr": null
+    },
+    "efficiency_first": "A",
+    "kill_cost_first": "B",
+    "passed": true
+  },
+  "boss_remaining_hp": 3500.0,
+  "budget_exhausted": true,
+  "cache_hits": 2,
+  "cache_validation": {
+    "all_identical": true,
+    "runs": [
+      {
+        "candidate_hash": "06aaececa0eeb32352ea44789f53220c806ecf46cfbd23d44f1d0b69841cd665",
+        "identical": true
+      },
+      {
+        "candidate_hash": "06aaececa0eeb32352ea44789f53220c806ecf46cfbd23d44f1d0b69841cd665",
+        "identical": true
+      }
+    ],
+    "used_cache_only": true
+  },
+  "compositions_pruned_by_fr": 0,
+  "daily_result_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\results/g5_b35_20260912_152556.json",
+  "deployment_quotes": 21,
+  "engine_time_scale": 1.0,
+  "engine_version": "4.7.2-stable (official)",
+  "errors": 0,
+  "estimate": {
+    "fleet_candidates": 27420,
+    "full_exact_estimated_hours": 1164764.15,
+    "full_exact_estimated_seconds": 4193150940.0,
+    "loadout_options_by_ship": {
+      "Corvette": 4,
+      "Cruiser": 2,
+      "Fighter": 2,
+      "Frigate": 4
+    },
+    "normal_only_compositions": 1,
+    "overdeploy_compositions": 19,
+    "planned_simulations": 1,
+    "quoted_fleet_candidates": 196,
+    "rough_full_formation_count": 465905660,
+    "simulation_budget": 1,
+    "wall_seconds_budget": 60.0
+  },
+  "exact_subspaces": [],
+  "finalization_status": "FULL RESULT SKIPPED: BUDGET EXHAUSTED",
+  "formations_pruned_by_fr": 0,
+  "http_nodes_proxied": 28,
+  "improvement_vs_baseline": {
+    "available": true,
+    "same_as_baseline": true,
+    "strictly_better": false
+  },
+  "kill_sequence_refinement": {
+    "candidates_refined": 1,
+    "candidates_requested": 1,
+    "enabled": true,
+    "max_battles_per_candidate": 100,
+    "partial": false,
+    "priority": "kill_cost",
+    "status": "COMPLETE"
+  },
+  "latest_result_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\results/latest.json",
+  "latest_summary_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\results/latest_summary.json",
+  "latest_text_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\results/latest.txt",
+  "losses": 1,
+  "mode": "realistic",
+  "network_protection": "HTTP/HTTPS proxied to 127.0.0.1:9; Steam singleton unavailable",
+  "node_result_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\map\\g5\\B35.result.json",
+  "objective": "boss",
+  "optimizer_version": "2.2",
+  "overdeploy_candidates": 192,
+  "overdeploy_candidates_simulated": 1,
+  "overdeploy_tests": {
+    "enabled": false
+  },
+  "performance_breakdown": {
+    "average_battle_start_ms": 525.351,
+    "average_battle_wall_ms": 353.641,
+    "average_canonicalization_ms": 0.406,
+    "average_cleanup_ms": 11.763,
+    "average_log_report_ms": 0.002,
+    "average_quote_ms": 1370.79457142857,
+    "average_result_extract_ms": 0.149,
+    "average_run_battle_total_ms_before_cleanup": 1720.97,
+    "average_scene_creation_ms": 707.232,
+    "average_scene_setup_ms": 134.582,
+    "candidate_generation_ms": 26997.397,
+    "canonicalization_total_ms": 0.406,
+    "deployment_quote_total_ms": 28786.686,
+    "json_serialization_ms": 1.631,
+    "resolver_ms": 0.515,
+    "samples": 1
+  },
+  "physics_ticks_per_second": 60,
+  "pruning_stats": {
+    "generated": 27420,
+    "hard_pruned": {
+      "disabled_ship": 0,
+      "dominated": 0,
+      "fr_budget": 0,
+      "incumbent_lower_bound": 0,
+      "symmetry_exact": 0
+    },
+    "hard_pruning_enabled": true,
+    "quoted_generated": 196,
+    "refined": 1,
+    "simulated": 1,
+    "smart_pruned": {
+      "composition_quote_budget": 27224,
+      "counter_probe": 0,
+      "efficiency_cutoff": 0,
+      "escort_gate": 0,
+      "formation_signature": 0,
+      "kill_cost_cutoff": 0
+    },
+    "smart_pruning_enabled": true
+  },
+  "ranked_candidates": [
+    {
+      "battles_run": 1,
+      "battles_to_kill": null,
+      "boss_damage": 1365.0,
+      "boss_damage_per_battle": 1365.0,
+      "boss_damage_per_fr": 4.55,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_final_hp": 2135.0,
+      "boss_starting_hp": 3500.0,
+      "candidate_hash": "06aaececa0eeb32352ea44789f53220c806ecf46cfbd23d44f1d0b69841cd665",
+      "candidate_index": 1,
+      "canonical_sha256": "0a9d989637fae4dd12098a949b2c7311fdd9bb4e917c76012135aed6fe98fdea",
+      "composition": {
+        "Cruiser": {
+          "available": 1,
+          "deployed": 5,
+          "normal_groups": 1,
+          "overdeployed_groups": 4
+        }
+      },
+      "composition_counts": {
+        "Cruiser": 5
+      },
+      "deployment_quote_committed_fr": 300.0,
+      "enemy_destroyed": 8,
+      "enemy_remaining": 1,
+      "error": "",
+      "failed_before_battle": 2,
+      "finalist_rank": 1,
+      "fleet_resources_committed": 300.0,
+      "fleet_resources_used": 300.0,
+      "fleet_resources_used_per_battle": 300.0,
+      "formation": [
+        {
+          "grid_position": [
+            0,
+            0
+          ],
+          "position": "A1",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            1
+          ],
+          "position": "A2",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            2
+          ],
+          "position": "A3",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            3
+          ],
+          "position": "A4",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            4
+          ],
+          "position": "A5",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        }
+      ],
+      "formation_key": "[\"Cruiser\",\"\",\"CruiserSingleArmorTank\",[]]:A1,A2,A3,A4,A5",
+      "is_verified_baseline": true,
+      "kill_refined": true,
+      "kill_sequence": [
+        {
+          "battle": 1,
+          "boss_damage": 1365.0,
+          "boss_hp_after": 2135.0,
+          "boss_hp_before": 3500.0,
+          "committed_fr": 300.0,
+          "fr_remaining": 2327.3,
+          "used_fr": 300.0
+        }
+      ],
+      "kill_sequence_stop_reason": "search_budget_exhausted",
+      "killable_with_current_fr": false,
+      "minimum_possible_used_fr": 250.0,
+      "mode": "realistic",
+      "observed": {
+        "boss_damage": -1.0,
+        "fleet_resources_used": -1.0
+      },
+      "outcome": "lose",
+      "performance_breakdown": {
+        "battle_start_ms": 525.351,
+        "battle_wall_ms": 353.641,
+        "log_report_ms": 0.002,
+        "result_extract_ms": 0.149,
+        "run_battle_total_ms_before_cleanup": 1720.97,
+        "scene_creation_ms": 707.232,
+        "scene_setup_ms": 134.582
+      },
+      "player_remaining_health": 0.0,
+      "player_survivors": 0,
+      "projected_battles_to_kill": 3,
+      "projected_kill_fr": 900.0,
+      "rank": 1,
+      "refined_battles_to_kill": null,
+      "refined_fr_spent": 300.0,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null,
+      "ship_loadouts": {
+        "Cruiser": {
+          "id": "CruiserSingleArmorTank",
+          "primary": null,
+          "secondary": "CruiserSingleArmorTank"
+        }
+      },
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 0.353641,
+        "wall_speedup": 23.8942882753979
+      },
+      "simulation_time": 8.45,
+      "total_kill_fr": null
+    }
+  ],
+  "recommendation_status": "NO IMPROVEMENT FOUND",
+  "refined_finalists": [
+    {
+      "battles_run": 1,
+      "battles_to_kill": null,
+      "boss_damage": 1365.0,
+      "boss_damage_per_battle": 1365.0,
+      "boss_damage_per_fr": 4.55,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_final_hp": 2135.0,
+      "boss_starting_hp": 3500.0,
+      "candidate_hash": "06aaececa0eeb32352ea44789f53220c806ecf46cfbd23d44f1d0b69841cd665",
+      "candidate_index": 1,
+      "canonical_sha256": "0a9d989637fae4dd12098a949b2c7311fdd9bb4e917c76012135aed6fe98fdea",
+      "composition": {
+        "Cruiser": {
+          "available": 1,
+          "deployed": 5,
+          "normal_groups": 1,
+          "overdeployed_groups": 4
+        }
+      },
+      "composition_counts": {
+        "Cruiser": 5
+      },
+      "deployment_quote_committed_fr": 300.0,
+      "enemy_destroyed": 8,
+      "enemy_remaining": 1,
+      "error": "",
+      "failed_before_battle": 2,
+      "finalist_rank": 1,
+      "fleet_resources_committed": 300.0,
+      "fleet_resources_used": 300.0,
+      "fleet_resources_used_per_battle": 300.0,
+      "formation": [
+        {
+          "grid_position": [
+            0,
+            0
+          ],
+          "position": "A1",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            1
+          ],
+          "position": "A2",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            2
+          ],
+          "position": "A3",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            3
+          ],
+          "position": "A4",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            4
+          ],
+          "position": "A5",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        }
+      ],
+      "formation_key": "[\"Cruiser\",\"\",\"CruiserSingleArmorTank\",[]]:A1,A2,A3,A4,A5",
+      "is_verified_baseline": true,
+      "kill_refined": true,
+      "kill_sequence": [
+        {
+          "battle": 1,
+          "boss_damage": 1365.0,
+          "boss_hp_after": 2135.0,
+          "boss_hp_before": 3500.0,
+          "committed_fr": 300.0,
+          "fr_remaining": 2327.3,
+          "used_fr": 300.0
+        }
+      ],
+      "kill_sequence_stop_reason": "search_budget_exhausted",
+      "killable_with_current_fr": false,
+      "minimum_possible_used_fr": 250.0,
+      "mode": "realistic",
+      "observed": {
+        "boss_damage": -1.0,
+        "fleet_resources_used": -1.0
+      },
+      "outcome": "lose",
+      "performance_breakdown": {
+        "battle_start_ms": 525.351,
+        "battle_wall_ms": 353.641,
+        "log_report_ms": 0.002,
+        "result_extract_ms": 0.149,
+        "run_battle_total_ms_before_cleanup": 1720.97,
+        "scene_creation_ms": 707.232,
+        "scene_setup_ms": 134.582
+      },
+      "player_remaining_health": 0.0,
+      "player_survivors": 0,
+      "projected_battles_to_kill": 3,
+      "projected_kill_fr": 900.0,
+      "rank": 1,
+      "refined_battles_to_kill": null,
+      "refined_fr_spent": 300.0,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null,
+      "ship_loadouts": {
+        "Cruiser": {
+          "id": "CruiserSingleArmorTank",
+          "primary": null,
+          "secondary": "CruiserSingleArmorTank"
+        }
+      },
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 0.353641,
+        "wall_speedup": 23.8942882753979
+      },
+      "simulation_time": 8.45,
+      "total_kill_fr": null
+    }
+  ],
+  "result_claim": "SEARCHED BEST",
+  "scales": {
+    "effective": {
+      "damage_scale": 3.25,
+      "health_scale": 3.25
+    },
+    "permanent": {
+      "damage_scale": 3.25,
+      "health_scale": 3.25
+    },
+    "temporary": {
+      "damage_scale": 0.0,
+      "health_scale": 0.0
+    }
+  },
+  "scene_tree_paused": false,
+  "search_goal": "beat_baseline",
+  "search_profile": "fast",
+  "settings": {
+    "allowed_loadouts": {
+      "Corvette": [
+        {
+          "id": "none",
+          "primary_mod": null,
+          "secondary_mod": null,
+          "tertiary_mods": []
+        },
+        {
+          "id": "ShieldMod",
+          "primary_mod": null,
+          "secondary_mod": "ShieldMod",
+          "tertiary_mods": []
+        },
+        {
+          "id": "CorvetteChargeLaserMod",
+          "primary_mod": "CorvetteChargeLaserMod",
+          "secondary_mod": null,
+          "tertiary_mods": []
+        },
+        {
+          "id": "CorvetteChargeLaserMod+ShieldMod",
+          "primary_mod": "CorvetteChargeLaserMod",
+          "secondary_mod": "ShieldMod",
+          "tertiary_mods": []
+        }
+      ],
+      "Cruiser": [
+        {
+          "id": "none",
+          "primary_mod": null,
+          "secondary_mod": null,
+          "tertiary_mods": []
+        },
+        {
+          "id": "CruiserSingleArmorTank",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "tertiary_mods": []
+        }
+      ],
+      "Fighter": [
+        {
+          "id": "none",
+          "primary_mod": null,
+          "secondary_mod": null,
+          "tertiary_mods": []
+        },
+        {
+          "id": "FighterMiniRailgunMod",
+          "primary_mod": "FighterMiniRailgunMod",
+          "secondary_mod": null,
+          "tertiary_mods": []
+        }
+      ],
+      "Frigate": [
+        {
+          "id": "none",
+          "primary_mod": null,
+          "secondary_mod": null,
+          "tertiary_mods": []
+        },
+        {
+          "id": "ArmorMod",
+          "primary_mod": null,
+          "secondary_mod": "ArmorMod",
+          "tertiary_mods": []
+        },
+        {
+          "id": "FrigateMissileMod",
+          "primary_mod": "FrigateMissileMod",
+          "secondary_mod": null,
+          "tertiary_mods": []
+        },
+        {
+          "id": "FrigateMissileMod+ArmorMod",
+          "primary_mod": "FrigateMissileMod",
+          "secondary_mod": "ArmorMod",
+          "tertiary_mods": []
+        }
+      ]
+    },
+    "allowed_mod_slots": {
+      "Corvette": {
+        "primary": [
+          null,
+          "CorvetteChargeLaserMod"
+        ],
+        "secondary": [
+          null,
+          "ShieldMod"
+        ]
+      },
+      "Cruiser": {
+        "primary": [
+          null
+        ],
+        "secondary": [
+          null,
+          "CruiserSingleArmorTank"
+        ]
+      },
+      "Fighter": {
+        "primary": [
+          null,
+          "FighterMiniRailgunMod"
+        ],
+        "secondary": [
+          null
+        ]
+      },
+      "Frigate": {
+        "primary": [
+          null,
+          "FrigateMissileMod"
+        ],
+        "secondary": [
+          null,
+          "ArmorMod"
+        ]
+      }
+    },
+    "baseline": {
+      "enabled": true,
+      "formation": {
+        "A1": "Cruiser",
+        "A2": "Cruiser",
+        "A3": "Cruiser",
+        "A4": "Cruiser",
+        "A5": "Cruiser"
+      },
+      "loadouts": {
+        "Cruiser": {
+          "primary": null,
+          "secondary": "CruiserSingleArmorTank"
+        }
+      },
+      "observed": {
+        "boss_damage": -1.0,
+        "fleet_resources_used": -1.0
+      }
+    },
+    "beam_depth": 3.0,
+    "beam_width_fleet": 12.0,
+    "beam_width_position": 12.0,
+    "boss_priority": "kill_cost",
+    "boss_remaining_hp": 3500.0,
+    "composition_quote_budget": 20,
+    "estimated_seconds_per_battle": 9.0,
+    "exploration_quota": 0.125,
+    "final_fleet_candidates": 3.0,
+    "finalization_reserve_seconds": 45.0,
+    "group_ranges": {
+      "Corvette": {
+        "max": 10.0,
+        "min": 0.0
+      },
+      "Cruiser": {
+        "max": 10.0,
+        "min": 0.0
+      },
+      "Fighter": {
+        "max": 10.0,
+        "min": 0.0
+      },
+      "Frigate": {
+        "max": 10.0,
+        "min": 0.0
+      }
+    },
+    "kill_cost_margin": 1.15,
+    "kill_refine_reserve_simulations": 30.0,
+    "kill_refine_top_n": 3.0,
+    "kill_sequence_max_battles": 100.0,
+    "local_exact_radius": 1.0,
+    "local_exact_threshold": 500.0,
+    "max_groups_per_ship": {
+      "Corvette": 10.0,
+      "Cruiser": 10.0,
+      "Fighter": 10.0,
+      "Frigate": 10.0
+    },
+    "max_simulations": 1,
+    "max_total_groups": 10,
+    "max_wall_seconds": 60.0,
+    "mode": "realistic",
+    "objective": "boss",
+    "optimistic_factor": 1.25,
+    "player_state": {
+      "fleet_resources": 2627.3,
+      "ships": {
+        "Corvette": {
+          "available": 1,
+          "enabled": true
+        },
+        "Cruiser": {
+          "available": 1,
+          "enabled": true
+        },
+        "Fighter": {
+          "available": 1,
+          "enabled": true
+        },
+        "Frigate": {
+          "available": 1,
+          "enabled": true
+        }
+      }
+    },
+    "probe_budget": 20,
+    "probe_formations_per_fleet": 1,
+    "representative_formations_per_fleet": 3.0,
+    "run_overdeploy_tests": false,
+    "search": {
+      "goal": "beat_baseline",
+      "max_simulations": 1,
+      "max_wall_seconds": 60.0,
+      "profile": "fast",
+      "simulation_clock": "offline_fixed_step",
+      "workers": 1
+    },
+    "ship_types": [
+      "Fighter",
+      "Corvette",
+      "Frigate",
+      "Cruiser"
+    ],
+    "simulation_clock": "offline_fixed_step",
+    "simulation_detail": "minimal",
+    "smart_pruning": true,
+    "top_n": 10.0,
+    "v1_regression": false,
+    "workers": 1
+  },
+  "simulation_clock": {
+    "engine_fixed_fps": 60,
+    "fallback_warning": "",
+    "mode": "offline_fixed_step",
+    "physics_hz": 60,
+    "requested_mode": "offline_fixed_step",
+    "simulated_seconds": 8.45,
+    "step_seconds": 0.0166666666666667,
+    "wall_seconds": 0.353641,
+    "wall_speedup": 23.8942882753979
+  },
+  "simulations_used": 1,
+  "top": [
+    {
+      "battles_run": 1,
+      "battles_to_kill": null,
+      "boss_damage": 1365.0,
+      "boss_damage_per_battle": 1365.0,
+      "boss_damage_per_fr": 4.55,
+      "boss_damage_per_fr_is_infinite": false,
+      "boss_final_hp": 2135.0,
+      "boss_starting_hp": 3500.0,
+      "candidate_hash": "06aaececa0eeb32352ea44789f53220c806ecf46cfbd23d44f1d0b69841cd665",
+      "candidate_index": 1,
+      "canonical_sha256": "0a9d989637fae4dd12098a949b2c7311fdd9bb4e917c76012135aed6fe98fdea",
+      "composition": {
+        "Cruiser": {
+          "available": 1,
+          "deployed": 5,
+          "normal_groups": 1,
+          "overdeployed_groups": 4
+        }
+      },
+      "composition_counts": {
+        "Cruiser": 5
+      },
+      "deployment_quote_committed_fr": 300.0,
+      "enemy_destroyed": 8,
+      "enemy_remaining": 1,
+      "error": "",
+      "failed_before_battle": 2,
+      "finalist_rank": 1,
+      "fleet_resources_committed": 300.0,
+      "fleet_resources_used": 300.0,
+      "fleet_resources_used_per_battle": 300.0,
+      "formation": [
+        {
+          "grid_position": [
+            0,
+            0
+          ],
+          "position": "A1",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            1
+          ],
+          "position": "A2",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            2
+          ],
+          "position": "A3",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            3
+          ],
+          "position": "A4",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        },
+        {
+          "grid_position": [
+            0,
+            4
+          ],
+          "position": "A5",
+          "primary_mod": null,
+          "secondary_mod": "CruiserSingleArmorTank",
+          "ship": "Cruiser",
+          "tertiary_mods": []
+        }
+      ],
+      "formation_key": "[\"Cruiser\",\"\",\"CruiserSingleArmorTank\",[]]:A1,A2,A3,A4,A5",
+      "is_verified_baseline": true,
+      "kill_refined": true,
+      "kill_sequence": [
+        {
+          "battle": 1,
+          "boss_damage": 1365.0,
+          "boss_hp_after": 2135.0,
+          "boss_hp_before": 3500.0,
+          "committed_fr": 300.0,
+          "fr_remaining": 2327.3,
+          "used_fr": 300.0
+        }
+      ],
+      "kill_sequence_stop_reason": "search_budget_exhausted",
+      "killable_with_current_fr": false,
+      "minimum_possible_used_fr": 250.0,
+      "mode": "realistic",
+      "observed": {
+        "boss_damage": -1.0,
+        "fleet_resources_used": -1.0
+      },
+      "outcome": "lose",
+      "performance_breakdown": {
+        "battle_start_ms": 525.351,
+        "battle_wall_ms": 353.641,
+        "log_report_ms": 0.002,
+        "result_extract_ms": 0.149,
+        "run_battle_total_ms_before_cleanup": 1720.97,
+        "scene_creation_ms": 707.232,
+        "scene_setup_ms": 134.582
+      },
+      "player_remaining_health": 0.0,
+      "player_survivors": 0,
+      "projected_battles_to_kill": 3,
+      "projected_kill_fr": 900.0,
+      "rank": 1,
+      "refined_battles_to_kill": null,
+      "refined_fr_spent": 300.0,
+      "refined_total_kill_fr": null,
+      "remaining_fr_after_kill": null,
+      "ship_loadouts": {
+        "Cruiser": {
+          "id": "CruiserSingleArmorTank",
+          "primary": null,
+          "secondary": "CruiserSingleArmorTank"
+        }
+      },
+      "simulation_clock": {
+        "engine_fixed_fps": 60,
+        "fallback_warning": "",
+        "mode": "offline_fixed_step",
+        "physics_hz": 60,
+        "requested_mode": "offline_fixed_step",
+        "simulated_seconds": 8.45,
+        "step_seconds": 0.0166666666666667,
+        "wall_seconds": 0.353641,
+        "wall_speedup": 23.8942882753979
+      },
+      "simulation_time": 8.45,
+      "total_kill_fr": null
+    }
+  ],
+  "unique_results": 1,
+  "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Test",
+  "v1_regression": {
+    "enabled": false
+  },
+  "verified_baseline": {
+    "battles_run": 1,
+    "battles_to_kill": null,
+    "boss_damage": 1365.0,
+    "boss_damage_per_battle": 1365.0,
+    "boss_damage_per_fr": 4.55,
+    "boss_damage_per_fr_is_infinite": false,
+    "boss_final_hp": 2135.0,
+    "boss_starting_hp": 3500.0,
+    "candidate_hash": "06aaececa0eeb32352ea44789f53220c806ecf46cfbd23d44f1d0b69841cd665",
+    "candidate_index": 1,
+    "canonical_sha256": "0a9d989637fae4dd12098a949b2c7311fdd9bb4e917c76012135aed6fe98fdea",
+    "composition": {
+      "Cruiser": {
+        "available": 1,
+        "deployed": 5,
+        "normal_groups": 1,
+        "overdeployed_groups": 4
+      }
+    },
+    "composition_counts": {
+      "Cruiser": 5
+    },
+    "deployment_quote_committed_fr": 300.0,
+    "enemy_destroyed": 8,
+    "enemy_remaining": 1,
+    "error": "",
+    "failed_before_battle": 2,
+    "finalist_rank": 1,
+    "fleet_resources_committed": 300.0,
+    "fleet_resources_used": 300.0,
+    "fleet_resources_used_per_battle": 300.0,
+    "formation": [
+      {
+        "grid_position": [
+          0,
+          0
+        ],
+        "position": "A1",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0,
+          1
+        ],
+        "position": "A2",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0,
+          2
+        ],
+        "position": "A3",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0,
+          3
+        ],
+        "position": "A4",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      },
+      {
+        "grid_position": [
+          0,
+          4
+        ],
+        "position": "A5",
+        "primary_mod": null,
+        "secondary_mod": "CruiserSingleArmorTank",
+        "ship": "Cruiser",
+        "tertiary_mods": []
+      }
+    ],
+    "formation_key": "[\"Cruiser\",\"\",\"CruiserSingleArmorTank\",[]]:A1,A2,A3,A4,A5",
+    "is_verified_baseline": true,
+    "kill_refined": true,
+    "kill_sequence": [
+      {
+        "battle": 1,
+        "boss_damage": 1365.0,
+        "boss_hp_after": 2135.0,
+        "boss_hp_before": 3500.0,
+        "committed_fr": 300.0,
+        "fr_remaining": 2327.3,
+        "used_fr": 300.0
+      }
+    ],
+    "kill_sequence_stop_reason": "search_budget_exhausted",
+    "killable_with_current_fr": false,
+    "minimum_possible_used_fr": 250.0,
+    "mode": "realistic",
+    "observed": {
+      "boss_damage": -1.0,
+      "fleet_resources_used": -1.0
+    },
+    "outcome": "lose",
+    "performance_breakdown": {
+      "battle_start_ms": 525.351,
+      "battle_wall_ms": 353.641,
+      "log_report_ms": 0.002,
+      "result_extract_ms": 0.149,
+      "run_battle_total_ms_before_cleanup": 1720.97,
+      "scene_creation_ms": 707.232,
+      "scene_setup_ms": 134.582
+    },
+    "player_remaining_health": 0.0,
+    "player_survivors": 0,
+    "projected_battles_to_kill": 3,
+    "projected_kill_fr": 900.0,
+    "rank": 1,
+    "refined_battles_to_kill": null,
+    "refined_fr_spent": 300.0,
+    "refined_total_kill_fr": null,
+    "remaining_fr_after_kill": null,
+    "ship_loadouts": {
+      "Cruiser": {
+        "id": "CruiserSingleArmorTank",
+        "primary": null,
+        "secondary": "CruiserSingleArmorTank"
+      }
+    },
+    "simulation_clock": {
+      "engine_fixed_fps": 60,
+      "fallback_warning": "",
+      "mode": "offline_fixed_step",
+      "physics_hz": 60,
+      "requested_mode": "offline_fixed_step",
+      "simulated_seconds": 8.45,
+      "step_seconds": 0.0166666666666667,
+      "wall_seconds": 0.353641,
+      "wall_speedup": 23.8942882753979
+    },
+    "simulation_time": 8.45,
+    "total_kill_fr": null
+  },
+  "victories": 0,
+  "wall_time_seconds": 31.374,
+  "worker_startup": [],
+  "worker_user_data_dirs": [],
+  "worker_warning": "",
+  "workers_effective": 1,
+  "workers_requested": 1
+}

@@ -12,6 +12,10 @@
    - fleetSimulation/work/full_recovered/ 是从本机原版 PCK 恢复的隔离运行时，不属于远端提交；模拟器运行仍需要用户在本机准备兼容的 Godot 4.7.2 恢复工程。
    - results/ 只保留稳定、可审计的回归证据；时间戳运行结果、latest.* 和 worker 输出属于本机产物。
 
+3. 舰队优化器管理应用：app/src/、app/docs/、app/tests/、app/package.json、app/pnpm-lock.yaml、app/pnpm-workspace.yaml、app/electron.vite.config.ts、app/tsconfig.json 和 app/vitest.config.ts。
+   - app-Phase 1 已完成：提供 Electron 主进程、context-isolated preload bridge、React 配置界面、正式配置导入与版本化保存、Zod 校验、Optimizer 进程管理、实时输出和结果差异展示。
+   - 应用只负责管理和调用已有 fleetSimulation Optimizer；不会重新实现战斗/搜索算法，也不会自动安装 PCK 或修改 Steam 游戏目录。
+
 ## 不提交的文件
 
 以下文件已在 .gitignore 中排除，或不应手工加入提交：
@@ -22,6 +26,9 @@
 - translation/output/：测试/正式 PCK 构建产物及构建元数据。
 - fleetSimulation/work/：原版恢复脚本、数据和运行时文件。
 - fleetSimulation/map/：本机 Galaxy/Node 输入文件，按要求不纳入 Git。
+- app/data/：个人本机正式配置和导入结果，整个目录不纳入 Git。
+- app/runtime/：应用运行时任务快照和临时状态，不纳入 Git；仓库只提交 `app/runtime/.gitkeep`。
+- app/node_modules/、app/out/、.pnpm-store/：依赖、构建产物和包管理器缓存，不纳入 Git。
 - *.log、地图运行结果、时间戳结果、latest.* 和多 worker 临时结果。
 - 任何 Steam 游戏目录、存档或原版 PCK。项目规则禁止自动安装或替换这些文件。
 
