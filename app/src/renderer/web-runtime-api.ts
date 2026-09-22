@@ -3,7 +3,9 @@ import type {
   FleetManagerApi,
   GalaxyRerunProgress,
   NamedItem,
+  OptimizerOutput,
   RunResult,
+  SearchTaskSnapshot,
   Selection,
 } from '../shared/contracts'
 import type { CommonConfig, NodeConfig, OptimizerConfig } from '../shared/schemas'
@@ -174,12 +176,18 @@ restoreWorkspace()
 const key = ({ galaxy, node, version }: Selection) => `${galaxy}/${node}/${version}`
 const commonKey = ({ galaxy, common }: Selection) => `${galaxy}/${common}`
 const uid = (prefix: string) => `${prefix}-${Date.now().toString(36)}`
+const hash = (value: unknown) => {
+  const source = JSON.stringify(value)
+  let result = 2166136261
+  for (let index = 0; index < source.length; index++) result = Math.imul(result ^ source.charCodeAt(index), 16777619)
+  return `web-${(result >>> 0).toString(16).padStart(8, '0')}`
+}
 
 function setDefault(items: NamedItem[], id: string) {
   for (const item of items) item.isDefault = item.id === id
 }
 
-function sampleRun(selection: Selection): RunResult {
+function sampleRun(selection: Selection, task?: SearchTaskSnapshot): RunResult {
   const current = nodes.get(key(selection))!
   const formation = Object.entries(current.baseline.formation)
     .filter(([, ship]) => ship !== 0 && ship !== null && ship !== '')
@@ -201,6 +209,7 @@ function sampleRun(selection: Selection): RunResult {
     exitCode: 0,
     startedAt: now,
     finishedAt: now,
+    task,
     result: {
       verified_baseline: {
         formation,
@@ -224,8 +233,10 @@ function sampleRun(selection: Selection): RunResult {
 }
 
 export function createBrowserApi(): FleetManagerApi {
-  const outputListeners = new Set<(line: string) => void>()
+  const outputListeners = new Set<(output: OptimizerOutput) => void>()
+  const taskListeners = new Set<(task: SearchTaskSnapshot) => void>()
   const progressListeners = new Set<(progress: GalaxyRerunProgress) => void>()
+  let lastSearch: RunResult | undefined
   return {
     runtime: 'web',
     previewImport: async () => ({ galaxies: [] }),
@@ -239,6 +250,13 @@ export function createBrowserApi(): FleetManagerApi {
     save: async (selection, node) => {
       nodes.set(key(selection), clone(node))
       persistWorkspace()
+    },
+    saveSearch: async (selection, search) => {
+      const current = clone(nodes.get(key(selection))!)
+      current.search = clone(search)
+      nodes.set(key(selection), current)
+      persistWorkspace()
+      return clone(current)
     },
     saveCommon: async (selection, common) => {
       commons.set(commonKey(selection), clone(common))
@@ -331,9 +349,26 @@ export function createBrowserApi(): FleetManagerApi {
       persistWorkspace()
       return { node: request.node, version }
     },
-    run: async selection => {
-      outputListeners.forEach(listener => listener('读取配置…\n搜索候选阵型…\n验证 Best Found…\n完成。\n'))
-      return sampleRun(selection)
+    run: async request => {
+      const selection: Selection = request
+      const current = clone(nodes.get(key(selection))!)
+      const common = clone(commons.get(commonKey(selection))!)
+      const task: SearchTaskSnapshot = {
+        ...request,
+        taskId: uid('task'),
+        nodeConfigHash: hash(current),
+        commonConfigHash: hash(common),
+        optimizerConfigHash: hash(optimizerConfig),
+        optimizerConfigVersion: `sha256:${hash(optimizerConfig)}`,
+        search: clone(current.search),
+        startedAt: new Date().toISOString(),
+      }
+      taskListeners.forEach(listener => listener(clone(task)))
+      outputListeners.forEach(listener =>
+        listener({ taskId: task.taskId, line: '读取配置…\n搜索候选阵型…\n验证 Best Found…\n完成。\n' }),
+      )
+      lastSearch = sampleRun(selection, task)
+      return clone(lastSearch)
     },
     rerunGalaxy: async galaxy => {
       const target = catalog.galaxies.find(g => g.id === galaxy)!
@@ -359,9 +394,21 @@ export function createBrowserApi(): FleetManagerApi {
       progressListeners.forEach(listener => listener(clone(progress)))
       return progress
     },
-    useBest: async selection => {
+    useBest: async taskId => {
+      const task = lastSearch?.task
+      const now = new Date().toISOString()
+      if (!task || task.taskId !== taskId || !lastSearch?.result?.best_result)
+        return { exitCode: -1, startedAt: now, finishedAt: now, error: '搜索任务不存在或已失效。' }
+      const selection: Selection = task
+      if (hash(nodes.get(key(selection))) !== task.nodeConfigHash)
+        return {
+          exitCode: -1,
+          startedAt: now,
+          finishedAt: now,
+          error: '目标 Version 在搜索后已变化，未应用 Best Found。',
+        }
       const current = clone(nodes.get(key(selection))!)
-      const best = sampleRun(selection).result?.best_result?.formation ?? []
+      const best = lastSearch.result.best_result.formation
       for (const entry of best) {
         const ship = shipSelectorToId(entry.ship)
         if (ship) {
@@ -373,12 +420,15 @@ export function createBrowserApi(): FleetManagerApi {
       }
       nodes.set(key(selection), current)
       persistWorkspace()
-      const now = new Date().toISOString()
       return { exitCode: 0, startedAt: now, finishedAt: now, node: clone(current) }
     },
     onOutput: listener => {
       outputListeners.add(listener)
       return () => outputListeners.delete(listener)
+    },
+    onSearchTask: listener => {
+      taskListeners.add(listener)
+      return () => taskListeners.delete(listener)
     },
     onGalaxyProgress: listener => {
       progressListeners.add(listener)

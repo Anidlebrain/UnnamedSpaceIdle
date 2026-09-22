@@ -18,6 +18,7 @@
    - 当前 V1 还包含标准浏览器运行时、舰种选择器、中文工作台样式和对应概念图；网页运行时不执行真实本地 Optimizer。
    - Optimizer 公共配置继续以 `fleetSimulation/poc/optimizer_v2_daily.json` 为唯一运行来源；Manager 只对该文件做结构校验、保留未知字段的原子编辑，不复制为第二份配置。
    - `app/docs/search-config-source-of-truth.md` 记录 Node `search`、daily JSON、Galaxy Common 与 Runner/Optimizer 的读取、覆盖和最终生效位置。
+   - 当前搜索任务通过不可变 `SearchTaskSnapshot` 绑定实际选择与配置哈希，并由任务锁保护运行期间的编辑与结果写回；Node JSON 字段到 UI 的映射见 `app/docs/node-field-audit.md`。
    - 应用只负责管理和调用已有 fleetSimulation Optimizer；不会重新实现战斗/搜索算法，也不会自动安装 PCK 或修改 Steam 游戏目录。
 
 ## 不提交的文件

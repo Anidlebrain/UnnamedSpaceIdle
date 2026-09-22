@@ -2,6 +2,17 @@ import type { CommonConfig, NodeConfig, OptimizerConfig, OptimizerResult } from 
 
 export type ImportPreview = { galaxies: Array<{ id: string; nodes: string[]; common: boolean }> }
 export type Selection = { galaxy: string; node: string; version: string; common: string }
+export type SearchTaskRequest = Selection & { versionName: string; commonName: string }
+export type SearchTaskSnapshot = SearchTaskRequest & {
+  taskId: string
+  nodeConfigHash: string
+  commonConfigHash: string
+  optimizerConfigHash: string
+  optimizerConfigVersion: string
+  search: NodeConfig['search']
+  startedAt: string
+}
+export type OptimizerOutput = { line: string; taskId?: string }
 export type NamedItem = { id: string; name: string; isDefault: boolean }
 export type Catalog = {
   galaxies: Array<{
@@ -16,6 +27,7 @@ export type RunResult = {
   exitCode: number
   startedAt: string
   finishedAt: string
+  task?: SearchTaskSnapshot
   result?: OptimizerResult
   error?: string
 }
@@ -55,6 +67,7 @@ export type FleetManagerApi = {
   load(selection: Selection): Promise<{ node: NodeConfig; common: CommonConfig }>
   loadOptimizerConfig(): Promise<OptimizerConfig>
   save(selection: Selection, node: NodeConfig): Promise<void>
+  saveSearch(selection: Selection, search: NodeConfig['search']): Promise<NodeConfig>
   saveCommon(selection: Selection, common: CommonConfig): Promise<void>
   saveOptimizerConfig(config: OptimizerConfig): Promise<void>
   createVersion(selection: Selection, name: string): Promise<string>
@@ -69,9 +82,10 @@ export type FleetManagerApi = {
   renameTemplate(id: string, name: string): Promise<void>
   deleteTemplate(id: string): Promise<void>
   createNode(request: CreateNodeRequest): Promise<{ node: string; version: string }>
-  run(selection: Selection): Promise<RunResult>
+  run(request: SearchTaskRequest): Promise<RunResult>
   rerunGalaxy(galaxy: string): Promise<GalaxyRerunProgress>
-  useBest(selection: Selection): Promise<CopyResult>
-  onOutput(listener: (line: string) => void): () => void
+  useBest(taskId: string): Promise<CopyResult>
+  onOutput(listener: (output: OptimizerOutput) => void): () => void
+  onSearchTask(listener: (task: SearchTaskSnapshot) => void): () => void
   onGalaxyProgress(listener: (progress: GalaxyRerunProgress) => void): () => void
 }

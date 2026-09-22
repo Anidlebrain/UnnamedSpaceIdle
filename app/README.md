@@ -9,7 +9,8 @@
 - 通过 context-isolated preload bridge 调用 Electron 主进程；Renderer 不直接访问文件系统或启动进程。
 - 将选定配置安全暂存到 `fleetSimulation/map/`，启动现有 `run_optimizer.bat`，实时显示 stdout/stderr。
 - 检查退出码、结果文件时间和内容变化、结果 JSON 结构以及 Galaxy/Node 身份，避免误读旧结果。
-- 在搜索页直接展示本次 Best Found 的结果质量、完整阵型与按舰种汇总的 Mod 配置；内部差异仍用于重跑变化判断。
+- 搜索启动时生成不可变任务快照；运行状态、日志和 Best Found 始终绑定 Task ID 与真实 Galaxy / Node / Version / Common，不受页面选择变化影响。
+- 在搜索页直接展示本次 Best Found 的结果质量、完整阵型与按舰种汇总的 Mod 配置；完成结果跨页面切换保留，并只允许写回任务来源 Version。
 - 人工新建、复制、重命名、删除、切换 Node Version，并设置默认 Version；各 Version 使用独立 JSON 文件。
 - 人工新建、复制、编辑、重命名、删除、切换 Common，并设置默认 Common。
 - 将当前 Node Version 保存为人工模板，并从模板或任意当前 Node Version 创建新 Node；创建时仅重写 Galaxy/Node 身份。
@@ -18,11 +19,12 @@
 - 批量结果按 `formation_key`（缺失时回退到结构化 Formation/Loadout diff）过滤，仅重点列出需要重新配置的节点；失败节点独立显示且不会复用旧 Result。
 - Galaxy 重跑只做变化发现，不执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found。
 - 五个独立工作区：节点配置、公共配置、搜索、Galaxy 重跑、模板与复制。Galaxy / Optimizer 公共不再作为当前 Node Tab。
-- Node 结构化编辑覆盖 Boss、Hazards、Supports、Formation 与舰种级 Loadout；Raw JSON 收入高级区。
+- Node 结构化编辑按阵型、舰队状态、装配、环境排列，覆盖 Formation、Fleet Resources、各舰种数量、Loadout、Boss、Hazards 与 Supports；Raw JSON 收入高级区。完整字段审计见 [`docs/node-field-audit.md`](docs/node-field-audit.md)。
 - 将 `fleetSimulation/poc/optimizer_v2_daily.json` 作为唯一的 Optimizer 公共配置直接管理；可视化编辑搜索舰种、组数范围、允许 Mod 和全局预算，未知字段保留。单节点与 Galaxy 重跑均继续通过既有 BAT 读取这同一文件，不建立第二份运行配置。
 - Loadout 选择由当前 `allowed_mod_slots` 有序数组驱动：`None + 1 Mod` 显示开关，多个 Mod 显示下拉，无合法 Mod 显示不可用；保存仍保持既有字符串 ID 或数字索引表示。
 - 搜索参数、运行状态、日志和 Best Found 位于同一宽页面；结果直接给出 Outcome / Committed FR / Used FR、完整 A1–B5 阵型和按舰种汇总的 Loadout。
-- 仅在实际启动搜索时记录最后 Galaxy / Node（同时兼容 Version / Common），重启后恢复；状态保存在 Manager 本地存储，不写入 Node JSON。
+- 节点、搜索、模板、公共配置分别持有独立选择上下文；仅搜索页恢复上次实际搜索的 Galaxy / Node / Version / Common。
+- Node、Search、Galaxy Common 与 Optimizer Public 草稿按数据域独立保留。搜索运行期间只锁定任务 Node+Version、任务 Common 和 Optimizer Public，其余应用操作保持可用。
 - Renderer 同时支持 Electron preload 和标准浏览器运行时。浏览器工作区使用 `localStorage` 持久化配置，可用于网页部署与 UI 工作流；真实本地 Optimizer 执行仍由桌面 Main 进程负责，后续网页部署需要受控的本地服务或服务端执行器。
 
 应用层不重新实现战斗模拟、搜索算法或结果复制逻辑，也不会自动安装 PCK、修改 Steam 游戏目录或覆盖已有正式配置。

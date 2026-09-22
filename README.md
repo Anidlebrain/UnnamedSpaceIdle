@@ -10,6 +10,7 @@
 - APP V1 暂时封板：在上述能力基础上完成 Galaxy 全局默认配置重跑、网页运行时兼容、舰种选择器和中文工作台 UI；全局重跑只发现变化，不自动写回配置，后续迭代另行开启。
 - APP V1 的 Optimizer 公共配置直接管理 `fleetSimulation/poc/optimizer_v2_daily.json`，包括搜索范围、全局预算和按舰种/槽位排列的 Mod 候选；应用不会在 `app/data/` 另建运行配置副本。
 - APP V1 封板后的维护整理：搜索页、公共配置页和 Galaxy 重跑页分离工作区；Node `search` 参数的最终生效顺序已形成文档，搜索配置来源以 `app/docs/search-config-source-of-truth.md` 为准。
+- 当前搜索任务使用不可变快照绑定实际选择与配置哈希；任务期间锁定任务相关 Node、Version、Common 与 Optimizer Public，避免页面切换误写回。Node 字段审计见 `app/docs/node-field-audit.md`。
 
 测试 PCK **尚未安装**，Steam 游戏目录未被修改。
 

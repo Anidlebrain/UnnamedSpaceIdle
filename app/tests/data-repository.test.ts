@@ -71,6 +71,16 @@ describe('DataRepository', () => {
     await repo.importMap()
     await expect(repo.importMap()).rejects.toThrow('will not overwrite')
   })
+  it('saves Search as its own data domain without overwriting concurrent Node edits', async () => {
+    const { repo } = await fixture()
+    await repo.importMap()
+    const selection = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
+    await repo.save(selection, { ...node, hazards: ['new-node-edit'] })
+    const search = { ...node.search, max_wall_seconds: 99 }
+    const saved = await repo.saveSearch(selection, search)
+    expect(saved.hazards).toEqual(['new-node-edit'])
+    expect(saved.search.max_wall_seconds).toBe(99)
+  })
   it('round-trips Optimizer public config without no-op drift and preserves unknown fields', async () => {
     const { repo, root } = await fixture()
     const path = join(root, 'poc', 'optimizer_v2_daily.json')

@@ -12,6 +12,7 @@ const api: FleetManagerApi = {
   load: selection => ipcRenderer.invoke('data:load', selection),
   loadOptimizerConfig: () => ipcRenderer.invoke('data:load-optimizer-config'),
   save: (selection, node) => ipcRenderer.invoke('data:save', selection, node),
+  saveSearch: (selection, search) => ipcRenderer.invoke('data:save-search', selection, search),
   saveCommon: (selection, common) => ipcRenderer.invoke('data:save-common', selection, common),
   saveOptimizerConfig: config => ipcRenderer.invoke('data:save-optimizer-config', config),
   createVersion: (selection, name) => ipcRenderer.invoke('version:create', selection, name),
@@ -26,13 +27,18 @@ const api: FleetManagerApi = {
   renameTemplate: (id, name) => ipcRenderer.invoke('template:rename', id, name),
   deleteTemplate: id => ipcRenderer.invoke('template:delete', id),
   createNode: request => ipcRenderer.invoke('node:create', request),
-  run: selection => ipcRenderer.invoke('optimizer:run', selection),
+  run: request => ipcRenderer.invoke('optimizer:run', request),
   rerunGalaxy: galaxy => ipcRenderer.invoke('optimizer:rerun-galaxy', galaxy),
-  useBest: selection => ipcRenderer.invoke('optimizer:use-best', selection),
+  useBest: taskId => ipcRenderer.invoke('optimizer:use-best', taskId),
   onOutput: listener => {
-    const handler = (_: Electron.IpcRendererEvent, line: string) => listener(line)
+    const handler = (_: Electron.IpcRendererEvent, output: Parameters<typeof listener>[0]) => listener(output)
     ipcRenderer.on('optimizer:output', handler)
     return () => ipcRenderer.removeListener('optimizer:output', handler)
+  },
+  onSearchTask: listener => {
+    const handler = (_: Electron.IpcRendererEvent, task: Parameters<typeof listener>[0]) => listener(task)
+    ipcRenderer.on('optimizer:task', handler)
+    return () => ipcRenderer.removeListener('optimizer:task', handler)
   },
   onGalaxyProgress: listener => {
     const handler = (_: Electron.IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress)

@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DataRepository } from '../src/main/services/data-repository'
 import { OptimizerRunner } from '../src/main/services/optimizer-runner'
+import type { SearchTaskSnapshot } from '../src/shared/contracts'
 const node = {
   galaxy: 6,
   node: 'B1',
@@ -21,6 +22,20 @@ const node = {
   },
 }
 const common = { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } }
+const optimizer = {
+  objective: 'normal',
+  mode: 'realistic',
+  ship_types: ['Fighter'],
+  group_ranges: { Fighter: { min: 0, max: 1 } },
+  allowed_mod_slots: { Fighter: { primary: [null], secondary: [null] } },
+  max_total_groups: 1,
+  max_groups_per_ship: { Fighter: 1 },
+  max_simulations: 1,
+  max_wall_seconds: 1,
+  top_n: 1,
+  kill_refine_top_n: 1,
+  kill_sequence_max_battles: 1,
+}
 const result = {
   base_config: { resolver: { friendly_input: { galaxy: 6, node: 'B1' } } },
   best_result: { formation: [] },
@@ -32,6 +47,8 @@ async function setup() {
   await mkdir(join(base, 'nodes', 'B1', 'versions'), { recursive: true })
   await mkdir(join(base, 'common', 'versions'), { recursive: true })
   await mkdir(join(root, 'map', 'g6'), { recursive: true })
+  await mkdir(join(root, 'poc'), { recursive: true })
+  await writeFile(join(root, 'poc', 'optimizer_v2_daily.json'), JSON.stringify(optimizer))
   await writeFile(join(base, 'nodes', 'B1', 'versions', 'default.json'), JSON.stringify(node))
   await writeFile(
     join(base, 'nodes', 'B1', 'meta.json'),
@@ -127,7 +144,7 @@ describe('OptimizerRunner', () => {
     )
     await started
     await expect(runner.run(x.s)).rejects.toThrow('already running')
-    await expect(runner.useBest(x.s)).rejects.toThrow('already running')
+    await expect(runner.useBest('task')).rejects.toThrow('already running')
     await expect(
       runner.runQueue(
         [x.s],
@@ -137,6 +154,46 @@ describe('OptimizerRunner', () => {
     ).rejects.toThrow('already running')
     release()
     await queue
+    await rm(x.root, { recursive: true, force: true })
+  })
+  it('publishes an immutable task snapshot and applies targeted write locks only while running', async () => {
+    const x = await setup()
+    let release!: () => void
+    let markStarted!: () => void
+    const started = new Promise<void>(resolve => {
+      markStarted = resolve
+    })
+    let task: SearchTaskSnapshot | undefined
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      () =>
+        new Promise(resolve => {
+          release = () => resolve(3)
+          markStarted()
+        }),
+      snapshot => {
+        task = snapshot
+      },
+    )
+    const running = runner.run({ ...x.s, versionName: '默认', commonName: '默认' })
+    await started
+    expect(task).toMatchObject({ galaxy: 'g6', node: 'B1', versionName: '默认', commonName: '默认' })
+    expect(task).toHaveProperty('taskId')
+    expect(task).toHaveProperty('nodeConfigHash')
+    expect(task).toHaveProperty('commonConfigHash')
+    expect(task).toHaveProperty('optimizerConfigHash')
+    expect(task).toHaveProperty('optimizerConfigVersion')
+    expect(task).toHaveProperty('search.max_wall_seconds', 1)
+    expect(() => runner.assertNodeWritable(x.s)).toThrow('being used')
+    expect(() => runner.assertNodeWritable({ ...x.s, node: 'B2' })).not.toThrow()
+    expect(() => runner.assertCommonWritable(x.s)).toThrow('being used')
+    expect(() => runner.assertCommonWritable({ ...x.s, galaxy: 'g7' })).not.toThrow()
+    expect(() => runner.assertOptimizerWritable()).toThrow('being used')
+    release()
+    await running
+    expect(() => runner.assertNodeWritable(x.s)).not.toThrow()
     await rm(x.root, { recursive: true, force: true })
   })
 })
@@ -154,11 +211,13 @@ describe('Best Found copy transaction', () => {
       () => {},
       async (_selection, nextMode) => {
         mode = nextMode
-        await writeFile(join(x.map, 'B1.json'), JSON.stringify(changed))
+        if (nextMode === 'search') await writeFile(join(x.map, 'B1.result.json'), JSON.stringify(result))
+        else await writeFile(join(x.map, 'B1.json'), JSON.stringify(changed))
         return 0
       },
     )
-    const applied = await runner.useBest(x.s)
+    const searched = await runner.run(x.s)
+    const applied = await runner.useBest(searched.task!.taskId)
     expect(mode).toBe('copy')
     expect(applied.error).toBeUndefined()
     expect((await x.repo.load(x.s)).node.baseline.formation).toEqual({ A1: 'Fighter' })
@@ -173,24 +232,50 @@ describe('Best Found copy transaction', () => {
       x.repo,
       x.root,
       () => {},
-      async () => {
+      async (_selection, mode) => {
+        if (mode === 'search') {
+          await writeFile(join(x.map, 'B1.result.json'), JSON.stringify(result))
+          return 0
+        }
         await writeFile(join(x.map, 'B1.json'), JSON.stringify({ ...node, hazards: ['workspace-only'] }))
         return 7
       },
     )
-    expect((await failed.useBest(x.s)).error).toContain('code 7')
+    const failedSearch = await failed.run(x.s)
+    expect((await failed.useBest(failedSearch.task!.taskId)).error).toContain('code 7')
     expect(await readFile(managerPath, 'utf8')).toBe(before)
+    await rm(join(x.map, 'B1.result.json'), { force: true })
     const invalid = new OptimizerRunner(
       x.repo,
       x.root,
       () => {},
-      async () => {
-        await writeFile(join(x.map, 'B1.json'), '{ invalid')
+      async (_selection, mode) => {
+        if (mode === 'search') await writeFile(join(x.map, 'B1.result.json'), JSON.stringify(result))
+        else await writeFile(join(x.map, 'B1.json'), '{ invalid')
         return 0
       },
     )
-    expect((await invalid.useBest(x.s)).error).toContain('invalid')
+    const invalidSearch = await invalid.run(x.s)
+    expect((await invalid.useBest(invalidSearch.task!.taskId)).error).toContain('invalid')
     expect(await readFile(managerPath, 'utf8')).toBe(before)
+    await rm(x.root, { recursive: true, force: true })
+  })
+  it('refuses to overwrite a target Version changed after the search', async () => {
+    const x = await setup()
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      async (_selection, mode) => {
+        if (mode === 'search') await writeFile(join(x.map, 'B1.result.json'), JSON.stringify(result))
+        return 0
+      },
+    )
+    const searched = await runner.run(x.s)
+    await x.repo.save(x.s, { ...node, hazards: ['changed-after-search'] })
+    const applied = await runner.useBest(searched.task!.taskId)
+    expect(applied.error).toContain('changed after this search')
+    expect((await x.repo.load(x.s)).node.hazards).toEqual(['changed-after-search'])
     await rm(x.root, { recursive: true, force: true })
   })
 })

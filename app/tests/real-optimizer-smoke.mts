@@ -119,7 +119,7 @@ try {
   if (!combinedOutput.includes('Godot log:'))
     throw new Error('Godot process completion was not observed in Runner output.')
   const controlBeforeCopy = await readFile(join(managerGalaxy, 'nodes', node, 'versions', 'control.json'))
-  const copy = await runner.useBest({ galaxy, node, version: 'smoke', common: 'smoke' })
+  const copy = await runner.useBest(run.task!.taskId)
   if (copy.exitCode !== 0 || copy.error || !copy.node)
     throw new Error(copy.error ?? `Optimizer copy returned exit code ${copy.exitCode}`)
   const managerAfterCopy = JSON.parse(

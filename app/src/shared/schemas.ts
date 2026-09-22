@@ -18,7 +18,7 @@ export const nodeConfigSchema = jsonObject.extend({
   supports: z.array(z.unknown()).default([]),
   player_state: jsonObject.extend({
     fleet_resources: z.number(),
-    ships: z.record(z.union([z.number(), jsonObject.extend({ available: z.number(), enabled: z.boolean() })])),
+    ships: z.record(z.number().int().nonnegative()),
   }),
   baseline: jsonObject.extend({
     enabled: z.boolean(),

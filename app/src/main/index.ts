@@ -6,7 +6,7 @@ import { is } from '@electron-toolkit/utils'
 import { DataRepository } from './services/data-repository'
 import { OptimizerRunner } from './services/optimizer-runner'
 import { GalaxyRerunService } from './services/galaxy-rerun'
-import type { CreateNodeRequest, Selection } from '../shared/contracts'
+import type { CreateNodeRequest, SearchTaskRequest, Selection } from '../shared/contracts'
 import { commonConfigSchema, nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
 
 if (process.env.FLEET_MANAGER_USER_DATA_DIR) {
@@ -21,8 +21,12 @@ const preloadPath = fileURLToPath(new URL('../preload/index.cjs', mainUrl))
 const dataRoot = app.isPackaged ? join(app.getPath('userData'), 'fleet-manager-data') : join(projectRoot, 'data')
 const repo = new DataRepository(dataRoot, join(projectRoot, '..', 'fleetSimulation', 'map'))
 let window: BrowserWindow | undefined
-const runner = new OptimizerRunner(repo, join(projectRoot, '..', 'fleetSimulation'), line =>
-  window?.webContents.send('optimizer:output', line),
+const runner = new OptimizerRunner(
+  repo,
+  join(projectRoot, '..', 'fleetSimulation'),
+  (line, taskId) => window?.webContents.send('optimizer:output', { line, taskId }),
+  undefined,
+  task => window?.webContents.send('optimizer:task', task),
 )
 const galaxyRerun = new GalaxyRerunService(repo, runner, progress =>
   window?.webContents.send('galaxy-rerun:progress', progress),
@@ -55,30 +59,43 @@ app.whenReady().then(() => {
   ipcMain.handle('data:catalog', () => repo.catalog())
   ipcMain.handle('data:load', (_, selection: Selection) => repo.load(selection))
   ipcMain.handle('data:load-optimizer-config', () => repo.loadOptimizerConfig())
-  ipcMain.handle('data:save', (_, selection: Selection, node: unknown) =>
-    repo.save(selection, nodeConfigSchema.parse(node)),
-  )
-  ipcMain.handle('data:save-common', (_, selection: Selection, common: unknown) =>
-    repo.saveCommon(selection, commonConfigSchema.parse(common)),
-  )
-  ipcMain.handle('data:save-optimizer-config', (_, config: unknown) =>
-    repo.saveOptimizerConfig(optimizerConfigSchema.parse(config)),
-  )
+  ipcMain.handle('data:save', (_, selection: Selection, node: unknown) => {
+    runner.assertNodeWritable(selection)
+    return repo.save(selection, nodeConfigSchema.parse(node))
+  })
+  ipcMain.handle('data:save-search', (_, selection: Selection, search: unknown) => {
+    runner.assertNodeWritable(selection)
+    return repo.saveSearch(selection, nodeConfigSchema.shape.search.parse(search))
+  })
+  ipcMain.handle('data:save-common', (_, selection: Selection, common: unknown) => {
+    runner.assertCommonWritable(selection)
+    return repo.saveCommon(selection, commonConfigSchema.parse(common))
+  })
+  ipcMain.handle('data:save-optimizer-config', (_, config: unknown) => {
+    runner.assertOptimizerWritable()
+    return repo.saveOptimizerConfig(optimizerConfigSchema.parse(config))
+  })
   ipcMain.handle('version:create', (_, selection: Selection, name: string) => repo.createVersion(selection, name))
   ipcMain.handle('version:rename', (_, selection: Selection, name: string) => repo.renameVersion(selection, name))
-  ipcMain.handle('version:delete', (_, selection: Selection) => repo.deleteVersion(selection))
+  ipcMain.handle('version:delete', (_, selection: Selection) => {
+    runner.assertNodeWritable(selection)
+    return repo.deleteVersion(selection)
+  })
   ipcMain.handle('version:set-default', (_, selection: Selection) => repo.setDefaultVersion(selection))
   ipcMain.handle('common:create', (_, selection: Selection, name: string) => repo.createCommon(selection, name))
   ipcMain.handle('common:rename', (_, selection: Selection, name: string) => repo.renameCommon(selection, name))
-  ipcMain.handle('common:delete', (_, selection: Selection) => repo.deleteCommon(selection))
+  ipcMain.handle('common:delete', (_, selection: Selection) => {
+    runner.assertCommonWritable(selection)
+    return repo.deleteCommon(selection)
+  })
   ipcMain.handle('common:set-default', (_, selection: Selection) => repo.setDefaultCommon(selection))
   ipcMain.handle('template:create', (_, selection: Selection, name: string) => repo.createTemplate(selection, name))
   ipcMain.handle('template:rename', (_, id: string, name: string) => repo.renameTemplate(id, name))
   ipcMain.handle('template:delete', (_, id: string) => repo.deleteTemplate(id))
   ipcMain.handle('node:create', (_, request: CreateNodeRequest) => repo.createNode(request))
-  ipcMain.handle('optimizer:run', (_, selection: Selection) => runner.run(selection))
+  ipcMain.handle('optimizer:run', (_, request: SearchTaskRequest) => runner.run(request))
   ipcMain.handle('optimizer:rerun-galaxy', (_, galaxy: string) => galaxyRerun.run(galaxy))
-  ipcMain.handle('optimizer:use-best', (_, selection: Selection) => runner.useBest(selection))
+  ipcMain.handle('optimizer:use-best', (_, taskId: string) => runner.useBest(taskId))
   createWindow()
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

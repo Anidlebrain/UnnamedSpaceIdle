@@ -169,6 +169,36 @@ small,
   display: none;
 }
 
+.task-chip {
+  display: none;
+}
+
+.dirty-dot {
+  margin-inline-start: auto;
+  color: var(--color-warning);
+  font-size: var(--text-md);
+  line-height: 1;
+}
+
+.editor-lock {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.editor-lock:disabled {
+  opacity: 0.72;
+}
+
+.lock-notice {
+  margin-block: var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  border-inline-start: 3px solid var(--color-warning);
+  background: var(--color-paper);
+  color: var(--color-ink-2);
+}
+
 .sidebar nav {
   display: contents;
 }
@@ -785,6 +815,33 @@ th {
   white-space: nowrap;
 }
 
+.search-context .context-title {
+  grid-column: 1 / -1;
+  color: var(--color-ink);
+  font-family: var(--font-display);
+}
+
+.task-context {
+  border-color: var(--color-rule-strong);
+}
+
+.apply-target {
+  color: var(--color-ink-2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.fleet-state-editor {
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.fleet-ship-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: var(--space-sm);
+}
+
 .best-found,
 .best-grid,
 .best-loadouts {
@@ -955,8 +1012,13 @@ th {
   background: var(--color-warning);
 }
 
-.run-dot.done {
+.run-dot.done,
+.run-dot.completed {
   background: var(--color-success);
+}
+
+.run-dot.failed {
+  background: var(--color-error);
 }
 
 .console {
@@ -1223,6 +1285,30 @@ th {
     flex-direction: row;
     padding-inline: var(--space-sm);
     font-size: var(--text-sm);
+  }
+
+  .task-chip {
+    display: flex;
+    justify-content: flex-start;
+    gap: var(--space-sm);
+    width: 100%;
+    margin-block-start: var(--space-lg);
+    padding: var(--space-sm);
+    border-color: var(--color-rule-strong);
+    background: var(--color-paper);
+    text-align: start;
+  }
+
+  .task-chip > span:last-child {
+    display: grid;
+    min-width: 0;
+  }
+
+  .task-chip strong,
+  .task-chip small {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .runtime-note {

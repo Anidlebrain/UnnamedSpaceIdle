@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
@@ -276,6 +276,41 @@ export class DataRepository {
     await atomicJson(join(this.nodeDir(selection), 'versions', `${selection.version}.json`), parsed)
   }
 
+  async saveSearch(selection: Selection, search: NodeConfig['search']): Promise<NodeConfig> {
+    const current = (await this.load(selection)).node
+    const next = nodeConfigSchema.parse({ ...current, search })
+    await this.save(selection, next)
+    return next
+  }
+
+  async nodeHash(selection: Selection): Promise<string> {
+    return this.hash((await this.load(selection)).node)
+  }
+
+  async configHashes(selection: Selection): Promise<{
+    node: NodeConfig
+    common: CommonConfig
+    optimizer: OptimizerConfig
+    nodeConfigHash: string
+    commonConfigHash: string
+    optimizerConfigHash: string
+  }> {
+    const { node, common } = await this.load(selection)
+    const optimizer = await this.loadOptimizerConfig()
+    return {
+      node,
+      common,
+      optimizer,
+      nodeConfigHash: this.hash(node),
+      commonConfigHash: this.hash(common),
+      optimizerConfigHash: this.hash(optimizer),
+    }
+  }
+
+  private hash(value: unknown): string {
+    return createHash('sha256').update(JSON.stringify(value)).digest('hex')
+  }
+
   async saveCommon(selection: Selection, common: CommonConfig): Promise<void> {
     this.validateSelection(selection)
     await atomicJson(
@@ -447,10 +482,18 @@ export class DataRepository {
 
   async stage(selection: Selection): Promise<{ node: NodeConfig; common: CommonConfig }> {
     const data = await this.load(selection)
-    const target = join(this.mapRoot, selection.galaxy)
-    await atomicJson(join(target, `${selection.node}.json`), data.node)
-    await atomicJson(join(target, 'common.json'), data.common)
+    await this.stageValues(selection, data.node, data.common)
     return data
+  }
+
+  async stageValues(selection: Selection, node: NodeConfig, common: CommonConfig): Promise<void> {
+    this.validateSelection(selection)
+    const parsedNode = nodeConfigSchema.parse(node)
+    const parsedCommon = commonConfigSchema.parse(common)
+    this.assertIdentity(selection, parsedNode)
+    const target = join(this.mapRoot, selection.galaxy)
+    await atomicJson(join(target, `${selection.node}.json`), parsedNode)
+    await atomicJson(join(target, 'common.json'), parsedCommon)
   }
 
   async readStagedNode(selection: Selection): Promise<NodeConfig> {

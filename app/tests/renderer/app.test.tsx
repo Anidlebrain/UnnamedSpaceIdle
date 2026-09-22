@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../../src/shared/bridge'
 import type { NodeConfig } from '../../src/shared/schemas'
+import type { SearchTaskSnapshot } from '../../src/shared/contracts'
 import { App } from '../../src/renderer/App'
 
 const node: NodeConfig = {
@@ -52,6 +53,23 @@ const optimizerConfig = {
 }
 const unsubscribe = vi.fn()
 const unsubscribeProgress = vi.fn()
+const unsubscribeTask = vi.fn()
+let taskListener: ((task: SearchTaskSnapshot) => void) | undefined
+const searchTask = (nodeId = 'B1'): SearchTaskSnapshot => ({
+  taskId: `task-${nodeId.toLowerCase()}`,
+  galaxy: 'g6',
+  node: nodeId,
+  version: 'default',
+  versionName: '默认',
+  common: 'default',
+  commonName: '默认',
+  nodeConfigHash: 'node-hash',
+  commonConfigHash: 'common-hash',
+  optimizerConfigHash: 'optimizer-hash',
+  optimizerConfigVersion: 'sha256:optimizer-hash',
+  search: node.search,
+  startedAt: '2026-01-01T00:00:00.000Z',
+})
 const galaxyResult = {
   galaxy: 'g6',
   status: 'completed' as const,
@@ -104,6 +122,7 @@ const api = {
   })),
   loadOptimizerConfig: vi.fn(async () => optimizerConfig),
   save: vi.fn(async () => {}),
+  saveSearch: vi.fn(async (_selection, search) => ({ ...node, search })),
   saveCommon: vi.fn(async () => {}),
   saveOptimizerConfig: vi.fn(async () => {}),
   createVersion: vi.fn(),
@@ -124,6 +143,10 @@ const api = {
   previewImport: vi.fn(),
   importMap: vi.fn(),
   onOutput: vi.fn(() => unsubscribe),
+  onSearchTask: vi.fn(listener => {
+    taskListener = listener
+    return unsubscribeTask
+  }),
   onGalaxyProgress: vi.fn(() => unsubscribeProgress),
 }
 
@@ -135,6 +158,7 @@ describe('Renderer preload contract', () => {
   beforeEach(() => {
     window[FLEET_MANAGER_BRIDGE_NAME] = api
     vi.clearAllMocks()
+    taskListener = undefined
     localStorage.clear()
   })
   it('mounts with the preload API, calls catalog, and renders the main UI', async () => {
@@ -188,15 +212,41 @@ describe('Renderer preload contract', () => {
       ),
     )
   })
-  it('blocks dirty search and has no direct node APIs', async () => {
+  it('keeps a Node draft when switching pages without blocking the Search domain', async () => {
     render(<App />)
     await screen.findByText('当前节点')
     fireEvent.change(screen.getByLabelText('Node JSON 编辑器'), { target: { value: '{}' } })
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    expect((screen.getByRole('button', { name: '开始搜索' }) as HTMLButtonElement).disabled).toBe(true)
-    expect(screen.getByText('保存搜索参数后即可启动。')).toBeTruthy()
+    expect((screen.getByRole('button', { name: '开始搜索' }) as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: /节点配置/ }))
+    expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toBe('{}')
     const source = await import('node:fs/promises').then(x => x.readFile('src/renderer/App.tsx', 'utf8'))
     expect(source).not.toMatch(/from ['"]node:(fs|child_process)/)
+  })
+  it('keeps a running task bound to its snapshot while unrelated Node editing remains available', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    act(() => taskListener?.(searchTask('B21')))
+    await screen.findByText(/B21 搜索中/)
+    fireEvent.change(screen.getByLabelText('Node JSON 编辑器'), {
+      target: { value: JSON.stringify({ ...node, hazards: ['B10'] }, null, 2) },
+    })
+    expect((screen.getByRole('button', { name: '保存节点' }) as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    expect(screen.getByText('准备搜索')).toBeTruthy()
+    expect(screen.getByText('正在运行')).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'B21 搜索中…' }) as HTMLButtonElement).disabled).toBe(true)
+  })
+  it('makes the active task Node, Common, and Optimizer Public explicitly read-only', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    act(() => taskListener?.(searchTask()))
+    await screen.findByText(/该 Node Version正在被 B1 搜索任务使用/)
+    expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).matches(':disabled')).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: '公共配置' }))
+    await screen.findByText(/该 Galaxy Common正在被 B1 搜索任务使用/)
+    fireEvent.click(screen.getByRole('tab', { name: 'Optimizer 公共' }))
+    await screen.findByText(/Optimizer 公共配置正在被 B1 搜索任务使用/)
   })
   it('runs only the selected Galaxy and emphasizes changed and failed nodes', async () => {
     render(<App />)
@@ -283,8 +333,31 @@ describe('Renderer preload contract', () => {
     expect(screen.getAllByText('自动 / 无手选槽位').length).toBeGreaterThan(0)
   })
 
+  it('writes Fleet Resources and all supported ship counts through the structured Fleet State editor', async () => {
+    api.load.mockResolvedValueOnce({
+      node: {
+        ...node,
+        player_state: {
+          fleet_resources: 50,
+          ships: { Fighter: 1, Corvette: 2, Frigate: 3, Cruiser: 4, HeavyCruiser: 5 },
+        },
+      },
+      common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '舰队状态' }))
+    fireEvent.change(screen.getByLabelText('Fleet Resources'), { target: { value: '79.67' } })
+    fireEvent.change(screen.getByLabelText('ships.HeavyCruiser'), { target: { value: '7' } })
+    const raw = (screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value
+    expect(raw).toContain('"fleet_resources": 79.67')
+    expect(raw).toContain('"HeavyCruiser": 7')
+  })
+
   it('edits Boss, Hazards, and Supports without Raw JSON', async () => {
     render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '环境' }))
     await screen.findByText('战斗与环境')
     fireEvent.click(screen.getByText('Boss 存活'))
     fireEvent.change(screen.getByLabelText('Boss 剩余生命'), { target: { value: '3500' } })
@@ -302,6 +375,7 @@ describe('Renderer preload contract', () => {
   it('keeps public configuration on its own page and does not mutate Node JSON', async () => {
     render(<App />)
     await screen.findByText('当前节点')
+    await waitFor(() => expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).not.toBe(''))
     const before = (screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value
     fireEvent.click(screen.getByRole('button', { name: '公共配置' }))
     expect(screen.getByRole('tab', { name: 'Galaxy 公共' })).toBeTruthy()
@@ -334,10 +408,12 @@ describe('Renderer preload contract', () => {
   })
 
   it('shows the complete Best Found formation and ship-level loadout on the search page', async () => {
+    const task = searchTask()
     api.run.mockResolvedValueOnce({
       exitCode: 0,
       startedAt: '2026-01-01T00:00:00.000Z',
       finishedAt: '2026-01-01T00:00:04.000Z',
+      task,
       result: {
         verified_baseline: {
           formation: [{ position: 'A1', ship: 'Fighter' }],
@@ -383,10 +459,25 @@ describe('Renderer preload contract', () => {
     expect(screen.getByText('B5')).toBeTruthy()
     expect(screen.getByText('Best Found Loadout')).toBeTruthy()
     expect(screen.getByText(/充能激光/)).toBeTruthy()
+    expect(screen.getByText('应用到：G6 / B1 / 默认')).toBeTruthy()
     expect(screen.getByRole('button', { name: '使用最优配置' })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /节点配置/ }))
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    expect(screen.getByText('Best Found Formation')).toBeTruthy()
+
+    api.useBest.mockResolvedValueOnce({
+      exitCode: 0,
+      startedAt: task.startedAt,
+      finishedAt: task.startedAt,
+      node: { ...node, baseline: { ...node.baseline, formation: { A1: 'Corvette' } } },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '使用最优配置' }))
+    const confirmButtons = await screen.findAllByRole('button', { name: '使用最优配置' })
+    fireEvent.click(confirmButtons.at(-1)!)
+    await waitFor(() => expect(api.useBest).toHaveBeenCalledWith('task-b1'))
   })
 
-  it('restores the last actually searched Galaxy and Node from Manager local state', async () => {
+  it('restores the last searched selection only inside the Search page context', async () => {
     const twoGalaxyCatalog = {
       galaxies: [
         {
@@ -410,18 +501,17 @@ describe('Renderer preload contract', () => {
     }
     localStorage.setItem(
       'fleet-manager-last-search-v1',
-      JSON.stringify({ galaxy: 'g5', node: 'B35', version: 'default', common: 'default' }),
+      JSON.stringify({ galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }),
     )
     api.catalog.mockResolvedValueOnce(twoGalaxyCatalog)
-    api.load.mockResolvedValueOnce({
-      node: { ...node, galaxy: 5, node: 'B35' },
-      common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
-    })
     render(<App />)
     await waitFor(() =>
       expect(api.load).toHaveBeenCalledWith({ galaxy: 'g5', node: 'B35', version: 'default', common: 'default' }),
     )
     expect((screen.getByLabelText('Galaxy') as HTMLSelectElement).value).toBe('g5')
     expect((screen.getByLabelText('节点') as HTMLSelectElement).value).toBe('B35')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    await waitFor(() => expect((screen.getByLabelText('Galaxy') as HTMLSelectElement).value).toBe('g6'))
+    expect((screen.getByLabelText('节点') as HTMLSelectElement).value).toBe('B1')
   })
 })
