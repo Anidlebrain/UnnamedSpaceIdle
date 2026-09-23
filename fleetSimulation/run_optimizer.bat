@@ -46,7 +46,12 @@ set "COMMON_FILE=%GALAXY_DIR%\common.json"
 set "RESULT_FILE=%GALAXY_DIR%\%NODE%.result.json"
 set "SUMMARY_FILE=%GALAXY_DIR%\%NODE%.result.txt"
 set "LOG_FILE=%GALAXY_DIR%\%NODE%.godot.log"
-set "DAILY_SETTINGS=%ROOT_DIR%\poc\optimizer_v2_daily.json"
+set "DAILY_SETTINGS=%ROOT_DIR%\map\optimizer_v2_daily.json"
+set "DAILY_SETTINGS_SOURCE=local map"
+if not exist "%DAILY_SETTINGS%" (
+  set "DAILY_SETTINGS=%ROOT_DIR%\poc\optimizer_v2_daily.json"
+  set "DAILY_SETTINGS_SOURCE=poc fallback"
+)
 set "GODOT_RUNNER=%ROOT_DIR%\tools\run_godot_optimizer.ps1"
 set "COPY_RESULT_TOOL=%ROOT_DIR%\tools\copy_result_to_config.ps1"
 set "GODOT_PROJECT=%ROOT_DIR%\work\full_recovered"
@@ -144,6 +149,7 @@ echo Node: %BATTLE_NODE%
 echo.
 echo Config: "%CONFIG_FILE%"
 echo Common: "%COMMON_FILE%"
+echo Optimizer config: "%DAILY_SETTINGS%" [%DAILY_SETTINGS_SOURCE%]
 echo Result: "%RESULT_FILE%"
 echo Summary: "%SUMMARY_FILE%"
 echo Log: "%LOG_FILE%"

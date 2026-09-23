@@ -1,0 +1,8 @@
+{
+  "profile": "fast",
+  "goal": "beat_baseline",
+  "simulation_clock": "offline_fixed_step",
+  "max_wall_seconds": 300,
+  "max_simulations": 300,
+  "workers": 4
+}

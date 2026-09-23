@@ -1,15 +1,17 @@
-import type { CommonConfig, NodeConfig, OptimizerConfig, OptimizerResult } from './schemas'
+import type { CommonConfig, NodeConfig, OptimizerConfig, OptimizerResult, SearchConfig } from './schemas'
 
 export type ImportPreview = { galaxies: Array<{ id: string; nodes: string[]; common: boolean }> }
 export type Selection = { galaxy: string; node: string; version: string; common: string }
-export type SearchTaskRequest = Selection & { versionName: string; commonName: string }
+export type ConfigSource = 'local' | 'default'
+export type SearchTaskRequest = Selection & { versionName: string; commonName: string; search: SearchConfig }
 export type SearchTaskSnapshot = SearchTaskRequest & {
   taskId: string
   nodeConfigHash: string
+  stagedNodeConfigHash: string
   commonConfigHash: string
   optimizerConfigHash: string
   optimizerConfigVersion: string
-  search: NodeConfig['search']
+  environment: Pick<NodeConfig, 'boss' | 'hazards' | 'supports'>
   startedAt: string
 }
 export type OptimizerOutput = { line: string; taskId?: string }
@@ -66,8 +68,10 @@ export type FleetManagerApi = {
   catalog(): Promise<Catalog>
   load(selection: Selection): Promise<{ node: NodeConfig; common: CommonConfig }>
   loadOptimizerConfig(): Promise<OptimizerConfig>
+  loadSearchConfig(): Promise<SearchConfig>
+  configSources(): Promise<{ search: ConfigSource; optimizer: ConfigSource }>
   save(selection: Selection, node: NodeConfig): Promise<void>
-  saveSearch(selection: Selection, search: NodeConfig['search']): Promise<NodeConfig>
+  saveSearchConfig(search: SearchConfig): Promise<SearchConfig>
   saveCommon(selection: Selection, common: CommonConfig): Promise<void>
   saveOptimizerConfig(config: OptimizerConfig): Promise<void>
   createVersion(selection: Selection, name: string): Promise<string>

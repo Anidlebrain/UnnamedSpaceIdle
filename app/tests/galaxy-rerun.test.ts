@@ -6,13 +6,14 @@ import { DataRepository } from '../src/main/services/data-repository'
 import { GalaxyRerunService } from '../src/main/services/galaxy-rerun'
 import { OptimizerRunner } from '../src/main/services/optimizer-runner'
 import type { Selection } from '../src/shared/contracts'
+import type { NodeConfig } from '../src/shared/schemas'
 
 const roots: string[] = []
 const common = (damage: number) => ({
   permanent: { damage_scale: damage, health_scale: 1 },
   temporary: { damage_scale: 0, health_scale: 0 },
 })
-const node = (id: string, marker: string) => ({
+const node = (id: string, marker: string): NodeConfig => ({
   galaxy: 6,
   node: id,
   hazards: [marker],
@@ -35,6 +36,25 @@ async function setup() {
   const galaxy = join(root, 'data', 'galaxies', 'g6')
   await mkdir(join(galaxy, 'common', 'versions'), { recursive: true })
   await mkdir(join(root, 'map', 'g6'), { recursive: true })
+  await mkdir(join(root, 'poc'), { recursive: true })
+  await writeFile(join(root, 'poc', 'search_config.json'), JSON.stringify(node('B1', 'default').search))
+  await writeFile(
+    join(root, 'poc', 'optimizer_v2_daily.json'),
+    JSON.stringify({
+      objective: 'normal',
+      mode: 'realistic',
+      ship_types: ['Fighter'],
+      group_ranges: { Fighter: { min: 0, max: 1 } },
+      allowed_mod_slots: { Fighter: { primary: [null], secondary: [null] } },
+      max_total_groups: 1,
+      max_groups_per_ship: { Fighter: 1 },
+      max_simulations: 1,
+      max_wall_seconds: 1,
+      top_n: 1,
+      kill_refine_top_n: 1,
+      kill_sequence_max_battles: 1,
+    }),
+  )
   await writeFile(join(galaxy, 'common', 'versions', 'old.json'), JSON.stringify(common(1)))
   await writeFile(join(galaxy, 'common', 'versions', 'buff.json'), JSON.stringify(common(2)))
   await writeFile(
@@ -148,6 +168,7 @@ describe('GalaxyRerunService', () => {
     ])
     expect(result.nodes[1].run?.result).toBeUndefined()
     expect(result.nodes[1].error).toContain('code 9')
+    expect(result.nodes[0].run?.task?.search).toEqual(node('B1', 'default').search)
     expect(events).toContain(1)
     expect(events.at(-1)).toBe(3)
     expect(await Promise.all(managerPaths.map(path => readFile(path, 'utf8')))).toEqual(before)

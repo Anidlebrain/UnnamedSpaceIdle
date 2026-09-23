@@ -10,6 +10,7 @@ export class OptimizerRunner {
   private running = false
   private activeTask?: SearchTaskSnapshot
   private pendingSelection?: Selection
+  private queuedSelections: Selection[] = []
   private lastSearch?: RunResult
   constructor(
     private readonly repo: DataRepository,
@@ -28,24 +29,33 @@ export class OptimizerRunner {
         common: request.common,
       }
       this.pendingSelection = selection
+      const savedSearch =
+        'search' in request ? await this.repo.saveSearchConfig(request.search) : await this.repo.loadSearchConfig()
       const prepared = await this.repo.configHashes(selection)
+      const stagedNode = { ...prepared.node, search: structuredClone(savedSearch) }
       const task: SearchTaskSnapshot = {
-        ...request,
+        ...selection,
         versionName: 'versionName' in request ? request.versionName : request.version,
         commonName: 'commonName' in request ? request.commonName : request.common,
+        search: structuredClone(savedSearch),
         taskId: randomUUID(),
         nodeConfigHash: prepared.nodeConfigHash,
+        stagedNodeConfigHash: this.hash(stagedNode),
         commonConfigHash: prepared.commonConfigHash,
         optimizerConfigHash: prepared.optimizerConfigHash,
         optimizerConfigVersion: `sha256:${prepared.optimizerConfigHash}`,
-        search: structuredClone(prepared.node.search),
+        environment: {
+          boss: structuredClone(stagedNode.boss),
+          hazards: structuredClone(stagedNode.hazards),
+          supports: structuredClone(stagedNode.supports),
+        },
         startedAt: new Date().toISOString(),
       }
       this.activeTask = task
       this.pendingSelection = undefined
       this.onTask?.(task)
-      await this.repo.stageValues(selection, prepared.node, prepared.common)
-      const result = await this.runUnlocked(selection, task)
+      await this.repo.stageValues(selection, stagedNode, prepared.common)
+      const result = await this.runUnlocked(selection, task, { node: stagedNode, common: prepared.common })
       this.lastSearch = result
       return result
     } finally {
@@ -60,22 +70,49 @@ export class OptimizerRunner {
     onComplete: (selection: Selection, result: RunResult) => void,
   ): Promise<RunResult[]> {
     this.acquire()
+    this.queuedSelections = selections.map(selection => ({ ...selection }))
     const results: RunResult[] = []
     try {
+      const search = await this.repo.loadSearchConfig()
       for (const selection of selections) {
         onStart(selection)
         let result: RunResult
         try {
-          result = await this.runUnlocked(selection)
+          const prepared = await this.repo.configHashes(selection)
+          const stagedNode = { ...prepared.node, search: structuredClone(search) }
+          const task: SearchTaskSnapshot = {
+            ...selection,
+            versionName: selection.version,
+            commonName: selection.common,
+            search: structuredClone(search),
+            taskId: randomUUID(),
+            nodeConfigHash: prepared.nodeConfigHash,
+            stagedNodeConfigHash: this.hash(stagedNode),
+            commonConfigHash: prepared.commonConfigHash,
+            optimizerConfigHash: prepared.optimizerConfigHash,
+            optimizerConfigVersion: `sha256:${prepared.optimizerConfigHash}`,
+            environment: {
+              boss: structuredClone(stagedNode.boss),
+              hazards: structuredClone(stagedNode.hazards),
+              supports: structuredClone(stagedNode.supports),
+            },
+            startedAt: new Date().toISOString(),
+          }
+          this.activeTask = task
+          await this.repo.stageValues(selection, stagedNode, prepared.common)
+          result = await this.runUnlocked(selection, task, { node: stagedNode, common: prepared.common })
         } catch (error) {
           const time = new Date().toISOString()
           result = { exitCode: -1, startedAt: time, finishedAt: time, error: (error as Error).message }
         }
         results.push(result)
         onComplete(selection, result)
+        this.activeTask = undefined
       }
       return results
     } finally {
+      this.activeTask = undefined
+      this.queuedSelections = []
       this.running = false
     }
   }
@@ -140,31 +177,48 @@ export class OptimizerRunner {
       source.version === selection.version
     )
       throw new Error(`This Version is being used by the ${source.node} search task. Edit it after the task finishes.`)
+    if (
+      this.queuedSelections.some(
+        item => item.galaxy === selection.galaxy && item.node === selection.node && item.version === selection.version,
+      )
+    )
+      throw new Error(`This Version is queued for the active Galaxy rerun. Edit it after the batch finishes.`)
   }
   assertCommonWritable(selection: Selection) {
     const source = this.activeTask ?? this.pendingSelection
     if (source && source.galaxy === selection.galaxy && source.common === selection.common)
       throw new Error(`This Common is being used by the ${source.node} search task. Edit it after the task finishes.`)
+    if (this.queuedSelections.some(item => item.galaxy === selection.galaxy && item.common === selection.common))
+      throw new Error(`This Common is queued for the active Galaxy rerun. Edit it after the batch finishes.`)
   }
   assertOptimizerWritable() {
-    const source = this.activeTask ?? this.pendingSelection
-    if (source)
+    if (this.running) {
+      const source = this.activeTask ?? this.pendingSelection
       throw new Error(
-        `Optimizer Public is being used by the ${source.node} search task. Edit it after the task finishes.`,
+        source
+          ? `Optimizer Public is being used by the ${source.node} search task. Edit it after the task finishes.`
+          : 'Optimizer Public is being used by the active Galaxy rerun. Edit it after the batch finishes.',
       )
+    }
   }
-  private async runUnlocked(selection: Selection, task?: SearchTaskSnapshot): Promise<RunResult> {
+  private async runUnlocked(
+    selection: Selection,
+    task: SearchTaskSnapshot,
+    staged: {
+      node: Awaited<ReturnType<DataRepository['load']>>['node']
+      common: Awaited<ReturnType<DataRepository['load']>>['common']
+    },
+  ): Promise<RunResult> {
     const startedAt = task?.startedAt ?? new Date().toISOString()
     const map = join(this.optimizerRoot, 'map', selection.galaxy)
     const resultPath = join(map, `${selection.node.replace(/_num$/i, '')}.result.json`)
-    const staged = task ? await this.repo.load(selection) : await this.repo.stage(selection)
     const before = await this.snapshot(resultPath)
     const nodeHash = this.hash(staged.node)
     const commonHash = this.hash(staged.common)
     await this.taskSnapshot(selection, task, startedAt, nodeHash, commonHash, before)
     this.emit(
       `Staged ${selection.galaxy}/${selection.node}; node ${nodeHash.slice(0, 12)}, common ${commonHash.slice(0, 12)}\n`,
-      task?.taskId,
+      task.taskId,
     )
     const exitCode = await (this.executor ? this.executor(selection, 'search') : this.execute(selection, 'search'))
     if (exitCode !== 0)

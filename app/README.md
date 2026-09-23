@@ -20,9 +20,10 @@
 - Galaxy 重跑只做变化发现，不执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found。
 - 五个独立工作区：节点配置、公共配置、搜索、Galaxy 重跑、模板与复制。Galaxy / Optimizer 公共不再作为当前 Node Tab。
 - Node 结构化编辑按阵型、舰队状态、装配、环境排列，覆盖 Formation、Fleet Resources、各舰种数量、Loadout、Boss、Hazards 与 Supports；Raw JSON 收入高级区。完整字段审计见 [`docs/node-field-audit.md`](docs/node-field-audit.md)。
-- 将 `fleetSimulation/poc/optimizer_v2_daily.json` 作为唯一的 Optimizer 公共配置直接管理；可视化编辑搜索舰种、组数范围、允许 Mod 和全局预算，未知字段保留。单节点与 Galaxy 重跑均继续通过既有 BAT 读取这同一文件，不建立第二份运行配置。
+- Search 偏好独立保存在忽略的 `fleetSimulation/map/search_config.json`，缺失时回退提交的 `poc/search_config.json`；点击开始即自动保存、回读确认、写入任务快照并覆盖到 staged Node。
+- Optimizer 公共配置优先读取忽略的 `fleetSimulation/map/optimizer_v2_daily.json`，缺失时回退提交的 `poc` 默认文件；日常编辑不再污染 Git。
 - Loadout 选择由当前 `allowed_mod_slots` 有序数组驱动：`None + 1 Mod` 显示开关，多个 Mod 显示下拉，无合法 Mod 显示不可用；保存仍保持既有字符串 ID 或数字索引表示。
-- 搜索参数、运行状态、日志和 Best Found 位于同一宽页面；结果直接给出 Outcome / Committed FR / Used FR、完整 A1–B5 阵型和按舰种汇总的 Loadout。
+- 搜索页以 Best Found 为核心；低频参数只显示紧凑摘要并在设置 Dialog 中编辑，结果直接给出 Outcome / Committed FR / Used FR、完整 A1–B5 地图式阵型和按舰种汇总的 Loadout。
 - 节点、搜索、模板、公共配置分别持有独立选择上下文；仅搜索页恢复上次实际搜索的 Galaxy / Node / Version / Common。
 - Node、Search、Galaxy Common 与 Optimizer Public 草稿按数据域独立保留。搜索运行期间只锁定任务 Node+Version、任务 Common 和 Optimizer Public，其余应用操作保持可用。
 - Renderer 同时支持 Electron preload 和标准浏览器运行时。浏览器工作区使用 `localStorage` 持久化配置，可用于网页部署与 UI 工作流；真实本地 Optimizer 执行仍由桌面 Main 进程负责，后续网页部署需要受控的本地服务或服务端执行器。
@@ -58,8 +59,8 @@ pnpm test
 
 - `app/data/`：个人本地正式配置、Galaxy/Node 版本和 Common Profile；整个目录已加入 Git 忽略，不提交任何个人数据。
 - `app/runtime/`：最近一次任务快照等运行时状态；已加入 Git 忽略。
-- `fleetSimulation/map/`：Optimizer 工作区，只有用户明确导入或启动任务时才写入。
-- `fleetSimulation/poc/optimizer_v2_daily.json`：跨 Galaxy 的 Optimizer 公共配置，也是 BAT 的直接输入。Manager 原子编辑该权威文件；它不复制进 `app/data/`。
+- `fleetSimulation/map/`：Git 忽略的本机运行与配置覆盖层；包含 staged Node/Common、Search 偏好和可选 Optimizer 公共覆盖。
+- `fleetSimulation/poc/search_config.json`、`poc/optimizer_v2_daily.json`：Git 跟踪的默认 / fallback，不由日常 Manager 编辑覆盖。
 
 架构细节见 [`docs/architecture.md`](docs/architecture.md)，产品范围见 [`docs/Unnamed Space Idle 舰队优化器管理界面 PRD v1.0.md`](docs/Unnamed%20Space%20Idle%20舰队优化器管理界面%20PRD%20v1.0.md)。
 搜索参数的读取、覆盖和最终生效位置见 [`docs/search-config-source-of-truth.md`](docs/search-config-source-of-truth.md)。

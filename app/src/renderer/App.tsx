@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type {
   Catalog,
+  ConfigSource,
   FleetManagerApi,
   GalaxyRerunNode,
   GalaxyRerunProgress,
@@ -9,7 +10,7 @@ import type {
   RunResult,
   Selection,
 } from '../shared/contracts'
-import type { CommonConfig, NodeConfig, OptimizerConfig } from '../shared/schemas'
+import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../shared/bridge'
 import { diffFormation } from '../shared/formation-diff'
 import {
@@ -118,6 +119,14 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const [node, setNode] = useState<NodeConfig | null>(null)
   const [common, setCommon] = useState<CommonConfig | null>(null)
   const [optimizerConfig, setOptimizerConfig] = useState<OptimizerConfig | null>(null)
+  const [searchConfig, setSearchConfig] = useState<SearchConfig | null>(null)
+  const [searchConfigSource, setSearchConfigSource] = useState('')
+  const [savedSearchConfigSource, setSavedSearchConfigSource] = useState('')
+  const [configSources, setConfigSources] = useState<{ search: ConfigSource; optimizer: ConfigSource }>({
+    search: 'default',
+    optimizer: 'default',
+  })
+  const [searchSettingsOpen, setSearchSettingsOpen] = useState(false)
   const [nodeSource, setNodeSource] = useState('')
   const [commonSource, setCommonSource] = useState('')
   const [savedNodeSource, setSavedNodeSource] = useState('')
@@ -149,11 +158,12 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const nodeDirty = Boolean(node && nodeSource !== savedNodeSource)
   const commonDirty = Boolean(common && commonSource !== savedCommonSource)
   const optimizerDirty = Boolean(optimizerConfig && optimizerSource !== savedOptimizerSource)
+  const searchDirty = Boolean(searchConfig && searchConfigSource !== savedSearchConfigSource)
   const dirty =
     workspace === 'node'
       ? nodeDirty
       : workspace === 'search'
-        ? nodeDirty
+        ? searchDirty
         : workspace === 'common'
           ? commonTab === 'galaxy'
             ? commonDirty
@@ -167,6 +177,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     nodeDirty ||
     commonDirty ||
     optimizerDirty ||
+    searchDirty ||
     [...nodeDrafts.current.values()].some(draft => isDirty(draft)) ||
     [...searchDrafts.current.values()].some(draft => isDirty(draft)) ||
     [...commonDrafts.current.values()].some(draft => isDirty(draft))
@@ -177,12 +188,17 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     return next
   }
   useEffect(() => {
-    void Promise.all([refresh(), api.loadOptimizerConfig()])
-      .then(([next, optimizer]) => {
+    void Promise.all([refresh(), api.loadOptimizerConfig(), api.loadSearchConfig(), api.configSources()])
+      .then(([next, optimizer, search, sources]) => {
         const source = format(optimizer)
         setOptimizerConfig(optimizer)
         setOptimizerSource(source)
         setSavedOptimizerSource(source)
+        const searchSource = format(search)
+        setSearchConfig(search)
+        setSearchConfigSource(searchSource)
+        setSavedSearchConfigSource(searchSource)
+        setConfigSources(sources)
         const contexts = initialContexts(next, storedSearchSelection(next))
         pageContextsRef.current = contexts
         setPageContexts(contexts)
@@ -371,17 +387,6 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       setSavedNodeSource(source)
       nodeDrafts.current.set(nodeDomainKey(selection), { value: parsed, source, savedSource: source })
     })
-  const saveSearch = () =>
-    act('搜索参数已保存到该 Node Version。', async () => {
-      if (!node) throw new Error('搜索配置尚未加载。')
-      const parsed = JSON.parse(nodeSource) as NodeConfig
-      const saved = await api.saveSearch(selection, parsed.search)
-      const source = format(saved)
-      setNode(saved)
-      setNodeSource(source)
-      setSavedNodeSource(source)
-      searchDrafts.current.set(nodeDomainKey(selection), { value: saved, source, savedSource: source })
-    })
   const saveCommon = () =>
     act('Common 配置已原子保存。', async () => {
       const parsed = JSON.parse(commonSource)
@@ -403,6 +408,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       setOptimizerConfig(parsed)
       setOptimizerSource(source)
       setSavedOptimizerSource(source)
+      setConfigSources(current => ({ ...current, optimizer: 'local' }))
     })
   const createVersion = (copyCurrent: boolean) => {
     if (copyCurrent && !requireNodeSaved(selection, false)) return
@@ -492,8 +498,8 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       setMessage('已有单节点搜索正在运行。')
       return
     }
-    if (nodeDirty) {
-      setMessage('当前搜索参数有未保存草稿；保存后再启动。')
+    if (!searchConfig) {
+      setMessage('搜索配置尚未加载，无法启动。')
       return
     }
     setLogs('')
@@ -506,6 +512,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         ...selection,
         versionName: currentVersion?.name ?? selection.version,
         commonName: currentCommon?.name ?? selection.common,
+        search: searchConfig,
       })
       if (!result.task) throw new Error('Main 未返回搜索任务快照。')
       setSearchTask(current => ({
@@ -517,6 +524,11 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         finishedAt: result.finishedAt,
         error: result.error,
       }))
+      const confirmed = format(result.task.search)
+      setSearchConfig(result.task.search)
+      setSearchConfigSource(confirmed)
+      setSavedSearchConfigSource(confirmed)
+      setConfigSources(current => ({ ...current, search: 'local' }))
       setMessage(result.error ? `搜索失败：${result.error}` : '搜索完成，Best Found 已绑定到本次任务。')
     } catch (error) {
       setSearchTask(current =>
@@ -680,7 +692,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const pageCopy: Record<Workspace, { title: string; description: string }> = {
     node: { title: '节点配置', description: '维护 Boss、环境、阵型与舰种装配' },
     common: { title: '公共配置', description: '管理 Galaxy 公共和全局 Optimizer 配置' },
-    search: { title: '搜索', description: '配置、运行并在同一页面采用 Best Found' },
+    search: { title: '搜索', description: '选择目标，运行 Optimizer，并按 Best Found 配置舰队' },
     rerun: { title: 'Galaxy 重跑', description: '串行检查当前 Galaxy 的默认配置' },
     templates: { title: '模板与复制', description: '从稳定配置快速创建 Node' },
   }
@@ -710,7 +722,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           </button>
           <button className={workspace === 'search' ? 'active' : ''} onClick={() => switchWorkspace('search')}>
             <Icon name="search" />
-            搜索{[...searchDrafts.current.values()].some(isDirty) ? <span className="dirty-dot">•</span> : null}
+            搜索{searchDirty ? <span className="dirty-dot">•</span> : null}
           </button>
           <button className={workspace === 'rerun' ? 'active' : ''} onClick={() => switchWorkspace('rerun')}>
             <Icon name="play" />
@@ -769,11 +781,6 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 保存 Optimizer 公共
               </button>
             )
-          ) : null}
-          {workspace === 'search' ? (
-            <button onClick={() => void saveSearch()} disabled={busy || !nodeDirty || nodeReadOnly}>
-              保存搜索参数
-            </button>
           ) : null}
           {workspace === 'rerun' ? (
             <button className="primary" onClick={() => void rerunCurrentGalaxy()} disabled={busy || taskRunning}>
@@ -1026,6 +1033,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             {optimizerConfig && commonTab === 'optimizer' ? (
               <OptimizerConfigEditor
                 config={optimizerConfig}
+                source={configSources.optimizer}
                 onChange={next => {
                   setOptimizerConfig(next)
                   setOptimizerSource(format(next))
@@ -1123,19 +1131,34 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       {workspace === 'search' ? (
         <SearchWorkspace
           node={node}
+          search={searchConfig}
+          searchSource={configSources.search}
           commonName={currentCommon?.name ?? selection.common}
           versionName={currentVersion?.name ?? selection.version}
           selection={selection}
           busy={busy}
-          dirty={nodeDirty}
-          readOnly={nodeReadOnly}
+          dirty={searchDirty}
+          readOnly={taskRunning}
           task={searchTask}
           elapsedSeconds={elapsedSeconds}
           activeRun={activeRun}
           changes={changes.length}
-          onNodeChange={tableChange}
+          onOpenSettings={() => setSearchSettingsOpen(true)}
           onStart={() => void start()}
           onUseBest={useBest}
+        />
+      ) : null}
+      {searchSettingsOpen && searchConfig ? (
+        <SearchSettingsDialog
+          config={searchConfig}
+          dirty={searchDirty}
+          readOnly={taskRunning}
+          source={configSources.search}
+          onChange={next => {
+            setSearchConfig(next)
+            setSearchConfigSource(format(next))
+          }}
+          onClose={() => setSearchSettingsOpen(false)}
         />
       ) : null}
       {dialog ? <AppDialog dialog={dialog} onClose={() => setDialog(null)} /> : null}
@@ -1186,6 +1209,55 @@ function AppDialog({ dialog, onClose }: { dialog: DialogState; onClose: () => vo
             onClick={confirm}
           >
             {dialog.confirmLabel}
+          </button>
+        </div>
+      </section>
+    </div>
+  )
+}
+
+function SearchSettingsDialog({
+  config,
+  dirty,
+  readOnly,
+  source,
+  onChange,
+  onClose,
+}: {
+  config: SearchConfig
+  dirty: boolean
+  readOnly: boolean
+  source: ConfigSource
+  onChange: (value: SearchConfig) => void
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="dialog-backdrop"
+      role="presentation"
+      onMouseDown={event => event.target === event.currentTarget && onClose()}
+    >
+      <section
+        className="app-dialog search-settings-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="search-settings-title"
+      >
+        <div className="dialog-heading">
+          <div>
+            <h2 id="search-settings-title">搜索设置</h2>
+            <p>低频执行偏好；下次点击“开始搜索”时自动保存并重新读取确认。</p>
+          </div>
+          <span className="config-source">{source === 'local' ? 'map 本机配置' : 'poc 默认值'}</span>
+        </div>
+        {readOnly ? <p className="lock-notice">当前任务正在使用这份配置，任务结束后可编辑。</p> : null}
+        <fieldset className="editor-lock" disabled={readOnly}>
+          <SearchSettings config={config} onChange={onChange} />
+        </fieldset>
+        <div className="dialog-actions search-dialog-actions">
+          <small>{dirty ? '修改已保留，将在启动搜索时自动保存。' : '当前配置已持久化。'}</small>
+          <button className="primary" onClick={onClose}>
+            完成
           </button>
         </div>
       </section>
@@ -1318,6 +1390,8 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
 
 function SearchWorkspace({
   node,
+  search,
+  searchSource,
   commonName,
   versionName,
   selection,
@@ -1328,11 +1402,13 @@ function SearchWorkspace({
   elapsedSeconds,
   activeRun,
   changes,
-  onNodeChange,
+  onOpenSettings,
   onStart,
   onUseBest,
 }: {
   node: NodeConfig | null
+  search: SearchConfig | null
+  searchSource: ConfigSource
   commonName: string
   versionName: string
   selection: Selection
@@ -1343,7 +1419,7 @@ function SearchWorkspace({
   elapsedSeconds: number
   activeRun: RunResult | null | undefined
   changes: number
-  onNodeChange: (value: NodeConfig) => void
+  onOpenSettings: () => void
   onStart: () => void
   onUseBest: () => void
 }) {
@@ -1358,68 +1434,80 @@ function SearchWorkspace({
     .split(/\r?\n/)
     .reverse()
     .find(line => /(\d+\/\d+|Evaluated:|Best updated|Final|Initializing|完成)/i.test(line))
+  const snapshot = task?.snapshot
+  const target = snapshot ?? {
+    galaxy: selection.galaxy,
+    node: selection.node,
+    versionName,
+    commonName,
+  }
+  const environment = snapshot?.environment ?? {
+    boss: node?.boss,
+    hazards: node?.hazards ?? [],
+    supports: node?.supports ?? [],
+  }
+  const boss = (environment.boss ?? {}) as Record<string, unknown>
+  const bossAlive = Boolean(boss.alive)
+  const profile = search?.profile === 'fast' ? '快速' : search?.profile === 'balanced' ? '均衡' : '穷举'
   return (
     <section className="search-workspace workspace-view">
-      <div className="search-context panel" aria-label="本次搜索上下文">
-        <strong className="context-title">准备搜索</strong>
+      <div className="search-context panel" aria-label="搜索目标与战斗环境">
+        <strong className="context-title">{snapshot ? '任务快照' : '搜索目标'}</strong>
         <div>
           <span>Galaxy</span>
-          <strong>{selection.galaxy.toUpperCase()}</strong>
+          <strong>{target.galaxy.toUpperCase()}</strong>
         </div>
         <div>
           <span>Node</span>
-          <strong>{selection.node}</strong>
+          <strong>{target.node}</strong>
         </div>
         <div>
           <span>Version</span>
-          <strong>{versionName}</strong>
+          <strong>{target.versionName}</strong>
         </div>
         <div>
           <span>Common</span>
-          <strong>{commonName}</strong>
+          <strong>{target.commonName}</strong>
+        </div>
+        <div className="environment-summary">
+          <span>Boss</span>
+          <strong>{bossAlive ? '存在' : '无'}</strong>
+          {bossAlive ? (
+            <small>
+              HP {String(boss.remaining_hp ?? '—')} · {String(boss.priority ?? 'efficiency')}
+            </small>
+          ) : null}
+        </div>
+        <div>
+          <span>Hazards</span>
+          <strong title={environment.hazards.join(', ')}>
+            {environment.hazards.length ? environment.hazards.join(', ') : '无'}
+          </strong>
+        </div>
+        <div>
+          <span>Supports</span>
+          <strong title={environment.supports.join(', ')}>
+            {environment.supports.length ? environment.supports.join(', ') : '无'}
+          </strong>
         </div>
       </div>
-      {task ? (
-        <div className="search-context panel task-context" aria-label="真实搜索任务">
-          <strong className="context-title">
-            {running ? '正在运行' : task.status === 'completed' ? '最近完成' : '最近失败'}
-          </strong>
-          <div>
-            <span>Task</span>
-            <strong>{task.snapshot.taskId.slice(0, 8)}</strong>
-          </div>
-          <div>
-            <span>Galaxy / Node</span>
-            <strong>
-              {task.snapshot.galaxy.toUpperCase()} / {task.snapshot.node}
-            </strong>
-          </div>
-          <div>
-            <span>Version</span>
-            <strong>{task.snapshot.versionName}</strong>
-          </div>
-          <div>
-            <span>Common</span>
-            <strong>{task.snapshot.commonName}</strong>
-          </div>
-        </div>
-      ) : null}
       <section className="panel search-command">
-        <div className="panel-heading">
-          <div>
-            <h2>搜索参数</h2>
-            <p>本页字段是日常搜索最终生效值；全局同名预算只作为非 Friendly Config 回退。</p>
-          </div>
-        </div>
-        {readOnly && task ? <LockedNotice node={task.snapshot.node} label="该搜索参数" /> : null}
-        <fieldset className="editor-lock" disabled={readOnly}>
-          {node ? <SearchSettings config={node} onChange={onNodeChange} /> : null}
-        </fieldset>
-        <button className="primary start-search" onClick={onStart} disabled={busy || dirty || running}>
+        <button className="primary start-search" onClick={onStart} disabled={busy || running || !search}>
           <Icon name="play" />
           {running ? `${task.snapshot.node} 搜索中…` : '开始搜索'}
         </button>
-        {dirty ? <small className="button-help">保存搜索参数后即可启动。</small> : null}
+        <p className="search-summary">
+          <strong>{profile}</strong>
+          <span>{search?.goal ?? '—'}</span>
+          <span>{search?.max_simulations ?? '—'} 次</span>
+          <span>{search?.max_wall_seconds ?? '—'} 秒</span>
+          <span>{search?.workers ?? '—'} Workers</span>
+          {dirty ? <em>待自动保存</em> : <small>{searchSource === 'local' ? '本机配置' : 'poc 默认'}</small>}
+        </p>
+        <button className="search-settings-button" onClick={onOpenSettings} disabled={readOnly}>
+          <Icon name="settings" />
+          搜索设置
+        </button>
       </section>
       <section className="panel run-status">
         <div className="panel-heading compact">
@@ -1438,8 +1526,10 @@ function SearchWorkspace({
           <dd>{runSeconds}s</dd>
           <dt>进度</dt>
           <dd>{running ? progress?.trim() || '准备中' : activeRun ? '完成' : '—'}</dd>
+          <dt>Workers</dt>
+          <dd>{snapshot?.search.workers ?? search?.workers ?? '—'}</dd>
         </dl>
-        <details className="console" open={running}>
+        <details className="console">
           <summary>Optimizer 输出 / 日志</summary>
           <pre className="logs">{taskLogs || (running ? '等待 Optimizer 输出…' : '尚未启动任务。')}</pre>
         </details>
@@ -1508,7 +1598,7 @@ function BestFound({
     ([a], [b]) => SHIP_TYPES.findIndex(ship => ship.id === a) - SHIP_TYPES.findIndex(ship => ship.id === b),
   )
   const modText = (value: unknown) =>
-    value === null || value === undefined || value === '' ? '无' : modDisplayName(String(value), true)
+    value === null || value === undefined || value === '' ? '无' : modDisplayName(String(value))
   return (
     <div className="best-found">
       <div className="best-found-heading">
@@ -1560,24 +1650,37 @@ function BestFound({
       </dl>
       <div className="best-grid">
         <section>
-          <h3>Best Found Formation</h3>
+          <h3>最终编队</h3>
           <div className="best-formation">
-            {positions.map(position => {
-              const entry = byPosition.get(position)
-              return (
-                <div key={position}>
-                  <b>{position}</b>
-                  <span>{entry ? shipDisplayName(entry.ship) : '空位'}</span>
+            {(['A', 'B'] as const).map(row => (
+              <div className="formation-row" key={row}>
+                <strong className="formation-row-label">{row}</strong>
+                <div className="formation-row-cells">
+                  {positions
+                    .filter(position => position.startsWith(row))
+                    .map(position => {
+                      const entry = byPosition.get(position)
+                      const ship = entry ? shipSelectorToId(entry.ship) : null
+                      return (
+                        <div
+                          className={`formation-cell ${ship ? `ship-${ship.toLowerCase()}` : 'ship-empty'}`}
+                          key={position}
+                        >
+                          <b>{position}</b>
+                          <span>{entry ? shipDisplayName(entry.ship) : '空位'}</span>
+                        </div>
+                      )
+                    })}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         </section>
         <section>
-          <h3>Best Found Loadout</h3>
+          <h3>舰船最终配置</h3>
           <div className="best-loadouts">
             {orderedLoadouts.map(([ship, loadout]) => (
-              <div key={ship}>
+              <div className={`ship-${ship.toLowerCase()}`} key={ship}>
                 <strong>{shipDisplayName(ship)}</strong>
                 <dl>
                   <dt>Primary</dt>
@@ -1944,9 +2047,11 @@ function CommonEditor({ config, onChange }: { config: CommonConfig; onChange: (v
 
 function OptimizerConfigEditor({
   config,
+  source,
   onChange,
 }: {
   config: OptimizerConfig
+  source: ConfigSource
   onChange: (value: OptimizerConfig) => void
 }) {
   const updateNumber = (field: keyof OptimizerConfig, value: string) => onChange({ ...config, [field]: Number(value) })
@@ -1988,11 +2093,13 @@ function OptimizerConfigEditor({
           <h3>Optimizer 公共配置</h3>
           <p>跨 Galaxy 的搜索空间与精炼规则。Node 搜索页覆盖 objective、时钟、workers 和日常总预算。</p>
         </div>
-        <span className="format-hint">poc/optimizer_v2_daily.json</span>
+        <span className="format-hint">
+          {source === 'local' ? 'map/optimizer_v2_daily.json' : 'poc/optimizer_v2_daily.json（默认）'}
+        </span>
       </div>
       <p className="source-note">
-        daily JSON 中的 objective、max_simulations、max_wall_seconds 是非 Friendly Config 回退值；Manager
-        日常运行一定由当前 Node 的 Boss / search 覆盖，避免在这里重复编辑。
+        本机 map 配置存在时优先，否则读取 poc 默认值。objective 与总预算仍保留为非 Friendly Config 回退； Manager
+        任务会用 Boss 与独立 Search 配置覆盖它们。
       </p>
       <div className="optimizer-groups">
         <fieldset>
@@ -2129,37 +2236,31 @@ function OptimizerConfigEditor({
   )
 }
 
-function SearchSettings({ config, onChange }: { config: NodeConfig; onChange: (value: NodeConfig) => void }) {
-  const update = <K extends keyof NodeConfig['search']>(field: K, value: NodeConfig['search'][K]) =>
-    onChange({ ...config, search: { ...config.search, [field]: value } })
+function SearchSettings({ config, onChange }: { config: SearchConfig; onChange: (value: SearchConfig) => void }) {
+  const update = <K extends keyof SearchConfig>(field: K, value: SearchConfig[K]) =>
+    onChange({ ...config, [field]: value })
   return (
     <div className="search-settings">
-      <label className="switch-field">
-        <input
-          aria-label="启用当前 Baseline"
-          type="checkbox"
-          checked={config.baseline.enabled}
-          onChange={event => onChange({ ...config, baseline: { ...config.baseline, enabled: event.target.checked } })}
-        />
-        <span>启用当前 Baseline</span>
-      </label>
       <Label text="搜索档位">
-        <select value={config.search.profile} onChange={event => update('profile', event.target.value)}>
+        <select
+          value={config.profile}
+          onChange={event => update('profile', event.target.value as SearchConfig['profile'])}
+        >
           <option value="fast">快速（fast）</option>
           <option value="balanced">均衡（balanced）</option>
           <option value="exhaustive">穷举（exhaustive）</option>
         </select>
       </Label>
       <Label text="Baseline 策略 goal">
-        <select value={config.search.goal} onChange={event => update('goal', event.target.value)}>
+        <select value={config.goal} onChange={event => update('goal', event.target.value as SearchConfig['goal'])}>
           <option value="best">寻找最佳（best）</option>
           <option value="beat_baseline">必须严格改善（beat_baseline）</option>
         </select>
       </Label>
       <Label text="模拟时钟">
         <select
-          value={config.search.simulation_clock}
-          onChange={event => update('simulation_clock', event.target.value as NodeConfig['search']['simulation_clock'])}
+          value={config.simulation_clock}
+          onChange={event => update('simulation_clock', event.target.value as SearchConfig['simulation_clock'])}
         >
           <option value="offline_fixed_step">离线固定步长</option>
           <option value="realtime">实时</option>
@@ -2170,15 +2271,16 @@ function SearchSettings({ config, onChange }: { config: NodeConfig; onChange: (v
           <input
             type="number"
             min="1"
-            value={config.search.max_simulations}
+            value={config.max_simulations}
             onChange={event => update('max_simulations', Number(event.target.value))}
           />
         </Label>
-        <Label text="Worker 数（仅 Node 控制）">
+        <Label text="Worker 数">
           <input
             type="number"
             min="1"
-            value={config.search.workers}
+            max="4"
+            value={config.workers}
             onChange={event => update('workers', Number(event.target.value))}
           />
         </Label>
@@ -2187,7 +2289,7 @@ function SearchSettings({ config, onChange }: { config: NodeConfig; onChange: (v
         <input
           type="number"
           min="1"
-          value={config.search.max_wall_seconds}
+          value={config.max_wall_seconds}
           onChange={event => update('max_wall_seconds', Number(event.target.value))}
         />
       </Label>

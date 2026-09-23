@@ -1,11 +1,12 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DataRepository } from '../src/main/services/data-repository'
 import { OptimizerRunner } from '../src/main/services/optimizer-runner'
 import type { SearchTaskSnapshot } from '../src/shared/contracts'
-const node = {
+import type { NodeConfig } from '../src/shared/schemas'
+const node: NodeConfig = {
   galaxy: 6,
   node: 'B1',
   hazards: [],
@@ -49,6 +50,7 @@ async function setup() {
   await mkdir(join(root, 'map', 'g6'), { recursive: true })
   await mkdir(join(root, 'poc'), { recursive: true })
   await writeFile(join(root, 'poc', 'optimizer_v2_daily.json'), JSON.stringify(optimizer))
+  await writeFile(join(root, 'poc', 'search_config.json'), JSON.stringify(node.search))
   await writeFile(join(base, 'nodes', 'B1', 'versions', 'default.json'), JSON.stringify(node))
   await writeFile(
     join(base, 'nodes', 'B1', 'meta.json'),
@@ -182,6 +184,7 @@ describe('OptimizerRunner', () => {
     expect(task).toMatchObject({ galaxy: 'g6', node: 'B1', versionName: '默认', commonName: '默认' })
     expect(task).toHaveProperty('taskId')
     expect(task).toHaveProperty('nodeConfigHash')
+    expect(task).toHaveProperty('stagedNodeConfigHash')
     expect(task).toHaveProperty('commonConfigHash')
     expect(task).toHaveProperty('optimizerConfigHash')
     expect(task).toHaveProperty('optimizerConfigVersion')
@@ -194,6 +197,38 @@ describe('OptimizerRunner', () => {
     release()
     await running
     expect(() => runner.assertNodeWritable(x.s)).not.toThrow()
+    await rm(x.root, { recursive: true, force: true })
+  })
+  it('auto-saves and stages the exact Search draft used by the task snapshot', async () => {
+    const x = await setup()
+    const requested = { ...node.search, max_simulations: 200, max_wall_seconds: 200, workers: 4 }
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      async () => {
+        const staged = JSON.parse(await readFile(join(x.map, 'B1.json'), 'utf8'))
+        expect(staged.search).toEqual(requested)
+        await writeFile(join(x.map, 'B1.result.json'), JSON.stringify(result))
+        return 0
+      },
+    )
+    const run = await runner.run({ ...x.s, versionName: '默认', commonName: '默认', search: requested })
+    expect(run.task?.search).toEqual(requested)
+    expect(run.task?.environment).toEqual({ boss: undefined, hazards: [], supports: [] })
+    expect(JSON.parse(await readFile(join(x.root, 'map', 'search_config.json'), 'utf8'))).toEqual(requested)
+    expect(run.task?.nodeConfigHash).not.toBe(run.task?.stagedNodeConfigHash)
+    await rm(x.root, { recursive: true, force: true })
+  })
+  it('does not start the executor when Search auto-save fails', async () => {
+    const x = await setup()
+    const execute = vi.fn(async () => 0)
+    vi.spyOn(x.repo, 'saveSearchConfig').mockRejectedValueOnce(new Error('disk full'))
+    const runner = new OptimizerRunner(x.repo, x.root, () => {}, execute)
+    await expect(runner.run({ ...x.s, versionName: '默认', commonName: '默认', search: node.search })).rejects.toThrow(
+      'disk full',
+    )
+    expect(execute).not.toHaveBeenCalled()
     await rm(x.root, { recursive: true, force: true })
   })
 })

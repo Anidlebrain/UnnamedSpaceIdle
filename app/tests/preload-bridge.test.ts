@@ -20,6 +20,9 @@ describe('preload bridge contract', () => {
       FLEET_MANAGER_BRIDGE_NAME,
       expect.objectContaining({
         catalog: expect.any(Function),
+        loadSearchConfig: expect.any(Function),
+        configSources: expect.any(Function),
+        saveSearchConfig: expect.any(Function),
         rerunGalaxy: expect.any(Function),
         onOutput: expect.any(Function),
         onGalaxyProgress: expect.any(Function),

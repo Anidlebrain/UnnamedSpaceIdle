@@ -7,7 +7,7 @@ import { DataRepository } from './services/data-repository'
 import { OptimizerRunner } from './services/optimizer-runner'
 import { GalaxyRerunService } from './services/galaxy-rerun'
 import type { CreateNodeRequest, SearchTaskRequest, Selection } from '../shared/contracts'
-import { commonConfigSchema, nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
+import { commonConfigSchema, nodeConfigSchema, optimizerConfigSchema, searchConfigSchema } from '../shared/schemas'
 
 if (process.env.FLEET_MANAGER_USER_DATA_DIR) {
   app.setPath('userData', process.env.FLEET_MANAGER_USER_DATA_DIR)
@@ -59,14 +59,15 @@ app.whenReady().then(() => {
   ipcMain.handle('data:catalog', () => repo.catalog())
   ipcMain.handle('data:load', (_, selection: Selection) => repo.load(selection))
   ipcMain.handle('data:load-optimizer-config', () => repo.loadOptimizerConfig())
+  ipcMain.handle('data:load-search-config', () => repo.loadSearchConfig())
+  ipcMain.handle('data:config-sources', () => repo.configSources())
   ipcMain.handle('data:save', (_, selection: Selection, node: unknown) => {
     runner.assertNodeWritable(selection)
     return repo.save(selection, nodeConfigSchema.parse(node))
   })
-  ipcMain.handle('data:save-search', (_, selection: Selection, search: unknown) => {
-    runner.assertNodeWritable(selection)
-    return repo.saveSearch(selection, nodeConfigSchema.shape.search.parse(search))
-  })
+  ipcMain.handle('data:save-search-config', (_, search: unknown) =>
+    repo.saveSearchConfig(searchConfigSchema.parse(search)),
+  )
   ipcMain.handle('data:save-common', (_, selection: Selection, common: unknown) => {
     runner.assertCommonWritable(selection)
     return repo.saveCommon(selection, commonConfigSchema.parse(common))
@@ -93,7 +94,9 @@ app.whenReady().then(() => {
   ipcMain.handle('template:rename', (_, id: string, name: string) => repo.renameTemplate(id, name))
   ipcMain.handle('template:delete', (_, id: string) => repo.deleteTemplate(id))
   ipcMain.handle('node:create', (_, request: CreateNodeRequest) => repo.createNode(request))
-  ipcMain.handle('optimizer:run', (_, request: SearchTaskRequest) => runner.run(request))
+  ipcMain.handle('optimizer:run', (_, request: SearchTaskRequest) =>
+    runner.run({ ...request, search: searchConfigSchema.parse(request.search) }),
+  )
   ipcMain.handle('optimizer:rerun-galaxy', (_, galaxy: string) => galaxyRerun.run(galaxy))
   ipcMain.handle('optimizer:use-best', (_, taskId: string) => runner.useBest(taskId))
   createWindow()

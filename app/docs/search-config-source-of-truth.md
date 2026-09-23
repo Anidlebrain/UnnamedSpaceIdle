@@ -4,14 +4,14 @@
 
 ## 运行链路
 
-1. BAT 读取 `map/<galaxy>/<node>.json`，验证 Galaxy / Node，并只从 Node `search` 解析模拟时钟。
-2. BAT 分别暂存 Node JSON、Galaxy `common.json`、`poc/optimizer_v2_daily.json` 到隔离 Godot 工程；三者没有在 BAT 或 PowerShell 中做对象级合并。
-3. Runner 分别加载三份 JSON，将 daily JSON 复制为 `optimizer_settings`。
-4. Resolver 使用 Node + Galaxy Common 生成 Battle Config 和 `config.optimizer`。
-5. Runner 用 `config.optimizer` 覆盖 daily 副本中的 objective、Boss、完整 `search`、baseline、diagnostic 和 player state。
-6. Optimizer `_normalize_settings()` 再把 `settings.search.max_simulations` / `max_wall_seconds` 写到顶层运行预算，并从 `settings.search` 读取 workers、profile、goal、simulation_clock。
+1. Fleet Manager 从 `map/search_config.json` 读取用户 Search 配置；文件不存在时回退 Git 跟踪的 `poc/search_config.json`。
+2. 点击开始搜索时，Main 先校验并原子保存 Search，重新读取确认，然后创建包含完整 Search 与战斗环境的不可变 Task Snapshot。保存失败不会启动任务。
+3. Main 只在 staging 时把确认后的 Search 覆盖进选中 Node Version，并将该 Node 与 Common 写到 `map`，同时锁定并记录有效 Optimizer 公共配置哈希。持久 Node Version 不因搜索偏好而改变。
+4. BAT 选择 `map/optimizer_v2_daily.json`，不存在时回退 `poc/optimizer_v2_daily.json`，再把三份输入暂存到隔离 Godot 工程。
+5. Runner 分别加载三份 JSON，将 daily JSON 复制为 `optimizer_settings`；Resolver 使用 Node + Common 生成 Battle Config 和 `config.optimizer`。
+6. Runner 用 `config.optimizer` 覆盖 daily 副本中的 objective、Boss、完整 `search`、baseline、diagnostic 和 player state；Optimizer `_normalize_settings()` 再读取最终预算。
 
-因此 Manager 的日常 Friendly Config 路径中，Node `search` 是本次运行预算与调度参数的最终来源；daily JSON 是跨 Galaxy 搜索空间和精炼规则的来源。
+因此 Godot 输入格式中 staged Node `search` 仍是最终预算来源，但 Manager 的持久 Source of Truth 已是独立 Search 配置。完整链路为 `UI Draft → map/search_config.json → Task Snapshot → staged Node.search → Resolver → Godot normalized settings`。直接 BAT 运行仍使用 Node 自带 `search`，保持旧 CLI 兼容。
 
 ## 参数结论
 
@@ -43,9 +43,13 @@
 
 当前 `optimizer_v2_daily.json` 的显式预算默认值为 `max_simulations=1,000,000`、`max_wall_seconds=300`、`top_n=10`、`kill_refine_top_n=3`、`kill_sequence_max_battles=100`；前两项在日常 Friendly Config 路径中会被 Node `search` 覆盖。
 
-## Manager UI 决策
+## Manager UI 与本机配置决策
 
-- “搜索”页只编辑 Node `search`，并明确它是日常运行最终生效值。
+- “搜索”页编辑独立 Search Draft；默认只显示紧凑摘要，详细字段进入 Dialog，点击搜索时自动保存。
+- Search 使用 `map/search_config.json → poc/search_config.json`；Optimizer 公共使用 `map/optimizer_v2_daily.json → poc/optimizer_v2_daily.json`。UI 显示当前来源。
+- `poc` 只保存可提交默认值，`map` 是已忽略的本机实际配置，日常修改不会污染 Git。
+- Galaxy rerun 在批次开始读取一次相同有效 Search，并把它记录到每个节点的 Task Snapshot 与 staged Node。
+- 旧 Node `search` 保留给 Resolver、直接 CLI 和旧数据兼容，不做破坏性迁移。
 - “Optimizer 公共”不再结构化重复显示 objective、max_simulations、max_wall_seconds；它们仍原样保留在 Raw JSON，作为非 Friendly Config 回退兼容字段。
 - `mode` 标为“部署模式”，`simulation_clock` 标为“模拟时钟”，避免把二者视为同义配置。
 - workers 只在 Node 搜索页出现。

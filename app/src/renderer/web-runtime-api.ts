@@ -8,7 +8,7 @@ import type {
   SearchTaskSnapshot,
   Selection,
 } from '../shared/contracts'
-import type { CommonConfig, NodeConfig, OptimizerConfig } from '../shared/schemas'
+import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
 import { preserveShipSelectorFormat, shipSelectorToId } from '../shared/ship-selectors'
 
 const clone = <T>(value: T): T => structuredClone(value)
@@ -78,6 +78,14 @@ let optimizerConfig: OptimizerConfig = {
   kill_refine_top_n: 3,
   kill_sequence_max_battles: 100,
 }
+let searchConfig: SearchConfig = {
+  profile: 'fast',
+  goal: 'beat_baseline',
+  simulation_clock: 'offline_fixed_step',
+  max_wall_seconds: 300,
+  max_simulations: 300,
+  workers: 4,
+}
 
 const catalog: Catalog = {
   galaxies: [
@@ -140,6 +148,7 @@ type BrowserWorkspaceSnapshot = {
   nodes: [string, NodeConfig][]
   commons: [string, CommonConfig][]
   optimizerConfig?: OptimizerConfig
+  searchConfig?: SearchConfig
 }
 
 function restoreWorkspace() {
@@ -155,6 +164,7 @@ function restoreWorkspace() {
     for (const [entryKey, node] of snapshot.nodes) nodes.set(entryKey, node)
     for (const [entryKey, common] of snapshot.commons) commons.set(entryKey, common)
     if (snapshot.optimizerConfig) optimizerConfig = snapshot.optimizerConfig
+    if (snapshot.searchConfig) searchConfig = snapshot.searchConfig
   } catch {
     localStorage.removeItem(STORAGE_KEY)
   }
@@ -167,6 +177,7 @@ function persistWorkspace() {
     nodes: [...nodes.entries()],
     commons: [...commons.entries()],
     optimizerConfig,
+    searchConfig,
   }
   localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot))
 }
@@ -247,16 +258,16 @@ export function createBrowserApi(): FleetManagerApi {
       common: clone(commons.get(commonKey(selection)) ?? defaultCommon),
     }),
     loadOptimizerConfig: async () => clone(optimizerConfig),
+    loadSearchConfig: async () => clone(searchConfig),
+    configSources: async () => ({ search: 'local', optimizer: 'local' }),
     save: async (selection, node) => {
       nodes.set(key(selection), clone(node))
       persistWorkspace()
     },
-    saveSearch: async (selection, search) => {
-      const current = clone(nodes.get(key(selection))!)
-      current.search = clone(search)
-      nodes.set(key(selection), current)
+    saveSearchConfig: async search => {
+      searchConfig = clone(search)
       persistWorkspace()
-      return clone(current)
+      return clone(searchConfig)
     },
     saveCommon: async (selection, common) => {
       commons.set(commonKey(selection), clone(common))
@@ -352,15 +363,24 @@ export function createBrowserApi(): FleetManagerApi {
     run: async request => {
       const selection: Selection = request
       const current = clone(nodes.get(key(selection))!)
+      searchConfig = clone(request.search)
+      persistWorkspace()
+      const staged = { ...current, search: clone(searchConfig) }
       const common = clone(commons.get(commonKey(selection))!)
       const task: SearchTaskSnapshot = {
         ...request,
+        search: clone(searchConfig),
         taskId: uid('task'),
         nodeConfigHash: hash(current),
+        stagedNodeConfigHash: hash(staged),
         commonConfigHash: hash(common),
         optimizerConfigHash: hash(optimizerConfig),
         optimizerConfigVersion: `sha256:${hash(optimizerConfig)}`,
-        search: clone(current.search),
+        environment: {
+          boss: clone(staged.boss),
+          hazards: clone(staged.hazards),
+          supports: clone(staged.supports),
+        },
         startedAt: new Date().toISOString(),
       }
       taskListeners.forEach(listener => listener(clone(task)))

@@ -3,9 +3,10 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DataRepository } from '../src/main/services/data-repository'
+import type { NodeConfig } from '../src/shared/schemas'
 
 const roots: string[] = []
-const node = {
+const node: NodeConfig = {
   galaxy: 6,
   node: 'B1',
   hazards: [],
@@ -47,6 +48,7 @@ async function fixture() {
   await writeFile(join(map, 'g6', 'B1.json'), JSON.stringify(node))
   await writeFile(join(map, 'g6', 'common.json'), JSON.stringify(common))
   await writeFile(join(root, 'poc', 'optimizer_v2_daily.json'), `${JSON.stringify(optimizer, null, 4)}\n`)
+  await writeFile(join(root, 'poc', 'search_config.json'), `${JSON.stringify(node.search, null, 2)}\n`)
   return { root, map, repo: new DataRepository(join(root, 'data'), map) }
 }
 afterEach(async () => {
@@ -71,25 +73,31 @@ describe('DataRepository', () => {
     await repo.importMap()
     await expect(repo.importMap()).rejects.toThrow('will not overwrite')
   })
-  it('saves Search as its own data domain without overwriting concurrent Node edits', async () => {
-    const { repo } = await fixture()
+  it('loads the committed Search fallback and persists user changes only under map', async () => {
+    const { repo, root } = await fixture()
     await repo.importMap()
     const selection = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
     await repo.save(selection, { ...node, hazards: ['new-node-edit'] })
     const search = { ...node.search, max_wall_seconds: 99 }
-    const saved = await repo.saveSearch(selection, search)
-    expect(saved.hazards).toEqual(['new-node-edit'])
-    expect(saved.search.max_wall_seconds).toBe(99)
+    expect(await repo.configSources()).toMatchObject({ search: 'default' })
+    expect((await repo.loadSearchConfig()).max_wall_seconds).toBe(1)
+    const saved = await repo.saveSearchConfig(search)
+    expect(saved.max_wall_seconds).toBe(99)
+    expect(await repo.configSources()).toMatchObject({ search: 'local' })
+    expect(JSON.parse(await readFile(join(root, 'map', 'search_config.json'), 'utf8')).max_wall_seconds).toBe(99)
+    expect((await repo.load(selection)).node.hazards).toEqual(['new-node-edit'])
   })
-  it('round-trips Optimizer public config without no-op drift and preserves unknown fields', async () => {
+  it('uses the Optimizer fallback until a local override is saved and preserves unknown fields', async () => {
     const { repo, root } = await fixture()
-    const path = join(root, 'poc', 'optimizer_v2_daily.json')
-    const before = await readFile(path, 'utf8')
+    const fallbackPath = join(root, 'poc', 'optimizer_v2_daily.json')
+    const localPath = join(root, 'map', 'optimizer_v2_daily.json')
+    const before = await readFile(fallbackPath, 'utf8')
     const loaded = await repo.loadOptimizerConfig()
-    await repo.saveOptimizerConfig(loaded)
-    expect(await readFile(path, 'utf8')).toBe(before)
+    expect(await repo.configSources()).toMatchObject({ optimizer: 'default' })
     await repo.saveOptimizerConfig({ ...loaded, max_wall_seconds: 45 })
-    const after = await readFile(path, 'utf8')
+    const after = await readFile(localPath, 'utf8')
+    expect(await readFile(fallbackPath, 'utf8')).toBe(before)
+    expect(await repo.configSources()).toMatchObject({ optimizer: 'local' })
     expect(after).toContain('\n    "mode"')
     expect(after.indexOf('"future_field"')).toBeLessThan(after.indexOf('"mode"'))
     expect(JSON.parse(after)).toMatchObject({ max_wall_seconds: 45, future_field: { preserved: true } })

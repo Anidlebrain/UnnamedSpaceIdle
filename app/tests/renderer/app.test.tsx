@@ -64,10 +64,12 @@ const searchTask = (nodeId = 'B1'): SearchTaskSnapshot => ({
   common: 'default',
   commonName: '默认',
   nodeConfigHash: 'node-hash',
+  stagedNodeConfigHash: 'staged-node-hash',
   commonConfigHash: 'common-hash',
   optimizerConfigHash: 'optimizer-hash',
   optimizerConfigVersion: 'sha256:optimizer-hash',
   search: node.search,
+  environment: { boss: node.boss, hazards: node.hazards, supports: node.supports },
   startedAt: '2026-01-01T00:00:00.000Z',
 })
 const galaxyResult = {
@@ -121,8 +123,10 @@ const api = {
     common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
   })),
   loadOptimizerConfig: vi.fn(async () => optimizerConfig),
+  loadSearchConfig: vi.fn(async () => node.search),
+  configSources: vi.fn(async () => ({ search: 'default' as const, optimizer: 'default' as const })),
   save: vi.fn(async () => {}),
-  saveSearch: vi.fn(async (_selection, search) => ({ ...node, search })),
+  saveSearchConfig: vi.fn(async search => search),
   saveCommon: vi.fn(async () => {}),
   saveOptimizerConfig: vi.fn(async () => {}),
   createVersion: vi.fn(),
@@ -233,8 +237,8 @@ describe('Renderer preload contract', () => {
     })
     expect((screen.getByRole('button', { name: '保存节点' }) as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    expect(screen.getByText('准备搜索')).toBeTruthy()
-    expect(screen.getByText('正在运行')).toBeTruthy()
+    expect(screen.getByText('任务快照')).toBeTruthy()
+    expect(screen.getAllByText('搜索中').length).toBeGreaterThan(0)
     expect((screen.getByRole('button', { name: 'B21 搜索中…' }) as HTMLButtonElement).disabled).toBe(true)
   })
   it('makes the active task Node, Common, and Optimizer Public explicitly read-only', async () => {
@@ -262,7 +266,7 @@ describe('Renderer preload contract', () => {
     fireEvent.click(changed)
     await screen.findByText('Best Found')
     expect(api.load).toHaveBeenLastCalledWith({ galaxy: 'g6', node: 'B3', version: 'default', common: 'default' })
-    expect(screen.getByText('Best Found Formation')).toBeTruthy()
+    expect(screen.getByText('最终编队')).toBeTruthy()
   })
   it('shows numeric Formation values and preserves numeric storage when edited', async () => {
     api.load.mockResolvedValueOnce({
@@ -446,7 +450,7 @@ describe('Renderer preload contract', () => {
     await screen.findByText('当前节点')
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
     fireEvent.click(screen.getByRole('button', { name: '开始搜索' }))
-    await screen.findByText('Best Found Formation')
+    await screen.findByText('最终编队')
     expect(JSON.parse(localStorage.getItem('fleet-manager-last-search-v1')!)).toMatchObject({
       galaxy: 'g6',
       node: 'B1',
@@ -457,13 +461,13 @@ describe('Renderer preload contract', () => {
     expect(screen.getByText('节省 FR')).toBeTruthy()
     expect(screen.getByText('A5')).toBeTruthy()
     expect(screen.getByText('B5')).toBeTruthy()
-    expect(screen.getByText('Best Found Loadout')).toBeTruthy()
+    expect(screen.getByText('舰船最终配置')).toBeTruthy()
     expect(screen.getByText(/充能激光/)).toBeTruthy()
     expect(screen.getByText('应用到：G6 / B1 / 默认')).toBeTruthy()
     expect(screen.getByRole('button', { name: '使用最优配置' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /节点配置/ }))
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    expect(screen.getByText('Best Found Formation')).toBeTruthy()
+    expect(screen.getByText('最终编队')).toBeTruthy()
 
     api.useBest.mockResolvedValueOnce({
       exitCode: 0,
@@ -475,6 +479,29 @@ describe('Renderer preload contract', () => {
     const confirmButtons = await screen.findAllByRole('button', { name: '使用最优配置' })
     fireEvent.click(confirmButtons.at(-1)!)
     await waitFor(() => expect(api.useBest).toHaveBeenCalledWith('task-b1'))
+  })
+
+  it('starts directly with the edited 200/200 Search draft without a separate save action', async () => {
+    api.run.mockImplementationOnce(async request => ({
+      exitCode: 0,
+      startedAt: '2026-01-01T00:00:00.000Z',
+      finishedAt: '2026-01-01T00:00:01.000Z',
+      task: { ...searchTask(), search: request.search },
+    }))
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '搜索设置' }))
+    fireEvent.change(screen.getByLabelText('本次最大模拟次数'), { target: { value: '200' } })
+    fireEvent.change(screen.getByLabelText('本次最长时间（秒）'), { target: { value: '200' } })
+    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+    expect(screen.queryByRole('button', { name: '保存搜索参数' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: '开始搜索' }))
+    await waitFor(() =>
+      expect(api.run).toHaveBeenCalledWith(
+        expect.objectContaining({ search: expect.objectContaining({ max_simulations: 200, max_wall_seconds: 200 }) }),
+      ),
+    )
   })
 
   it('restores the last searched selection only inside the Search page context', async () => {

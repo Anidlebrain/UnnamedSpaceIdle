@@ -38,6 +38,7 @@ const snapshot: SearchTaskSnapshot = {
   common: 'default',
   commonName: '默认',
   nodeConfigHash: 'node',
+  stagedNodeConfigHash: 'staged-node',
   commonConfigHash: 'common',
   optimizerConfigHash: 'optimizer',
   optimizerConfigVersion: 'sha256:optimizer',
@@ -49,6 +50,7 @@ const snapshot: SearchTaskSnapshot = {
     max_simulations: 100,
     workers: 1,
   },
+  environment: { hazards: [], supports: [] },
   startedAt: '2026-09-21T00:00:00.000Z',
 }
 

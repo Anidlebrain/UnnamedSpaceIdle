@@ -10,6 +10,14 @@ const loadoutSchema = jsonObject.extend({
   tertiary: z.array(z.union([z.string(), z.number()])).optional(),
   tertiary_mods: z.array(z.string()).optional(),
 })
+export const searchConfigSchema = jsonObject.extend({
+  profile: z.enum(['fast', 'balanced', 'exhaustive']),
+  goal: z.enum(['best', 'beat_baseline']),
+  simulation_clock: z.enum(['realtime', 'offline_fixed_step']),
+  max_wall_seconds: z.number().positive(),
+  max_simulations: z.number().int().positive(),
+  workers: z.number().int().min(1).max(4),
+})
 export const nodeConfigSchema = jsonObject.extend({
   galaxy: z.number().int(),
   node: z.string().min(1),
@@ -26,14 +34,9 @@ export const nodeConfigSchema = jsonObject.extend({
     loadouts: z.record(loadoutSchema),
     observed: jsonObject.optional(),
   }),
-  search: jsonObject.extend({
-    profile: z.string(),
-    goal: z.string(),
-    simulation_clock: z.enum(['realtime', 'offline_fixed_step']),
-    max_wall_seconds: z.number(),
-    max_simulations: z.number(),
-    workers: z.number(),
-  }),
+  // Kept in Friendly Nodes for direct CLI and legacy-data compatibility.
+  // Fleet Manager replaces this object from its independent Search config only while staging a task.
+  search: searchConfigSchema,
 })
 export const commonConfigSchema = jsonObject.extend({ permanent: scaleSchema, temporary: scaleSchema })
 const optimizerRangeSchema = jsonObject.extend({
@@ -102,6 +105,7 @@ export const optimizerResultSchema = jsonObject.extend({
 })
 
 export type NodeConfig = z.infer<typeof nodeConfigSchema>
+export type SearchConfig = z.infer<typeof searchConfigSchema>
 export type CommonConfig = z.infer<typeof commonConfigSchema>
 export type OptimizerConfig = z.infer<typeof optimizerConfigSchema>
 export type OptimizerResult = z.infer<typeof optimizerResultSchema>

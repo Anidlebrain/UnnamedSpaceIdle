@@ -17,6 +17,12 @@
   --color-success: oklch(76% 0.14 160);
   --color-warning: oklch(79% 0.14 78);
   --color-error: oklch(72% 0.17 24);
+  --color-ship-fighter: oklch(72% 0.16 245);
+  --color-ship-corvette: oklch(76% 0.14 155);
+  --color-ship-frigate: oklch(72% 0.14 305);
+  --color-ship-cruiser: oklch(82% 0.14 88);
+  --color-ship-heavycruiser: oklch(70% 0.17 25);
+  --color-ship-empty: var(--color-rule-strong);
   --color-overlay: oklch(8% 0.014 250 / 0.72);
 
   --font-display: "Microsoft YaHei UI", "PingFang SC", sans-serif;

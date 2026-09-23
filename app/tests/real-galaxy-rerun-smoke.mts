@@ -67,6 +67,8 @@ const projectFiles = [
   'fleet_optimizer_battle_area.gd',
 ].map(file => join(optimizerRoot, 'work', 'full_recovered', file))
 const workspaceTargets = [
+  join(optimizerRoot, 'map', 'search_config.json'),
+  join(optimizerRoot, 'map', 'optimizer_v2_daily.json'),
   join(mapGalaxy, 'common.json'),
   ...selections.flatMap(item => {
     const resultNode = item.node.replace(/_num$/i, '')
@@ -118,6 +120,12 @@ try {
   const output: string[] = []
   const progress: string[] = []
   const temporaryRepo = new DataRepository(temporaryDataRoot, join(optimizerRoot, 'map'))
+  await temporaryRepo.saveSearchConfig({
+    profile: 'fast',
+    goal: 'beat_baseline',
+    simulation_clock: 'offline_fixed_step',
+    ...smokeBudget,
+  })
   const runner = new OptimizerRunner(temporaryRepo, optimizerRoot, line => output.push(line))
   const result = await new GalaxyRerunService(temporaryRepo, runner, state => {
     progress.push(`${state.completed}/${state.total}:${state.currentNode ?? 'done'}`)
@@ -141,6 +149,7 @@ try {
         item.startedAt && item.finishedAt ? Date.parse(item.finishedAt) - Date.parse(item.startedAt) : undefined,
     })),
     batchUsedSearchOnly: true,
+    searchSnapshots: result.nodes.map(item => item.run?.task?.search),
     temporaryManagerConfigsUnchanged: temporaryManagerAfter.every(
       (bytes, index) => hash(bytes) === hash(temporaryManagerBefore[index]),
     ),

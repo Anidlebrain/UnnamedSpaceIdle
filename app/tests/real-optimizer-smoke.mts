@@ -33,6 +33,8 @@ const overwrittenProjectFiles = [
   'fleet_optimizer_battle_area.gd',
 ].map(file => join(optimizerRoot, 'work', 'full_recovered', file))
 const restoreTargets = [
+  join(optimizerRoot, 'map', 'search_config.json'),
+  join(optimizerRoot, 'map', 'optimizer_v2_daily.json'),
   join(mapGalaxy, `${node}.json`),
   join(mapGalaxy, 'common.json'),
   join(mapGalaxy, `${node}.result.json`),
@@ -98,7 +100,15 @@ try {
   )
   const resultBefore = await snapshot(join(mapGalaxy, `${node}.result.json`))
   const startedMs = Date.now()
-  const run = await runner.run({ galaxy, node, version: 'smoke', common: 'smoke' })
+  const run = await runner.run({
+    galaxy,
+    node,
+    version: 'smoke',
+    common: 'smoke',
+    versionName: 'Smoke',
+    commonName: 'Smoke',
+    search: smokeNode.search,
+  })
   const resultAfter = await snapshot(join(mapGalaxy, `${node}.result.json`))
   if (run.exitCode !== 0 || run.error || !run.result)
     throw new Error(run.error ?? `Optimizer returned exit code ${run.exitCode}`)
@@ -140,6 +150,7 @@ try {
     resultChanged: resultBefore.hash !== resultAfter.hash,
     resultMtimeMs: resultStat.mtimeMs,
     resultSchemaParsed: true,
+    searchSnapshot: run.task?.search,
     resultIdentity: identity,
     bestFound: {
       outcome: run.result.best_result.outcome,

@@ -7,11 +7,13 @@ import {
   commonMetaSchema,
   nodeConfigSchema,
   optimizerConfigSchema,
+  searchConfigSchema,
   templateMetaSchema,
   versionMetaSchema,
   type CommonConfig,
   type NodeConfig,
   type OptimizerConfig,
+  type SearchConfig,
 } from '../../shared/schemas'
 import type { Catalog, CreateNodeRequest, ImportPreview, Selection } from '../../shared/contracts'
 
@@ -65,11 +67,21 @@ function preserveObjectOrder(current: unknown, next: unknown): unknown {
 }
 
 export class DataRepository {
+  private readonly optimizerConfigPath: string
+  private readonly optimizerFallbackPath: string
+  private readonly searchConfigPath: string
+  private readonly searchFallbackPath: string
   constructor(
     private readonly dataRoot: string,
     private readonly mapRoot: string,
-    private readonly optimizerConfigPath = join(dirname(mapRoot), 'poc', 'optimizer_v2_daily.json'),
-  ) {}
+    optimizerConfigPath?: string,
+  ) {
+    const fleetRoot = dirname(mapRoot)
+    this.optimizerConfigPath = optimizerConfigPath ?? join(mapRoot, 'optimizer_v2_daily.json')
+    this.optimizerFallbackPath = join(fleetRoot, 'poc', 'optimizer_v2_daily.json')
+    this.searchConfigPath = join(mapRoot, 'search_config.json')
+    this.searchFallbackPath = join(fleetRoot, 'poc', 'search_config.json')
+  }
   private validateSelection(s: Selection) {
     if (!/^g\d+$/i.test(s.galaxy)) throw new Error('Invalid Galaxy.')
     assertItem(s.node, 'Node')
@@ -243,22 +255,56 @@ export class DataRepository {
     return { node, common }
   }
 
+  private async effectivePath(local: string, fallback: string): Promise<{ path: string; source: 'local' | 'default' }> {
+    try {
+      await stat(local)
+      return { path: local, source: 'local' }
+    } catch (error) {
+      if (!missing(error)) throw error
+      return { path: fallback, source: 'default' }
+    }
+  }
+
+  async configSources(): Promise<{ search: 'local' | 'default'; optimizer: 'local' | 'default' }> {
+    const [search, optimizer] = await Promise.all([
+      this.effectivePath(this.searchConfigPath, this.searchFallbackPath),
+      this.effectivePath(this.optimizerConfigPath, this.optimizerFallbackPath),
+    ])
+    return { search: search.source, optimizer: optimizer.source }
+  }
+
   async loadOptimizerConfig(): Promise<OptimizerConfig> {
-    return optimizerConfigSchema.parse(await readJson(this.optimizerConfigPath))
+    const effective = await this.effectivePath(this.optimizerConfigPath, this.optimizerFallbackPath)
+    return optimizerConfigSchema.parse(await readJson(effective.path))
   }
 
   async saveOptimizerConfig(config: OptimizerConfig): Promise<void> {
     const parsed = optimizerConfigSchema.parse(config)
-    const source = await readFile(this.optimizerConfigPath, 'utf8')
+    const effective = await this.effectivePath(this.optimizerConfigPath, this.optimizerFallbackPath)
+    const source = await readFile(effective.path, 'utf8')
     const sourceObject = JSON.parse(source)
     const current = optimizerConfigSchema.parse(sourceObject)
-    if (isDeepStrictEqual(current, parsed)) return
+    if (effective.source === 'local' && isDeepStrictEqual(current, parsed)) return
     const newline = source.includes('\r\n') ? '\r\n' : '\n'
     const indent = source.match(/\r?\n([ \t]+)"/)?.[1] ?? '  '
     const trailingNewline = /\r?\n$/.test(source)
     const nextValue = preserveObjectOrder(sourceObject, parsed)
     const next = JSON.stringify(nextValue, null, indent).replace(/\n/g, newline) + (trailingNewline ? newline : '')
     await atomicText(this.optimizerConfigPath, next)
+  }
+
+  async loadSearchConfig(): Promise<SearchConfig> {
+    const effective = await this.effectivePath(this.searchConfigPath, this.searchFallbackPath)
+    return searchConfigSchema.parse(await readJson(effective.path))
+  }
+
+  async saveSearchConfig(config: SearchConfig): Promise<SearchConfig> {
+    const parsed = searchConfigSchema.parse(config)
+    const effective = await this.effectivePath(this.searchConfigPath, this.searchFallbackPath)
+    const current = searchConfigSchema.parse(await readJson(effective.path))
+    if (effective.source !== 'local' || !isDeepStrictEqual(current, parsed))
+      await atomicJson(this.searchConfigPath, parsed)
+    return this.loadSearchConfig()
   }
 
   private assertIdentity(selection: Pick<Selection, 'galaxy' | 'node'>, node: NodeConfig) {
@@ -274,13 +320,6 @@ export class DataRepository {
     const parsed = nodeConfigSchema.parse(node)
     this.assertIdentity(selection, parsed)
     await atomicJson(join(this.nodeDir(selection), 'versions', `${selection.version}.json`), parsed)
-  }
-
-  async saveSearch(selection: Selection, search: NodeConfig['search']): Promise<NodeConfig> {
-    const current = (await this.load(selection)).node
-    const next = nodeConfigSchema.parse({ ...current, search })
-    await this.save(selection, next)
-    return next
   }
 
   async nodeHash(selection: Selection): Promise<string> {
