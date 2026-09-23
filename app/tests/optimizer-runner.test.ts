@@ -69,6 +69,70 @@ async function setup() {
   }
 }
 describe('OptimizerRunner', () => {
+  it('runs enqueued searches serially and keeps each result', async () => {
+    const x = await setup()
+    let release!: () => void
+    let calls = 0
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      async () => {
+        calls++
+        if (calls === 1)
+          await new Promise<void>(resolve => {
+            release = resolve
+          })
+        await writeFile(join(x.map, 'B1.result.json'), JSON.stringify({ ...result, sequence: calls }))
+        return 0
+      },
+    )
+    const request = { ...x.s, versionName: '默认', commonName: '默认', search: node.search }
+    await runner.enqueue(request)
+    await runner.enqueue(request)
+    await vi.waitFor(() => expect(calls).toBe(1))
+    expect(calls).toBe(1)
+    expect(runner.getQueue().map(item => item.status)).toEqual(['running', 'waiting'])
+    release()
+    await vi.waitFor(() => expect(runner.getQueue().map(item => item.status)).toEqual(['success', 'success']))
+    expect(calls).toBe(2)
+    expect(runner.getQueue()[0].run?.task?.taskId).not.toBe(runner.getQueue()[1].run?.task?.taskId)
+    expect((await runner.useBest(runner.getQueue()[0].snapshot.taskId)).error).toContain('后续搜索覆盖')
+    await rm(x.root, { recursive: true, force: true })
+  })
+  it('stops current or all queued tasks and releases the runner lock', async () => {
+    const x = await setup()
+    const releases: Array<() => void> = []
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      () =>
+        new Promise(resolve => {
+          releases.push(() => resolve(1))
+        }),
+    )
+    const request = { ...x.s, versionName: '默认', commonName: '默认', search: node.search }
+    await runner.enqueue(request)
+    await runner.enqueue(request)
+    await vi.waitFor(() => expect(releases.length).toBe(1))
+    await runner.stopCurrentTask()
+    releases.shift()!()
+    await vi.waitFor(() => expect(runner.getQueue().map(item => item.status)).toEqual(['canceled', 'running']))
+    await vi.waitFor(() => expect(releases.length).toBe(1))
+    await runner.enqueue(request)
+    await runner.stopAllTasks()
+    releases.shift()!()
+    await vi.waitFor(() =>
+      expect(runner.getQueue().map(item => item.status)).toEqual(['canceled', 'canceled', 'canceled']),
+    )
+    await runner.enqueue(request)
+    await vi.waitFor(() => expect(runner.getQueue().at(-1)?.status).toBe('running'))
+    await vi.waitFor(() => expect(releases.length).toBe(1))
+    releases.shift()!()
+    await vi.waitFor(() => expect(runner.getQueue().at(-1)?.status).toBe('failed'))
+    await rm(x.root, { recursive: true, force: true })
+  })
   it('success, nonzero, stale, malformed and association failures release lock', async () => {
     const x = await setup()
     let calls = 0
@@ -215,7 +279,12 @@ describe('OptimizerRunner', () => {
     )
     const run = await runner.run({ ...x.s, versionName: '默认', commonName: '默认', search: requested })
     expect(run.task?.search).toEqual(requested)
-    expect(run.task?.environment).toEqual({ boss: undefined, hazards: [], supports: [] })
+    expect(run.task?.environment).toEqual({
+      boss: undefined,
+      hazards: [],
+      supports: [],
+      player_state: { fleet_resources: 1, ships: {} },
+    })
     expect(JSON.parse(await readFile(join(x.root, 'map', 'search_config.json'), 'utf8'))).toEqual(requested)
     expect(run.task?.nodeConfigHash).not.toBe(run.task?.stagedNodeConfigHash)
     await rm(x.root, { recursive: true, force: true })

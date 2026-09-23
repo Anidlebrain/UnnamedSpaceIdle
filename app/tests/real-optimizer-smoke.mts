@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { DataRepository } from '../src/main/services/data-repository'
 import { OptimizerRunner } from '../src/main/services/optimizer-runner'
 import { diffFormation } from '../src/shared/formation-diff'
+import { nodeConfigSchema } from '../src/shared/schemas'
 
 const appRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = resolve(appRoot, '..')
@@ -137,8 +138,11 @@ try {
   )
   const workspaceAfterCopy = JSON.parse(await readFile(join(mapGalaxy, `${node}.json`), 'utf8'))
   const controlAfterCopy = await readFile(join(managerGalaxy, 'nodes', node, 'versions', 'control.json'))
-  if (JSON.stringify(managerAfterCopy) !== JSON.stringify(workspaceAfterCopy))
-    throw new Error('Manager selected Version does not match --c workspace output.')
+  if (
+    JSON.stringify(nodeConfigSchema.parse(managerAfterCopy)) !==
+    JSON.stringify(nodeConfigSchema.parse(workspaceAfterCopy))
+  )
+    throw new Error('Manager selected Version does not semantically match --c workspace output.')
   if (hash(controlBeforeCopy) !== hash(controlAfterCopy))
     throw new Error('Unselected Manager Version was modified by --c copy.')
   report = {

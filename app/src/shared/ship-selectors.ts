@@ -21,6 +21,17 @@ export function shipSelectorToId(value: unknown): ShipId | '' {
   return (byId.get(text)?.id as ShipId | undefined) ?? ''
 }
 
+export function canonicalShipRecord<T>(record: Record<string, T>): Record<string, T> {
+  const result: Record<string, T> = {}
+  for (const [key, value] of Object.entries(record)) {
+    const canonical = shipSelectorToId(key) || key
+    if (Object.hasOwn(result, canonical) && JSON.stringify(result[canonical]) !== JSON.stringify(value))
+      throw new Error(`舰种 ${canonical} 存在冲突的别名字段（${key}）。请先合并配置。`)
+    result[canonical] = value
+  }
+  return result
+}
+
 export function preserveShipSelectorFormat(previous: unknown, ship: ShipId | ''): ShipSelector {
   const numeric = ship ? byId.get(ship)!.numeric : 0
   if (typeof previous === 'number') return numeric

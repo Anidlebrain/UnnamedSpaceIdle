@@ -5,10 +5,12 @@ import type {
   NamedItem,
   OptimizerOutput,
   RunResult,
+  SearchQueueItem,
   SearchTaskSnapshot,
   Selection,
 } from '../shared/contracts'
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
+import { nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
 import { preserveShipSelectorFormat, shipSelectorToId } from '../shared/ship-selectors'
 
 const clone = <T>(value: T): T => structuredClone(value)
@@ -247,21 +249,47 @@ export function createBrowserApi(): FleetManagerApi {
   const outputListeners = new Set<(output: OptimizerOutput) => void>()
   const taskListeners = new Set<(task: SearchTaskSnapshot) => void>()
   const progressListeners = new Set<(progress: GalaxyRerunProgress) => void>()
+  const queueListeners = new Set<(queue: SearchQueueItem[]) => void>()
+  const queue: SearchQueueItem[] = []
+  let webQueueRunning = false
+  let webStopCurrent = false
+  const publishQueue = () => queueListeners.forEach(listener => listener(clone(queue)))
+  const drainQueue = async () => {
+    if (webQueueRunning) return
+    webQueueRunning = true
+    while (queue.some(item => item.status === 'waiting')) {
+      const item = queue.find(entry => entry.status === 'waiting')!
+      item.status = 'running'
+      item.runningAt = new Date().toISOString()
+      webStopCurrent = false
+      publishQueue()
+      const run = await api.run(item.snapshot)
+      run.task!.taskId = item.snapshot.taskId
+      if (lastSearch?.task) lastSearch.task.taskId = item.snapshot.taskId
+      item.snapshot = run.task!
+      item.run = run
+      item.status = webStopCurrent ? 'canceled' : run.error ? 'failed' : 'success'
+      publishQueue()
+    }
+    webQueueRunning = false
+  }
   let lastSearch: RunResult | undefined
-  return {
+  const api: FleetManagerApi = {
     runtime: 'web',
     previewImport: async () => ({ galaxies: [] }),
     importMap: async () => undefined,
     catalog: async () => clone(catalog),
     load: async selection => ({
-      node: clone(nodes.get(key(selection)) ?? makeNode(Number(selection.galaxy.slice(1)), selection.node)),
+      node: nodeConfigSchema.parse(
+        clone(nodes.get(key(selection)) ?? makeNode(Number(selection.galaxy.slice(1)), selection.node)),
+      ),
       common: clone(commons.get(commonKey(selection)) ?? defaultCommon),
     }),
-    loadOptimizerConfig: async () => clone(optimizerConfig),
+    loadOptimizerConfig: async () => optimizerConfigSchema.parse(clone(optimizerConfig)),
     loadSearchConfig: async () => clone(searchConfig),
     configSources: async () => ({ search: 'local', optimizer: 'local' }),
     save: async (selection, node) => {
-      nodes.set(key(selection), clone(node))
+      nodes.set(key(selection), nodeConfigSchema.parse(clone(node)))
       persistWorkspace()
     },
     saveSearchConfig: async search => {
@@ -274,7 +302,7 @@ export function createBrowserApi(): FleetManagerApi {
       persistWorkspace()
     },
     saveOptimizerConfig: async config => {
-      optimizerConfig = clone(config)
+      optimizerConfig = optimizerConfigSchema.parse(clone(config))
       persistWorkspace()
     },
     createVersion: async (selection, name) => {
@@ -390,26 +418,70 @@ export function createBrowserApi(): FleetManagerApi {
       lastSearch = sampleRun(selection, task)
       return clone(lastSearch)
     },
-    rerunGalaxy: async galaxy => {
+    enqueueSearch: async request => {
+      const item: SearchQueueItem = {
+        snapshot: {
+          ...request,
+          taskId: uid('task'),
+          nodeConfigHash: '',
+          stagedNodeConfigHash: '',
+          commonConfigHash: '',
+          optimizerConfigHash: '',
+          optimizerConfigVersion: '',
+          environment: { hazards: [], supports: [], player_state: clone(nodes.get(key(request))!.player_state) },
+          startedAt: new Date().toISOString(),
+        },
+        status: 'waiting',
+        logs: '',
+      }
+      queue.push(item)
+      publishQueue()
+      queueMicrotask(() => void drainQueue())
+      return clone(item)
+    },
+    searchQueue: async () => clone(queue),
+    stopCurrent: async () => {
+      webStopCurrent = true
+    },
+    stopAll: async () => {
+      webStopCurrent = true
+      for (const item of queue)
+        if (item.status === 'waiting') {
+          item.status = 'canceled'
+          item.run = {
+            exitCode: -1,
+            startedAt: item.snapshot.startedAt,
+            finishedAt: new Date().toISOString(),
+            task: item.snapshot,
+            canceled: true,
+            error: '搜索被用户中止',
+          }
+        }
+      publishQueue()
+    },
+    rerunGalaxy: async request => {
+      const galaxy = typeof request === 'string' ? request : request.galaxy
       const target = catalog.galaxies.find(g => g.id === galaxy)!
       const now = new Date().toISOString()
       const progress: GalaxyRerunProgress = {
         galaxy,
         status: 'completed',
-        total: target.nodes.length,
-        completed: target.nodes.length,
+        total: typeof request === 'string' ? target.nodes.length : request.nodes.length,
+        completed: typeof request === 'string' ? target.nodes.length : request.nodes.length,
         startedAt: now,
         finishedAt: now,
-        nodes: target.nodes.map((node, index) => ({
-          node: node.id,
-          version: node.defaultVersion,
-          common: target.defaultCommon,
-          status: 'succeeded',
-          startedAt: now,
-          finishedAt: now,
-          changed: index === 0,
-          run: sampleRun({ galaxy, node: node.id, version: node.defaultVersion, common: target.defaultCommon }),
-        })),
+        nodes: target.nodes
+          .filter(node => typeof request === 'string' || request.nodes.includes(node.id))
+          .map((node, index) => ({
+            node: node.id,
+            version: node.defaultVersion,
+            common: target.defaultCommon,
+            status: 'succeeded',
+            startedAt: now,
+            finishedAt: now,
+            changed: index === 0,
+            run: sampleRun({ galaxy, node: node.id, version: node.defaultVersion, common: target.defaultCommon }),
+          })),
       }
       progressListeners.forEach(listener => listener(clone(progress)))
       return progress
@@ -450,9 +522,14 @@ export function createBrowserApi(): FleetManagerApi {
       taskListeners.add(listener)
       return () => taskListeners.delete(listener)
     },
+    onSearchQueue: listener => {
+      queueListeners.add(listener)
+      return () => queueListeners.delete(listener)
+    },
     onGalaxyProgress: listener => {
       progressListeners.add(listener)
       return () => progressListeners.delete(listener)
     },
   }
+  return api
 }

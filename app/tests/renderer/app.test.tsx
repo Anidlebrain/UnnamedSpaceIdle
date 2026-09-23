@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../../src/shared/bridge'
 import type { NodeConfig } from '../../src/shared/schemas'
-import type { SearchTaskSnapshot } from '../../src/shared/contracts'
+import type { SearchQueueItem, SearchTaskSnapshot } from '../../src/shared/contracts'
 import { App } from '../../src/renderer/App'
 
 const node: NodeConfig = {
@@ -55,6 +55,7 @@ const unsubscribe = vi.fn()
 const unsubscribeProgress = vi.fn()
 const unsubscribeTask = vi.fn()
 let taskListener: ((task: SearchTaskSnapshot) => void) | undefined
+let queueListener: ((queue: SearchQueueItem[]) => void) | undefined
 const searchTask = (nodeId = 'B1'): SearchTaskSnapshot => ({
   taskId: `task-${nodeId.toLowerCase()}`,
   galaxy: 'g6',
@@ -142,6 +143,10 @@ const api = {
   deleteTemplate: vi.fn(),
   createNode: vi.fn(),
   run: vi.fn(),
+  enqueueSearch: vi.fn(),
+  searchQueue: vi.fn(async () => []),
+  stopCurrent: vi.fn(async () => {}),
+  stopAll: vi.fn(async () => {}),
   rerunGalaxy: vi.fn(async () => galaxyResult),
   useBest: vi.fn(),
   previewImport: vi.fn(),
@@ -150,6 +155,10 @@ const api = {
   onSearchTask: vi.fn(listener => {
     taskListener = listener
     return unsubscribeTask
+  }),
+  onSearchQueue: vi.fn(listener => {
+    queueListener = listener
+    return unsubscribe
   }),
   onGalaxyProgress: vi.fn(() => unsubscribeProgress),
 }
@@ -163,7 +172,13 @@ describe('Renderer preload contract', () => {
     window[FLEET_MANAGER_BRIDGE_NAME] = api
     vi.clearAllMocks()
     taskListener = undefined
+    queueListener = undefined
     localStorage.clear()
+    api.searchQueue.mockResolvedValue([])
+    api.enqueueSearch.mockImplementation(async request => {
+      const run = await api.run(request)
+      return { snapshot: run.task, status: run.error ? 'failed' : 'success', logs: '', run }
+    })
   })
   it('mounts with the preload API, calls catalog, and renders the main UI', async () => {
     render(<App />)
@@ -171,7 +186,7 @@ describe('Renderer preload contract', () => {
     expect(api.catalog).toHaveBeenCalled()
     expect(screen.getByRole('tab', { name: '阵型' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    expect(screen.getByRole('button', { name: '开始搜索' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: '加入搜索队列' })).toBeTruthy()
   })
   it('renders a clear startup error when the preload API is missing', () => {
     delete window[FLEET_MANAGER_BRIDGE_NAME]
@@ -183,7 +198,7 @@ describe('Renderer preload contract', () => {
     const view = render(<App />)
     expect(api.onOutput).toHaveBeenCalledTimes(1)
     view.unmount()
-    expect(unsubscribe).toHaveBeenCalledTimes(1)
+    expect(unsubscribe).toHaveBeenCalledTimes(2)
     expect(unsubscribeProgress).toHaveBeenCalledTimes(1)
   })
   it('exposes Version and Common creation through their context menus', async () => {
@@ -221,7 +236,7 @@ describe('Renderer preload contract', () => {
     await screen.findByText('当前节点')
     fireEvent.change(screen.getByLabelText('Node JSON 编辑器'), { target: { value: '{}' } })
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    expect((screen.getByRole('button', { name: '开始搜索' }) as HTMLButtonElement).disabled).toBe(false)
+    expect((screen.getByRole('button', { name: '加入搜索队列' }) as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(screen.getByRole('button', { name: /节点配置/ }))
     expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toBe('{}')
     const source = await import('node:fs/promises').then(x => x.readFile('src/renderer/App.tsx', 'utf8'))
@@ -239,7 +254,7 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
     expect(screen.getByText('任务快照')).toBeTruthy()
     expect(screen.getAllByText('搜索中').length).toBeGreaterThan(0)
-    expect((screen.getByRole('button', { name: 'B21 搜索中…' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: '加入搜索队列' }) as HTMLButtonElement).disabled).toBe(false)
   })
   it('makes the active task Node, Common, and Optimizer Public explicitly read-only', async () => {
     render(<App />)
@@ -256,13 +271,13 @@ describe('Renderer preload contract', () => {
     render(<App />)
     await screen.findByText('当前节点')
     fireEvent.click(screen.getByRole('button', { name: 'Galaxy 重跑' }))
-    fireEvent.click(screen.getByRole('button', { name: '开始重跑 G6' }))
+    fireEvent.click(screen.getByRole('button', { name: '开始重跑所选节点' }))
     await screen.findByText('需要重新配置的节点')
-    expect(api.rerunGalaxy).toHaveBeenCalledWith('g6')
+    expect(api.rerunGalaxy).toHaveBeenCalledWith(expect.objectContaining({ galaxy: 'g6', nodes: ['B1'] }))
     expect(screen.getByText(/1 个节点配置不变，已从结果列表过滤/)).toBeTruthy()
     const changed = screen.getByRole('button', { name: /B3.*查看 Baseline/ })
     expect(changed).toBeTruthy()
-    expect(screen.getByText('Optimizer exited with code 9.')).toBeTruthy()
+    expect(screen.getByText(/未知运行错误/)).toBeTruthy()
     fireEvent.click(changed)
     await screen.findByText('Best Found')
     expect(api.load).toHaveBeenLastCalledWith({ galaxy: 'g6', node: 'B3', version: 'default', common: 'default' })
@@ -449,7 +464,7 @@ describe('Renderer preload contract', () => {
     render(<App />)
     await screen.findByText('当前节点')
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    fireEvent.click(screen.getByRole('button', { name: '开始搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
     await screen.findByText('最终编队')
     expect(JSON.parse(localStorage.getItem('fleet-manager-last-search-v1')!)).toMatchObject({
       galaxy: 'g6',
@@ -458,7 +473,7 @@ describe('Renderer preload contract', () => {
     expect(screen.getByText('Committed FR')).toBeTruthy()
     expect(screen.getByText('Used FR')).toBeTruthy()
     expect(screen.getByText('Boss Damage')).toBeTruthy()
-    expect(screen.getByText('节省 FR')).toBeTruthy()
+    expect(screen.getByText('Saved FR')).toBeTruthy()
     expect(screen.getByText('A5')).toBeTruthy()
     expect(screen.getByText('B5')).toBeTruthy()
     expect(screen.getByText('舰船最终配置')).toBeTruthy()
@@ -476,8 +491,6 @@ describe('Renderer preload contract', () => {
       node: { ...node, baseline: { ...node.baseline, formation: { A1: 'Corvette' } } },
     })
     fireEvent.click(screen.getByRole('button', { name: '使用最优配置' }))
-    const confirmButtons = await screen.findAllByRole('button', { name: '使用最优配置' })
-    fireEvent.click(confirmButtons.at(-1)!)
     await waitFor(() => expect(api.useBest).toHaveBeenCalledWith('task-b1'))
   })
 
@@ -496,9 +509,9 @@ describe('Renderer preload contract', () => {
     fireEvent.change(screen.getByLabelText('本次最长时间（秒）'), { target: { value: '200' } })
     fireEvent.click(screen.getByRole('button', { name: '完成' }))
     expect(screen.queryByRole('button', { name: '保存搜索参数' })).toBeNull()
-    fireEvent.click(screen.getByRole('button', { name: '开始搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
     await waitFor(() =>
-      expect(api.run).toHaveBeenCalledWith(
+      expect(api.enqueueSearch).toHaveBeenCalledWith(
         expect.objectContaining({ search: expect.objectContaining({ max_simulations: 200, max_wall_seconds: 200 }) }),
       ),
     )
@@ -540,5 +553,59 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
     await waitFor(() => expect((screen.getByLabelText('Galaxy') as HTMLSelectElement).value).toBe('g6'))
     expect((screen.getByLabelText('节点') as HTMLSelectElement).value).toBe('B1')
+  })
+  it('restores the last active page and its selection after remount', async () => {
+    const selected = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
+    localStorage.setItem(
+      'fleet-manager-location-v1',
+      JSON.stringify({
+        workspace: 'search',
+        contexts: {
+          node: selected,
+          search: selected,
+          common: selected,
+          templates: selected,
+          rerunGalaxy: 'g6',
+        },
+      }),
+    )
+    const view = render(<App />)
+    await screen.findByRole('button', { name: '加入搜索队列' })
+    expect((screen.getByLabelText('节点') as HTMLSelectElement).value).toBe('B1')
+    view.unmount()
+    render(<App />)
+    await screen.findByRole('button', { name: '加入搜索队列' })
+    expect(screen.getByRole('heading', { name: '搜索', level: 1 })).toBeTruthy()
+  })
+  it('allows another search to enter the queue while one is running', async () => {
+    api.enqueueSearch
+      .mockResolvedValueOnce({ snapshot: searchTask('B1'), status: 'waiting', logs: '' })
+      .mockResolvedValueOnce({ snapshot: { ...searchTask('B1'), taskId: 'second' }, status: 'waiting', logs: '' })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
+    await waitFor(() => expect(api.enqueueSearch).toHaveBeenCalledTimes(1))
+    act(() => queueListener?.([{ snapshot: searchTask('B1'), status: 'running', logs: 'searching' }]))
+    expect((screen.getByRole('button', { name: '加入搜索队列' }) as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
+    await waitFor(() => expect(api.enqueueSearch).toHaveBeenCalledTimes(2))
+  })
+  it('shows a concise error and keeps raw details collapsed', async () => {
+    const raw = 'BASELINE VALIDATION FAILED ' + JSON.stringify({ formation: Array(100).fill('bad') })
+    api.enqueueSearch.mockResolvedValueOnce({
+      snapshot: searchTask(),
+      status: 'failed',
+      logs: raw,
+      run: { exitCode: 1, startedAt: searchTask().startedAt, finishedAt: searchTask().startedAt, error: raw },
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
+    await screen.findByText('基线配置无效')
+    const details = screen.getByText('查看详情').closest('details')!
+    expect(details.open).toBe(false)
+    expect(details.textContent).toContain('BASELINE VALIDATION FAILED')
   })
 })

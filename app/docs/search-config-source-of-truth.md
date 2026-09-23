@@ -48,7 +48,7 @@
 - “搜索”页编辑独立 Search Draft；默认只显示紧凑摘要，详细字段进入 Dialog，点击搜索时自动保存。
 - Search 使用 `map/search_config.json → poc/search_config.json`；Optimizer 公共使用 `map/optimizer_v2_daily.json → poc/optimizer_v2_daily.json`。UI 显示当前来源。
 - `poc` 只保存可提交默认值，`map` 是已忽略的本机实际配置，日常修改不会污染 Git。
-- Galaxy rerun 在批次开始读取一次相同有效 Search，并把它记录到每个节点的 Task Snapshot 与 staged Node。
+- Galaxy rerun 启动时自动校验并保存当前 Search 草稿，冻结后把同一份 Search 记录到所选节点的 Task Snapshot 与 staged Node，不依赖此前手动搜索或保存。
 - 旧 Node `search` 保留给 Resolver、直接 CLI 和旧数据兼容，不做破坏性迁移。
 - “Optimizer 公共”不再结构化重复显示 objective、max_simulations、max_wall_seconds；它们仍原样保留在 Raw JSON，作为非 Friendly Config 回退兼容字段。
 - `mode` 标为“部署模式”，`simulation_clock` 标为“模拟时钟”，避免把二者视为同义配置。

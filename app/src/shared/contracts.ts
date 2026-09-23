@@ -11,7 +11,7 @@ export type SearchTaskSnapshot = SearchTaskRequest & {
   commonConfigHash: string
   optimizerConfigHash: string
   optimizerConfigVersion: string
-  environment: Pick<NodeConfig, 'boss' | 'hazards' | 'supports'>
+  environment: Pick<NodeConfig, 'boss' | 'hazards' | 'supports'> & { player_state?: NodeConfig['player_state'] }
   startedAt: string
 }
 export type OptimizerOutput = { line: string; taskId?: string }
@@ -32,12 +32,21 @@ export type RunResult = {
   task?: SearchTaskSnapshot
   result?: OptimizerResult
   error?: string
+  canceled?: boolean
 }
+export type SearchQueueItem = {
+  snapshot: SearchTaskSnapshot
+  status: 'waiting' | 'running' | 'success' | 'failed' | 'canceled'
+  runningAt?: string
+  logs: string
+  run?: RunResult
+}
+export type GalaxyRerunRequest = { galaxy: string; nodes: string[]; search: SearchConfig }
 export type GalaxyRerunNode = {
   node: string
   version: string
   common: string
-  status: 'queued' | 'running' | 'succeeded' | 'failed'
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'canceled'
   startedAt?: string
   finishedAt?: string
   changed?: boolean
@@ -46,7 +55,8 @@ export type GalaxyRerunNode = {
 }
 export type GalaxyRerunProgress = {
   galaxy: string
-  status: 'running' | 'completed'
+  search?: SearchConfig
+  status: 'running' | 'completed' | 'canceled'
   total: number
   completed: number
   currentNode?: string
@@ -87,9 +97,14 @@ export type FleetManagerApi = {
   deleteTemplate(id: string): Promise<void>
   createNode(request: CreateNodeRequest): Promise<{ node: string; version: string }>
   run(request: SearchTaskRequest): Promise<RunResult>
-  rerunGalaxy(galaxy: string): Promise<GalaxyRerunProgress>
+  enqueueSearch(request: SearchTaskRequest): Promise<SearchQueueItem>
+  searchQueue(): Promise<SearchQueueItem[]>
+  stopCurrent(): Promise<void>
+  stopAll(): Promise<void>
+  rerunGalaxy(request: GalaxyRerunRequest | string): Promise<GalaxyRerunProgress>
   useBest(taskId: string): Promise<CopyResult>
   onOutput(listener: (output: OptimizerOutput) => void): () => void
   onSearchTask(listener: (task: SearchTaskSnapshot) => void): () => void
+  onSearchQueue(listener: (queue: SearchQueueItem[]) => void): () => void
   onGalaxyProgress(listener: (progress: GalaxyRerunProgress) => void): () => void
 }

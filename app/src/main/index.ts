@@ -6,7 +6,7 @@ import { is } from '@electron-toolkit/utils'
 import { DataRepository } from './services/data-repository'
 import { OptimizerRunner } from './services/optimizer-runner'
 import { GalaxyRerunService } from './services/galaxy-rerun'
-import type { CreateNodeRequest, SearchTaskRequest, Selection } from '../shared/contracts'
+import type { CreateNodeRequest, GalaxyRerunRequest, SearchTaskRequest, Selection } from '../shared/contracts'
 import { commonConfigSchema, nodeConfigSchema, optimizerConfigSchema, searchConfigSchema } from '../shared/schemas'
 
 if (process.env.FLEET_MANAGER_USER_DATA_DIR) {
@@ -27,6 +27,7 @@ const runner = new OptimizerRunner(
   (line, taskId) => window?.webContents.send('optimizer:output', { line, taskId }),
   undefined,
   task => window?.webContents.send('optimizer:task', task),
+  queue => window?.webContents.send('optimizer:queue', queue),
 )
 const galaxyRerun = new GalaxyRerunService(repo, runner, progress =>
   window?.webContents.send('galaxy-rerun:progress', progress),
@@ -97,7 +98,13 @@ app.whenReady().then(() => {
   ipcMain.handle('optimizer:run', (_, request: SearchTaskRequest) =>
     runner.run({ ...request, search: searchConfigSchema.parse(request.search) }),
   )
-  ipcMain.handle('optimizer:rerun-galaxy', (_, galaxy: string) => galaxyRerun.run(galaxy))
+  ipcMain.handle('optimizer:enqueue', (_, request: SearchTaskRequest) =>
+    runner.enqueue({ ...request, search: searchConfigSchema.parse(request.search) }),
+  )
+  ipcMain.handle('optimizer:queue', () => runner.getQueue())
+  ipcMain.handle('optimizer:stop-current', () => runner.stopCurrentTask())
+  ipcMain.handle('optimizer:stop-all', () => runner.stopAllTasks())
+  ipcMain.handle('optimizer:rerun-galaxy', (_, request: GalaxyRerunRequest | string) => galaxyRerun.run(request))
   ipcMain.handle('optimizer:use-best', (_, taskId: string) => runner.useBest(taskId))
   createWindow()
   app.on('activate', () => {

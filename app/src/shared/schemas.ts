@@ -1,4 +1,20 @@
 import { z } from 'zod'
+import { canonicalShipRecord, shipSelectorToId } from './ship-selectors'
+
+const normalizeNodeShips = (input: unknown): unknown => {
+  if (!input || typeof input !== 'object') return input
+  const value = structuredClone(input) as Record<string, any>
+  if (value.player_state?.ships) value.player_state.ships = canonicalShipRecord(value.player_state.ships)
+  if (value.baseline?.loadouts) value.baseline.loadouts = canonicalShipRecord(value.baseline.loadouts)
+  if (value.baseline?.formation)
+    value.baseline.formation = Object.fromEntries(
+      Object.entries(value.baseline.formation).map(([position, ship]) => [
+        position,
+        typeof ship === 'string' && !/^\d+$/.test(ship.trim()) ? shipSelectorToId(ship) || ship : ship,
+      ]),
+    )
+  return value
+}
 
 export const jsonObject = z.object({}).passthrough()
 const scaleSchema = jsonObject.extend({ damage_scale: z.number(), health_scale: z.number() })
@@ -18,7 +34,7 @@ export const searchConfigSchema = jsonObject.extend({
   max_simulations: z.number().int().positive(),
   workers: z.number().int().min(1).max(4),
 })
-export const nodeConfigSchema = jsonObject.extend({
+const rawNodeConfigSchema = jsonObject.extend({
   galaxy: z.number().int(),
   node: z.string().min(1),
   boss: jsonObject.optional(),
@@ -38,6 +54,7 @@ export const nodeConfigSchema = jsonObject.extend({
   // Fleet Manager replaces this object from its independent Search config only while staging a task.
   search: searchConfigSchema,
 })
+export const nodeConfigSchema = z.preprocess(normalizeNodeShips, rawNodeConfigSchema)
 export const commonConfigSchema = jsonObject.extend({ permanent: scaleSchema, temporary: scaleSchema })
 const optimizerRangeSchema = jsonObject.extend({
   min: z.number().int().nonnegative(),
@@ -49,7 +66,7 @@ const optimizerShipSlotsSchema = jsonObject.extend({
   secondary: optimizerModOptionsSchema,
   tertiary: optimizerModOptionsSchema.optional(),
 })
-export const optimizerConfigSchema = jsonObject.extend({
+const rawOptimizerConfigSchema = jsonObject.extend({
   objective: z.string().min(1),
   mode: z.string().min(1),
   ship_types: z.array(z.string().min(1)).min(1),
@@ -63,6 +80,15 @@ export const optimizerConfigSchema = jsonObject.extend({
   kill_refine_top_n: z.number().int().positive(),
   kill_sequence_max_battles: z.number().int().positive(),
 })
+export const optimizerConfigSchema = z.preprocess(input => {
+  if (!input || typeof input !== 'object') return input
+  const value = structuredClone(input) as Record<string, any>
+  if (Array.isArray(value.ship_types))
+    value.ship_types = [...new Set(value.ship_types.map((ship: string) => shipSelectorToId(ship) || ship))]
+  for (const field of ['group_ranges', 'allowed_mod_slots', 'max_groups_per_ship'])
+    if (value[field]) value[field] = canonicalShipRecord(value[field])
+  return value
+}, rawOptimizerConfigSchema)
 export const versionMetaSchema = z.object({
   default_version: z.string().min(1),
   versions: z.array(z.object({ id: z.string().min(1), name: z.string().min(1) })),
@@ -83,7 +109,7 @@ export const formationEntrySchema = z
     tertiary_mods: z.array(z.string()).optional(),
   })
   .passthrough()
-export const candidateSchema = z
+const rawCandidateSchema = z
   .object({
     formation_key: z.string().optional(),
     formation: z.array(formationEntrySchema).default([]),
@@ -95,6 +121,17 @@ export const candidateSchema = z
     outcome: z.string().optional(),
   })
   .passthrough()
+export const candidateSchema = z.preprocess(input => {
+  if (!input || typeof input !== 'object') return input
+  const value = structuredClone(input) as Record<string, any>
+  if (value.ship_loadouts) value.ship_loadouts = canonicalShipRecord(value.ship_loadouts)
+  if (Array.isArray(value.formation))
+    value.formation = value.formation.map((entry: Record<string, unknown>) => ({
+      ...entry,
+      ship: shipSelectorToId(entry.ship) || entry.ship,
+    }))
+  return value
+}, rawCandidateSchema)
 export const optimizerResultSchema = jsonObject.extend({
   best_result: candidateSchema.nullable().optional(),
   verified_baseline: candidateSchema.nullable().optional(),

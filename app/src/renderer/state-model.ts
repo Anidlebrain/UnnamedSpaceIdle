@@ -1,4 +1,4 @@
-import type { Catalog, SearchTaskSnapshot, Selection } from '../shared/contracts'
+import type { Catalog, SearchQueueItem, SearchTaskSnapshot, Selection } from '../shared/contracts'
 import type { CommonConfig, NodeConfig, OptimizerConfig, OptimizerResult } from '../shared/schemas'
 
 export type Workspace = 'node' | 'common' | 'search' | 'rerun' | 'templates'
@@ -13,7 +13,8 @@ export type PageContexts = {
 export type Draft<T> = { value: T; source: string; savedSource: string }
 export type SearchTaskState = {
   snapshot: SearchTaskSnapshot
-  status: 'running' | 'completed' | 'failed'
+  runningAt?: string
+  status: 'waiting' | 'running' | 'completed' | 'failed' | 'canceled'
   logs: string
   result?: OptimizerResult
   exitCode?: number
@@ -46,6 +47,31 @@ export function initialContexts(catalog: Catalog, storedSearch: Selection | null
     templates: { ...initial },
     common: { ...initial },
     rerunGalaxy: initial.galaxy,
+  }
+}
+
+export function restoreContexts(catalog: Catalog, saved: Partial<PageContexts> | null): PageContexts {
+  const fallback = initialContexts(catalog, null)
+  if (!saved) return fallback
+  const valid = (candidate: Selection | undefined, defaultValue: Selection) => {
+    const galaxy = catalog.galaxies.find(item => item.id === candidate?.galaxy)
+    const node = galaxy?.nodes.find(item => item.id === candidate?.node)
+    if (!galaxy || !node) return defaultValue
+    return {
+      galaxy: galaxy.id,
+      node: node.id,
+      version: node.versions.some(item => item.id === candidate?.version) ? candidate!.version : node.defaultVersion,
+      common: galaxy.commons.some(item => item.id === candidate?.common) ? candidate!.common : galaxy.defaultCommon,
+    }
+  }
+  return {
+    node: valid(saved.node, fallback.node),
+    search: valid(saved.search, fallback.search),
+    templates: valid(saved.templates, fallback.templates),
+    common: valid(saved.common, fallback.common),
+    rerunGalaxy: catalog.galaxies.some(item => item.id === saved.rerunGalaxy)
+      ? saved.rerunGalaxy!
+      : fallback.rerunGalaxy,
   }
 }
 
@@ -90,6 +116,18 @@ export function commonLocked(task: SearchTaskState | null, selection: Selection)
 
 export function taskFromSnapshot(snapshot: SearchTaskSnapshot): SearchTaskState {
   return { snapshot, status: 'running', logs: '' }
+}
+export function taskFromQueue(item: SearchQueueItem): SearchTaskState {
+  return {
+    snapshot: item.snapshot,
+    runningAt: item.runningAt,
+    status: item.status === 'success' ? 'completed' : item.status,
+    logs: item.logs,
+    result: item.run?.result,
+    error: item.run?.error,
+    exitCode: item.run?.exitCode,
+    finishedAt: item.run?.finishedAt,
+  }
 }
 
 export type DraftMaps = {

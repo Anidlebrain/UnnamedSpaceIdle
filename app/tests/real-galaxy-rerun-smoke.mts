@@ -129,11 +129,117 @@ try {
   const runner = new OptimizerRunner(temporaryRepo, optimizerRoot, line => output.push(line))
   const result = await new GalaxyRerunService(temporaryRepo, runner, state => {
     progress.push(`${state.completed}/${state.total}:${state.currentNode ?? 'done'}`)
-  }).run(galaxy)
+  }).run({
+    galaxy,
+    nodes: selections.map(item => item.node),
+    search: {
+      profile: 'fast',
+      goal: 'beat_baseline',
+      simulation_clock: 'offline_fixed_step',
+      ...smokeBudget,
+    },
+  })
   if (result.nodes.some(item => item.status === 'failed'))
     throw new Error(`Smoke Node failed: ${result.nodes.find(item => item.status === 'failed')?.error}`)
   if (!output.join('').includes('Initializing Fleet Optimizer'))
     throw new Error('Real BAT invocation was not observed.')
+  const queueRunner = new OptimizerRunner(temporaryRepo, optimizerRoot, () => {})
+  const queueRequest = (selection: (typeof selections)[number], maxWall = 1) => ({
+    ...selection,
+    version: 'smoke',
+    common: 'smoke',
+    versionName: 'Smoke',
+    commonName: 'Smoke',
+    search: {
+      profile: 'fast' as const,
+      goal: 'beat_baseline' as const,
+      simulation_clock: 'offline_fixed_step' as const,
+      max_wall_seconds: maxWall,
+      max_simulations: maxWall === 1 ? 1 : 100000,
+      workers: 1,
+    },
+  })
+  const until = async (check: () => boolean, label: string, timeoutMs = 90000) => {
+    const started = Date.now()
+    while (!check()) {
+      if (Date.now() - started > timeoutMs) throw new Error(`Timed out waiting for ${label}`)
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+  }
+  await queueRunner.enqueue(queueRequest(selections[0]))
+  await queueRunner.enqueue(queueRequest(selections[1]))
+  await until(
+    () =>
+      queueRunner
+        .getQueue()
+        .slice(0, 2)
+        .every(item => ['success', 'failed'].includes(item.status)),
+    'serial queue',
+  )
+  const queueResult = queueRunner.getQueue().slice(0, 2)
+  if (queueResult.some(item => item.status !== 'success'))
+    throw new Error(
+      `Real queue failed: ${queueResult.map(item => `${item.snapshot.node}:${item.run?.error}`).join('; ')}`,
+    )
+
+  await queueRunner.enqueue(queueRequest(selections[0], 120))
+  await until(() => queueRunner.getQueue()[2]?.logs.includes('Initializing Fleet Optimizer'), 'current BAT start')
+  const stopCurrentAt = Date.now()
+  await queueRunner.stopCurrentTask()
+  await until(() => queueRunner.getQueue()[2]?.status === 'canceled', 'current stop', 15000)
+  const stopCurrentMs = Date.now() - stopCurrentAt
+
+  await queueRunner.enqueue(queueRequest(selections[0], 120))
+  await queueRunner.enqueue(queueRequest(selections[1], 120))
+  await until(() => queueRunner.getQueue()[3]?.logs.includes('Initializing Fleet Optimizer'), 'batch BAT start')
+  const stopAllAt = Date.now()
+  await queueRunner.stopAllTasks()
+  await until(
+    () =>
+      queueRunner
+        .getQueue()
+        .slice(3, 5)
+        .every(item => item.status === 'canceled'),
+    'queue stop',
+    15000,
+  )
+  const stopAllMs = Date.now() - stopAllAt
+  await queueRunner.enqueue(queueRequest(selections[0]))
+  await until(() => queueRunner.getQueue()[5]?.status === 'success', 'post-stop restart')
+
+  const rerunSearch = {
+    profile: 'fast' as const,
+    goal: 'beat_baseline' as const,
+    simulation_clock: 'offline_fixed_step' as const,
+    ...smokeBudget,
+  }
+  const rerunOutput: string[] = []
+  const stopRerunRunner = new OptimizerRunner(temporaryRepo, optimizerRoot, line => rerunOutput.push(line))
+  const stopRerunService = new GalaxyRerunService(temporaryRepo, stopRerunRunner, () => {})
+  const partialRun = stopRerunService.run({ galaxy, nodes: selections.map(item => item.node), search: rerunSearch })
+  await until(() => rerunOutput.join('').includes('Initializing Fleet Optimizer'), 'rerun current BAT')
+  await stopRerunRunner.stopCurrentTask()
+  const partialProgress = await partialRun
+  if (partialProgress.nodes[0].status !== 'canceled' || partialProgress.nodes[1].status !== 'succeeded')
+    throw new Error(`Rerun stop-current behavior invalid: ${partialProgress.nodes.map(item => item.status)}`)
+
+  const stopBatchOutput: string[] = []
+  const stopBatchRunner = new OptimizerRunner(temporaryRepo, optimizerRoot, line => stopBatchOutput.push(line))
+  const stopBatchService = new GalaxyRerunService(temporaryRepo, stopBatchRunner, () => {})
+  const batchRun = stopBatchService.run({
+    galaxy,
+    nodes: selections.map(item => item.node),
+    search: {
+      ...rerunSearch,
+      max_wall_seconds: 120,
+      max_simulations: 100000,
+    },
+  })
+  await until(() => stopBatchOutput.join('').includes('Initializing Fleet Optimizer'), 'rerun batch BAT')
+  await stopBatchRunner.stopAllTasks()
+  const batchProgress = await batchRun
+  if (batchProgress.nodes.some(item => item.status !== 'canceled'))
+    throw new Error(`Rerun stop-all behavior invalid: ${batchProgress.nodes.map(item => item.status)}`)
   const temporaryManagerAfter = await Promise.all(temporaryManagerPaths.map(path => readFile(path)))
   report = {
     ...report,
@@ -150,6 +256,23 @@ try {
     })),
     batchUsedSearchOnly: true,
     searchSnapshots: result.nodes.map(item => item.run?.task?.search),
+    realQueue: queueResult.map(item => ({
+      node: item.snapshot.node,
+      status: item.status,
+      taskId: item.snapshot.taskId,
+      exitCode: item.run?.exitCode,
+    })),
+    stopCurrent: { status: queueRunner.getQueue()[2].status, elapsedMs: stopCurrentMs },
+    stopAll: {
+      statuses: queueRunner
+        .getQueue()
+        .slice(3, 5)
+        .map(item => item.status),
+      elapsedMs: stopAllMs,
+    },
+    postStopRestart: queueRunner.getQueue()[5].status,
+    rerunStopCurrent: partialProgress.nodes.map(item => item.status),
+    rerunStopAll: batchProgress.nodes.map(item => item.status),
     temporaryManagerConfigsUnchanged: temporaryManagerAfter.every(
       (bytes, index) => hash(bytes) === hash(temporaryManagerBefore[index]),
     ),

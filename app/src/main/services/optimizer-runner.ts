@@ -1,9 +1,17 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { stat, readFile, writeFile, mkdir } from 'node:fs/promises'
-import { spawn } from 'node:child_process'
+import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 import { optimizerResultSchema, type OptimizerResult } from '../../shared/schemas'
-import type { CopyResult, RunResult, SearchTaskRequest, SearchTaskSnapshot, Selection } from '../../shared/contracts'
+import type { SearchConfig } from '../../shared/schemas'
+import type {
+  CopyResult,
+  RunResult,
+  SearchQueueItem,
+  SearchTaskRequest,
+  SearchTaskSnapshot,
+  Selection,
+} from '../../shared/contracts'
 import { DataRepository } from './data-repository'
 
 export class OptimizerRunner {
@@ -12,13 +20,157 @@ export class OptimizerRunner {
   private pendingSelection?: Selection
   private queuedSelections: Selection[] = []
   private lastSearch?: RunResult
+  private completed = new Map<string, RunResult>()
+  private latestResultByNode = new Map<string, string>()
+  private queue: SearchQueueItem[] = []
+  private lastOutputPublishAt = 0
+  private prepared = new Map<
+    string,
+    {
+      node: Awaited<ReturnType<DataRepository['load']>>['node']
+      common: Awaited<ReturnType<DataRepository['load']>>['common']
+    }
+  >()
+  private process?: ChildProcess
+  private recentOutput = ''
+  private cancelCurrent = false
+  private cancelRemaining = false
   constructor(
     private readonly repo: DataRepository,
     private readonly optimizerRoot: string,
     private readonly emit: (line: string, taskId?: string) => void,
     private readonly executor?: (selection: Selection, mode: 'search' | 'copy') => Promise<number>,
     private readonly onTask?: (task: SearchTaskSnapshot) => void,
+    private readonly onQueue?: (queue: SearchQueueItem[]) => void,
   ) {}
+  getQueue(): SearchQueueItem[] {
+    return structuredClone(this.queue)
+  }
+  async enqueue(request: SearchTaskRequest): Promise<SearchQueueItem> {
+    const selection: Selection = request
+    const search = await this.repo.saveSearchConfig(request.search)
+    const values = await this.repo.configHashes(selection)
+    const node = { ...values.node, search: structuredClone(search) }
+    const snapshot: SearchTaskSnapshot = {
+      ...selection,
+      versionName: request.versionName,
+      commonName: request.commonName,
+      search: structuredClone(search),
+      taskId: randomUUID(),
+      nodeConfigHash: values.nodeConfigHash,
+      stagedNodeConfigHash: this.hash(node),
+      commonConfigHash: values.commonConfigHash,
+      optimizerConfigHash: values.optimizerConfigHash,
+      optimizerConfigVersion: `sha256:${values.optimizerConfigHash}`,
+      environment: {
+        boss: structuredClone(node.boss),
+        hazards: structuredClone(node.hazards),
+        supports: structuredClone(node.supports),
+        player_state: structuredClone(node.player_state),
+      },
+      startedAt: new Date().toISOString(),
+    }
+    const item: SearchQueueItem = { snapshot, status: 'waiting', logs: '' }
+    while (this.queue.length >= 100) {
+      const index = this.queue.findIndex(entry => ['success', 'failed', 'canceled'].includes(entry.status))
+      if (index < 0) break
+      const [removed] = this.queue.splice(index, 1)
+      this.completed.delete(removed.snapshot.taskId)
+    }
+    this.prepared.set(snapshot.taskId, { node, common: values.common })
+    this.queue.push(item)
+    this.publishQueue()
+    void this.drainQueue()
+    return structuredClone(item)
+  }
+  private async drainQueue(): Promise<void> {
+    if (this.running) return
+    const item = this.queue.find(entry => entry.status === 'waiting')
+    if (!item) return
+    this.acquire()
+    const task = item.snapshot
+    this.latestResultByNode.delete(this.resultKey(task))
+    const staged = this.prepared.get(task.taskId)!
+    item.status = 'running'
+    item.runningAt = new Date().toISOString()
+    this.activeTask = task
+    this.cancelCurrent = false
+    this.publishQueue()
+    this.onTask?.(task)
+    try {
+      if (this.hash(await this.repo.loadOptimizerConfig()) !== task.optimizerConfigHash)
+        throw new Error('Optimizer 公共配置在排队后已变化，请重新加入任务。')
+      await this.repo.stageValues(task, staged.node, staged.common)
+      const result = await this.runUnlocked(task, task, staged)
+      item.run = this.cancelCurrent
+        ? { ...result, startedAt: item.runningAt, canceled: true, error: '搜索被用户中止' }
+        : { ...result, startedAt: item.runningAt }
+      item.status = item.run.canceled ? 'canceled' : item.run.error ? 'failed' : 'success'
+      if (item.status === 'success') {
+        this.lastSearch = item.run
+        this.completed.set(task.taskId, item.run)
+        this.latestResultByNode.set(this.resultKey(task), task.taskId)
+      }
+    } catch (error) {
+      const now = new Date().toISOString()
+      item.run = {
+        exitCode: -1,
+        startedAt: item.runningAt,
+        finishedAt: now,
+        task,
+        error: this.cancelCurrent ? '搜索被用户中止' : (error as Error).message,
+        canceled: this.cancelCurrent,
+      }
+      item.status = this.cancelCurrent ? 'canceled' : 'failed'
+    } finally {
+      this.prepared.delete(task.taskId)
+      this.activeTask = undefined
+      this.running = false
+      this.cancelCurrent = false
+      this.publishQueue()
+      void this.drainQueue()
+    }
+  }
+  async stopCurrentTask(): Promise<void> {
+    if (!this.running) return
+    this.cancelCurrent = true
+    if (this.process?.pid) await this.killTree(this.process.pid)
+  }
+  async stopAllTasks(): Promise<void> {
+    this.cancelRemaining = true
+    for (const item of this.queue)
+      if (item.status === 'waiting') {
+        item.status = 'canceled'
+        item.run = {
+          exitCode: -1,
+          startedAt: item.snapshot.startedAt,
+          finishedAt: new Date().toISOString(),
+          task: item.snapshot,
+          canceled: true,
+          error: '搜索被用户中止',
+        }
+        this.prepared.delete(item.snapshot.taskId)
+      }
+    this.publishQueue()
+    await this.stopCurrentTask()
+  }
+  private publishQueue() {
+    this.onQueue?.(this.getQueue())
+  }
+  private resultKey(selection: Selection) {
+    return `${selection.galaxy}/${selection.node.replace(/_num$/i, '')}`
+  }
+  private async killTree(pid: number): Promise<void> {
+    if (process.platform !== 'win32') {
+      this.process?.kill('SIGKILL')
+      return
+    }
+    await new Promise<void>(resolve => {
+      const killer = spawn('taskkill.exe', ['/PID', String(pid), '/T', '/F'], { windowsHide: true })
+      killer.once('error', () => resolve())
+      killer.once('close', () => resolve())
+    })
+  }
   async run(request: SearchTaskRequest | Selection): Promise<RunResult> {
     this.acquire()
     try {
@@ -48,6 +200,7 @@ export class OptimizerRunner {
           boss: structuredClone(stagedNode.boss),
           hazards: structuredClone(stagedNode.hazards),
           supports: structuredClone(stagedNode.supports),
+          player_state: structuredClone(stagedNode.player_state),
         },
         startedAt: new Date().toISOString(),
       }
@@ -57,6 +210,7 @@ export class OptimizerRunner {
       await this.repo.stageValues(selection, stagedNode, prepared.common)
       const result = await this.runUnlocked(selection, task, { node: stagedNode, common: prepared.common })
       this.lastSearch = result
+      if (!result.error) this.latestResultByNode.set(this.resultKey(selection), task.taskId)
       return result
     } finally {
       this.activeTask = undefined
@@ -68,17 +222,26 @@ export class OptimizerRunner {
     selections: Selection[],
     onStart: (selection: Selection) => void,
     onComplete: (selection: Selection, result: RunResult) => void,
+    requestedSearch?: SearchConfig,
   ): Promise<RunResult[]> {
     this.acquire()
     this.queuedSelections = selections.map(selection => ({ ...selection }))
+    this.cancelRemaining = false
     const results: RunResult[] = []
     try {
-      const search = await this.repo.loadSearchConfig()
+      const search = requestedSearch
+        ? await this.repo.saveSearchConfig(requestedSearch)
+        : await this.repo.loadSearchConfig()
+      const optimizerHash = this.hash(await this.repo.loadOptimizerConfig())
       for (const selection of selections) {
+        if (this.cancelRemaining) break
         onStart(selection)
+        this.latestResultByNode.delete(this.resultKey(selection))
         let result: RunResult
         try {
           const prepared = await this.repo.configHashes(selection)
+          if (prepared.optimizerConfigHash !== optimizerHash)
+            throw new Error('Optimizer 公共配置在批次运行期间已变化，未继续使用旧快照。')
           const stagedNode = { ...prepared.node, search: structuredClone(search) }
           const task: SearchTaskSnapshot = {
             ...selection,
@@ -95,6 +258,7 @@ export class OptimizerRunner {
               boss: structuredClone(stagedNode.boss),
               hazards: structuredClone(stagedNode.hazards),
               supports: structuredClone(stagedNode.supports),
+              player_state: structuredClone(stagedNode.player_state),
             },
             startedAt: new Date().toISOString(),
           }
@@ -105,22 +269,25 @@ export class OptimizerRunner {
           const time = new Date().toISOString()
           result = { exitCode: -1, startedAt: time, finishedAt: time, error: (error as Error).message }
         }
+        if (this.cancelCurrent) result = { ...result, canceled: true, error: '搜索被用户中止' }
         results.push(result)
         onComplete(selection, result)
         this.activeTask = undefined
+        this.cancelCurrent = false
       }
       return results
     } finally {
       this.activeTask = undefined
       this.queuedSelections = []
       this.running = false
+      void this.drainQueue()
     }
   }
   async useBest(taskId: string): Promise<CopyResult> {
     this.acquire()
     const startedAt = new Date().toISOString()
     try {
-      const completed = this.lastSearch
+      const completed = this.completed.get(taskId) ?? this.lastSearch
       if (!completed?.task || completed.task.taskId !== taskId || completed.error || !completed.result?.best_result)
         return {
           exitCode: -1,
@@ -129,6 +296,14 @@ export class OptimizerRunner {
           error: 'The selected Best Found is not the most recent successful search task.',
         }
       const selection: Selection = completed.task
+      const latest = this.latestResultByNode.get(this.resultKey(selection))
+      if (latest !== taskId)
+        return {
+          exitCode: -1,
+          startedAt,
+          finishedAt: new Date().toISOString(),
+          error: '该节点的结果文件已被后续搜索覆盖，请重新搜索后再应用。',
+        }
       if ((await this.repo.nodeHash(selection)) !== completed.task.nodeConfigHash)
         return {
           exitCode: -1,
@@ -183,6 +358,16 @@ export class OptimizerRunner {
       )
     )
       throw new Error(`This Version is queued for the active Galaxy rerun. Edit it after the batch finishes.`)
+    if (
+      this.queue.some(
+        item =>
+          ['waiting', 'running'].includes(item.status) &&
+          item.snapshot.galaxy === selection.galaxy &&
+          item.snapshot.node === selection.node &&
+          item.snapshot.version === selection.version,
+      )
+    )
+      throw new Error('该版本正在搜索队列中，请等待任务完成。')
   }
   assertCommonWritable(selection: Selection) {
     const source = this.activeTask ?? this.pendingSelection
@@ -190,6 +375,15 @@ export class OptimizerRunner {
       throw new Error(`This Common is being used by the ${source.node} search task. Edit it after the task finishes.`)
     if (this.queuedSelections.some(item => item.galaxy === selection.galaxy && item.common === selection.common))
       throw new Error(`This Common is queued for the active Galaxy rerun. Edit it after the batch finishes.`)
+    if (
+      this.queue.some(
+        item =>
+          ['waiting', 'running'].includes(item.status) &&
+          item.snapshot.galaxy === selection.galaxy &&
+          item.snapshot.common === selection.common,
+      )
+    )
+      throw new Error('该公共配置正在搜索队列中，请等待任务完成。')
   }
   assertOptimizerWritable() {
     if (this.running) {
@@ -220,17 +414,35 @@ export class OptimizerRunner {
       `Staged ${selection.galaxy}/${selection.node}; node ${nodeHash.slice(0, 12)}, common ${commonHash.slice(0, 12)}\n`,
       task.taskId,
     )
+    if (this.cancelCurrent)
+      return {
+        exitCode: -1,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        task,
+        error: '搜索被用户中止',
+        canceled: true,
+      }
     const exitCode = await (this.executor ? this.executor(selection, 'search') : this.execute(selection, 'search'))
+    if (this.cancelCurrent)
+      return {
+        exitCode,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        task,
+        error: '搜索被用户中止',
+        canceled: true,
+      }
     if (exitCode !== 0)
       return {
         exitCode,
         startedAt,
         finishedAt: new Date().toISOString(),
         task,
-        error: `Optimizer exited with code ${exitCode}.`,
+        error: `Optimizer exited with code ${exitCode}. ${this.recentOutput.slice(-1800)}`.trim(),
       }
     const after = await this.snapshot(resultPath)
-    if (!after || (before !== undefined && (after.mtimeMs <= before.mtimeMs || after.hash === before.hash)))
+    if (!after || (before !== undefined && after.mtimeMs <= before.mtimeMs))
       return {
         exitCode,
         startedAt,
@@ -310,10 +522,28 @@ export class OptimizerRunner {
       const args = ['/d', '/s', '/c', 'run_optimizer.bat', selection.galaxy, selection.node]
       if (mode === 'copy') args.push('--c')
       const process = spawn('cmd.exe', args, { cwd: this.optimizerRoot, windowsHide: true })
-      process.stdout.on('data', data => this.emit(data.toString(), this.activeTask?.taskId))
-      process.stderr.on('data', data => this.emit(data.toString(), this.activeTask?.taskId))
+      this.recentOutput = ''
+      this.process = process
+      const output = (data: Buffer) => {
+        const line = data.toString()
+        this.recentOutput = (this.recentOutput + line).slice(-4000)
+        const item = this.queue.find(entry => entry.snapshot.taskId === this.activeTask?.taskId)
+        if (item) {
+          item.logs = (item.logs + line).slice(-200_000)
+          if (Date.now() - this.lastOutputPublishAt > 500) {
+            this.lastOutputPublishAt = Date.now()
+            this.publishQueue()
+          }
+        }
+        this.emit(line, this.activeTask?.taskId)
+      }
+      process.stdout.on('data', output)
+      process.stderr.on('data', output)
       process.on('error', reject)
-      process.on('close', code => resolve(code ?? 1))
+      process.on('close', code => {
+        this.process = undefined
+        resolve(code ?? 1)
+      })
     })
   }
 }

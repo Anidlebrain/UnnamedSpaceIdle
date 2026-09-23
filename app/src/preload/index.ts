@@ -30,7 +30,11 @@ const api: FleetManagerApi = {
   deleteTemplate: id => ipcRenderer.invoke('template:delete', id),
   createNode: request => ipcRenderer.invoke('node:create', request),
   run: request => ipcRenderer.invoke('optimizer:run', request),
-  rerunGalaxy: galaxy => ipcRenderer.invoke('optimizer:rerun-galaxy', galaxy),
+  enqueueSearch: request => ipcRenderer.invoke('optimizer:enqueue', request),
+  searchQueue: () => ipcRenderer.invoke('optimizer:queue'),
+  stopCurrent: () => ipcRenderer.invoke('optimizer:stop-current'),
+  stopAll: () => ipcRenderer.invoke('optimizer:stop-all'),
+  rerunGalaxy: request => ipcRenderer.invoke('optimizer:rerun-galaxy', request),
   useBest: taskId => ipcRenderer.invoke('optimizer:use-best', taskId),
   onOutput: listener => {
     const handler = (_: Electron.IpcRendererEvent, output: Parameters<typeof listener>[0]) => listener(output)
@@ -41,6 +45,11 @@ const api: FleetManagerApi = {
     const handler = (_: Electron.IpcRendererEvent, task: Parameters<typeof listener>[0]) => listener(task)
     ipcRenderer.on('optimizer:task', handler)
     return () => ipcRenderer.removeListener('optimizer:task', handler)
+  },
+  onSearchQueue: listener => {
+    const handler = (_: Electron.IpcRendererEvent, queue: Parameters<typeof listener>[0]) => listener(queue)
+    ipcRenderer.on('optimizer:queue', handler)
+    return () => ipcRenderer.removeListener('optimizer:queue', handler)
   },
   onGalaxyProgress: listener => {
     const handler = (_: Electron.IpcRendererEvent, progress: Parameters<typeof listener>[0]) => listener(progress)

@@ -8,6 +8,7 @@ import type {
   ImportPreview,
   OptimizerOutput,
   RunResult,
+  SearchQueueItem,
   Selection,
 } from '../shared/contracts'
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
@@ -29,16 +30,19 @@ import {
   type ModSlot,
 } from '../shared/mod-catalog'
 import { GalaxyRerunPanel } from './GalaxyRerunPanel'
+import { runErrorSummary } from '../shared/run-errors'
 import {
   commonDomainKey,
   chooseInitial,
   formatJson,
   initialContexts,
+  restoreContexts,
   isDirty,
   nodeDomainKey,
   nodeLocked,
   commonLocked,
   taskFromSnapshot,
+  taskFromQueue,
   updateSelection,
   type Draft,
   type PageContexts,
@@ -52,6 +56,7 @@ const format = formatJson
 type EditorTab = 'formation' | 'fleet' | 'loadout' | 'environment'
 type CommonTab = 'galaxy' | 'optimizer'
 const LAST_SEARCH_KEY = 'fleet-manager-last-search-v1'
+const LAST_LOCATION_KEY = 'fleet-manager-location-v1'
 const formatDuration = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
@@ -60,7 +65,10 @@ const formatDuration = (seconds: number) =>
     .padStart(2, '0')}`
 const taskDuration = (task: SearchTaskState) =>
   task.finishedAt
-    ? Math.max(0, Math.round((Date.parse(task.finishedAt) - Date.parse(task.snapshot.startedAt)) / 1000))
+    ? Math.max(
+        0,
+        Math.round((Date.parse(task.finishedAt) - Date.parse(task.runningAt ?? task.snapshot.startedAt)) / 1000),
+      )
     : 0
 
 function storedSearchSelection(catalog: Catalog): Selection | null {
@@ -133,12 +141,15 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const [savedCommonSource, setSavedCommonSource] = useState('')
   const [optimizerSource, setOptimizerSource] = useState('')
   const [savedOptimizerSource, setSavedOptimizerSource] = useState('')
-  const [logs, setLogs] = useState('')
   const [searchTask, setSearchTask] = useState<SearchTaskState | null>(null)
+  const [searchQueue, setSearchQueue] = useState<SearchQueueItem[]>([])
+  const [rerunNodes, setRerunNodes] = useState<string[]>([])
   const [galaxyRerun, setGalaxyRerun] = useState<GalaxyRerunProgress | null>(null)
+  const [rerunStarting, setRerunStarting] = useState(false)
   const [galaxyDetail, setGalaxyDetail] = useState<GalaxyRerunNode | null>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [message, setMessage] = useState('')
+  const [errorDetail, setErrorDetail] = useState('')
   const [busy, setBusy] = useState(false)
   const [template, setTemplate] = useState('')
   const [createMode, setCreateMode] = useState<'selection' | 'template'>('selection')
@@ -169,10 +180,41 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             ? commonDirty
             : optimizerDirty
           : false
-  const taskRunning = searchTask?.status === 'running'
-  const nodeReadOnly = nodeLocked(searchTask, selection)
-  const commonReadOnly = commonLocked(searchTask, selection)
-  const optimizerReadOnly = Boolean(taskRunning)
+  const taskRunning = searchQueue.some(item => item.status === 'running') || searchTask?.status === 'running'
+  const activeQueueItem = searchQueue.find(item => item.status === 'running')
+  const activeLock = activeQueueItem ? taskFromQueue(activeQueueItem) : searchTask
+  const queuedNodeLocked = searchQueue.some(
+    item =>
+      ['waiting', 'running'].includes(item.status) &&
+      item.snapshot.galaxy === selection.galaxy &&
+      item.snapshot.node === selection.node &&
+      item.snapshot.version === selection.version,
+  )
+  const queuedCommonLocked = searchQueue.some(
+    item =>
+      ['waiting', 'running'].includes(item.status) &&
+      item.snapshot.galaxy === selection.galaxy &&
+      item.snapshot.common === selection.common,
+  )
+  const rerunActive = galaxyRerun?.status === 'running'
+  const rerunNodeLocked = Boolean(
+    rerunActive &&
+    galaxyRerun.galaxy === selection.galaxy &&
+    galaxyRerun.nodes.some(
+      item =>
+        item.node === selection.node &&
+        item.version === selection.version &&
+        ['queued', 'running'].includes(item.status),
+    ),
+  )
+  const rerunCommonLocked = Boolean(
+    rerunActive &&
+    galaxyRerun.galaxy === selection.galaxy &&
+    galaxyRerun.nodes.some(item => item.common === selection.common && ['queued', 'running'].includes(item.status)),
+  )
+  const nodeReadOnly = nodeLocked(activeLock, selection) || queuedNodeLocked || rerunNodeLocked
+  const commonReadOnly = commonLocked(activeLock, selection) || queuedCommonLocked || rerunCommonLocked
+  const optimizerReadOnly = Boolean(taskRunning || rerunActive)
   const hasAnyDirtyDraft =
     nodeDirty ||
     commonDirty ||
@@ -199,36 +241,83 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         setSearchConfigSource(searchSource)
         setSavedSearchConfigSource(searchSource)
         setConfigSources(sources)
-        const contexts = initialContexts(next, storedSearchSelection(next))
+        let saved: { workspace?: Workspace; contexts?: Partial<PageContexts> } | null = null
+        try {
+          saved = JSON.parse(localStorage.getItem(LAST_LOCATION_KEY) ?? 'null')
+        } catch {
+          /* ignore invalid local state */
+        }
+        const contexts = saved?.contexts
+          ? restoreContexts(next, saved.contexts)
+          : initialContexts(next, storedSearchSelection(next))
         pageContextsRef.current = contexts
         setPageContexts(contexts)
-        setSelection(contexts.node)
+        const page =
+          saved?.workspace && ['node', 'common', 'search', 'rerun', 'templates'].includes(saved.workspace)
+            ? saved.workspace
+            : 'node'
+        setWorkspace(page)
+        if (page === 'rerun') {
+          const galaxy = next.galaxies.find(item => item.id === contexts.rerunGalaxy)
+          const first = galaxy?.nodes[0]
+          setSelection({
+            galaxy: galaxy?.id ?? '',
+            node: first?.id ?? '',
+            version: first?.defaultVersion ?? '',
+            common: galaxy?.defaultCommon ?? '',
+          })
+        } else setSelection(contexts[page])
+        setRerunNodes(next.galaxies.find(item => item.id === contexts.rerunGalaxy)?.nodes.map(item => item.id) ?? [])
+        void api.searchQueue().then(setSearchQueue)
       })
       .catch(error => setMessage(`无法读取 Manager / Optimizer 配置：${(error as Error).message}`))
     const stopOutput = api.onOutput((output: OptimizerOutput) => {
-      setLogs(previous => `${previous}${output.line}`)
       if (!output.taskId) return
       setSearchTask(current => {
         if (!current || current.snapshot.taskId !== output.taskId) return current
         return { ...current, logs: `${current.logs}${output.line}` }
       })
     })
-    const stopTask = api.onSearchTask(task => setSearchTask(taskFromSnapshot(task)))
-    const stopProgress = api.onGalaxyProgress(setGalaxyRerun)
+    const stopTask = api.onSearchTask(task => setSearchTask(current => current ?? taskFromSnapshot(task)))
+    const stopQueue = api.onSearchQueue(queue => {
+      setSearchQueue(queue)
+      setSearchTask(current => {
+        const item = queue.find(entry => entry.snapshot.taskId === current?.snapshot.taskId)
+        return item ? taskFromQueue(item) : current
+      })
+    })
+    const stopProgress = api.onGalaxyProgress(progress => {
+      setGalaxyRerun(progress)
+      setRerunStarting(false)
+      if (progress.search) {
+        setSavedSearchConfigSource(format(progress.search))
+        setConfigSources(current => ({ ...current, search: 'local' }))
+      }
+    })
     return () => {
       stopOutput()
       stopTask()
+      stopQueue()
       stopProgress()
     }
   }, [api])
   useEffect(() => {
+    if (pageContextsRef.current)
+      localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ workspace, contexts: pageContextsRef.current }))
+  }, [workspace, selection])
+  useEffect(() => {
     if (!searchTask || searchTask.status !== 'running') return
     const updateElapsed = () =>
-      setElapsedSeconds(Math.max(0, Math.floor((Date.now() - Date.parse(searchTask.snapshot.startedAt)) / 1000)))
+      setElapsedSeconds(
+        Math.max(
+          0,
+          Math.floor((Date.now() - Date.parse(searchTask.runningAt ?? searchTask.snapshot.startedAt)) / 1000),
+        ),
+      )
     updateElapsed()
     const timer = window.setInterval(updateElapsed, 1000)
     return () => window.clearInterval(timer)
-  }, [searchTask?.snapshot.startedAt, searchTask?.status])
+  }, [searchTask?.runningAt, searchTask?.snapshot.startedAt, searchTask?.status])
   useEffect(() => {
     if (!hasAnyDirtyDraft) return
     const warn = (event: BeforeUnloadEvent) => {
@@ -298,7 +387,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       : searchTask
         ? {
             exitCode: searchTask.exitCode ?? (searchTask.status === 'failed' ? -1 : 0),
-            startedAt: searchTask.snapshot.startedAt,
+            startedAt: searchTask.runningAt ?? searchTask.snapshot.startedAt,
             finishedAt: searchTask.finishedAt ?? searchTask.snapshot.startedAt,
             result: searchTask.result,
             error: searchTask.error,
@@ -327,12 +416,15 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   }
   const switchWorkspace = (next: Workspace) => {
     cacheCurrentDraft()
+    setMessage('')
+    setErrorDetail('')
     const contexts = pageContextsRef.current
     if (!contexts) return
     setWorkspace(next)
     setGalaxyDetail(null)
     if (next === 'rerun') {
       const galaxy = catalog.galaxies.find(item => item.id === contexts.rerunGalaxy) ?? catalog.galaxies[0]
+      setRerunNodes(galaxy?.nodes.map(item => item.id) ?? [])
       const first = galaxy?.nodes[0]
       setSelection({
         galaxy: galaxy?.id ?? '',
@@ -353,9 +445,12 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   }
   const applyUpdate = <K extends keyof Selection>(field: K, value: Selection[K]) => {
     setMessage('')
+    setErrorDetail('')
     cacheCurrentDraft()
     const next = updateSelection(catalog, selection, field, value)
     setCurrentSelection(next)
+    if (workspace === 'rerun' && field === 'galaxy')
+      setRerunNodes(catalog.galaxies.find(item => item.id === value)?.nodes.map(item => item.id) ?? [])
     if (field === 'galaxy') setNewNodeGalaxy(value)
   }
   const update = <K extends keyof Selection>(field: K, value: Selection[K]) => applyUpdate(field, value)
@@ -363,9 +458,13 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     try {
       setBusy(true)
       await action()
+      setErrorDetail('')
       if (label) setMessage(label)
     } catch (error) {
-      setMessage(`操作失败：${(error as Error).message}`)
+      if (workspace === 'rerun' || workspace === 'search') {
+        setMessage(`操作失败：${runErrorSummary(error)}`)
+        setErrorDetail(String((error as Error).message ?? error).slice(0, 4000))
+      } else setMessage(`操作失败：${(error as Error).message}`)
     } finally {
       setBusy(false)
     }
@@ -494,47 +593,31 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     )
   }
   const start = async () => {
-    if (taskRunning) {
-      setMessage('已有单节点搜索正在运行。')
-      return
-    }
     if (!searchConfig) {
       setMessage('搜索配置尚未加载，无法启动。')
       return
     }
-    setLogs('')
     setGalaxyDetail(null)
-    setMessage(`正在准备 ${selection.galaxy.toUpperCase()} / ${selection.node} 搜索任务…`)
-    setElapsedSeconds(0)
+    setErrorDetail('')
+    setMessage(`正在将 ${selection.galaxy.toUpperCase()} / ${selection.node} 加入队列…`)
     localStorage.setItem(LAST_SEARCH_KEY, JSON.stringify(selection))
     try {
-      const result = await api.run({
+      const item = await api.enqueueSearch({
         ...selection,
         versionName: currentVersion?.name ?? selection.version,
         commonName: currentCommon?.name ?? selection.common,
         search: searchConfig,
       })
-      if (!result.task) throw new Error('Main 未返回搜索任务快照。')
-      setSearchTask(current => ({
-        snapshot: result.task!,
-        status: result.error ? 'failed' : 'completed',
-        logs: current?.snapshot.taskId === result.task!.taskId ? current.logs : '',
-        result: result.result,
-        exitCode: result.exitCode,
-        finishedAt: result.finishedAt,
-        error: result.error,
-      }))
-      const confirmed = format(result.task.search)
-      setSearchConfig(result.task.search)
+      setSearchTask(taskFromQueue(item))
+      const confirmed = format(item.snapshot.search)
+      setSearchConfig(item.snapshot.search)
       setSearchConfigSource(confirmed)
       setSavedSearchConfigSource(confirmed)
       setConfigSources(current => ({ ...current, search: 'local' }))
-      setMessage(result.error ? `搜索失败：${result.error}` : '搜索完成，Best Found 已绑定到本次任务。')
+      setMessage(`${item.snapshot.node} 已加入搜索队列。`)
     } catch (error) {
-      setSearchTask(current =>
-        current?.status === 'running' ? { ...current, status: 'failed', error: (error as Error).message } : current,
-      )
-      setMessage(`搜索失败：${(error as Error).message}`)
+      setMessage(`无法加入队列：${runErrorSummary(error)}`)
+      setErrorDetail(String((error as Error).message ?? error).slice(0, 4000))
     }
   }
   const useBest = () => {
@@ -546,39 +629,45 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       setMessage(`目标 ${task.node} / ${task.versionName} 存在未保存草稿，未应用 Best Found。`)
       return
     }
-    requestConfirm(
-      '使用最优配置？',
-      `Best Found 将应用到 ${task.galaxy.toUpperCase()} / ${task.node} / ${task.versionName}，不会使用当前浏览选择。`,
-      '使用最优配置',
-      () => {
-        void act(`Best Found 已写入 ${task.node} / ${task.versionName}。`, async () => {
-          const result = await api.useBest(task.taskId)
-          if (result.error || !result.node) throw new Error(result.error ?? 'Copy 未返回有效 Node。')
-          const source = format(result.node)
-          const draft = { value: result.node, source, savedSource: source }
-          nodeDrafts.current.set(targetKey, draft)
-          searchDrafts.current.set(targetKey, draft)
-          if (nodeDomainKey(selection) === targetKey) {
-            setNode(result.node)
-            setNodeSource(source)
-            setSavedNodeSource(source)
-          }
-        })
-      },
-    )
+    void act(`Best Found 已写入 ${task.node} / ${task.versionName}。`, async () => {
+      const result = await api.useBest(task.taskId)
+      if (result.error || !result.node) throw new Error(result.error ?? 'Copy 未返回有效 Node。')
+      const source = format(result.node)
+      const draft = { value: result.node, source, savedSource: source }
+      nodeDrafts.current.set(targetKey, draft)
+      searchDrafts.current.set(targetKey, draft)
+      if (nodeDomainKey(selection) === targetKey) {
+        setNode(result.node)
+        setNodeSource(source)
+        setSavedNodeSource(source)
+      }
+    })
   }
-  const rerunCurrentGalaxy = () =>
-    act('', async () => {
-      if (taskRunning) throw new Error('单节点搜索运行期间不能启动 Galaxy 重跑。')
-      setLogs('')
+  const rerunCurrentGalaxy = async () => {
+    if (!searchConfig || !rerunNodes.length || rerunStarting || rerunActive) return
+    const searchSnapshot = searchConfig
+    try {
+      setRerunStarting(true)
+      setErrorDetail('')
       setGalaxyDetail(null)
       setMessage(`${selection.galaxy.toUpperCase()} 正在串行重跑…`)
-      const result = await api.rerunGalaxy(selection.galaxy)
+      const result = await api.rerunGalaxy({ galaxy: selection.galaxy, nodes: rerunNodes, search: searchSnapshot })
       setGalaxyRerun(result)
+      setSavedSearchConfigSource(format(searchSnapshot))
+      setConfigSources(current => ({ ...current, search: 'local' }))
       const failed = result.nodes.filter(item => item.status === 'failed').length
       const changed = result.nodes.filter(item => item.changed).length
-      setMessage(`Galaxy 重跑完成：发现 ${changed} 个配置变化，${failed} 个节点失败。`)
-    })
+      const canceled = result.nodes.filter(item => item.status === 'canceled').length
+      setMessage(`Galaxy 重跑结束：发现 ${changed} 个配置变化，${failed} 个失败，${canceled} 个已停止。`)
+    } catch (error) {
+      setMessage(`Galaxy 重跑失败：${runErrorSummary(error)}`)
+      setErrorDetail(String((error as Error).message ?? error).slice(0, 4000))
+    } finally {
+      setRerunStarting(false)
+    }
+  }
+  const stopCurrent = () => void api.stopCurrent().catch(error => setMessage(runErrorSummary(error)))
+  const stopAll = () => void api.stopAll().catch(error => setMessage(runErrorSummary(error)))
   const openGalaxyResult = (item: GalaxyRerunNode) => {
     cacheCurrentDraft()
     setMessage('')
@@ -699,6 +788,11 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const optimizerGlobalContext = workspace === 'common' && commonTab === 'optimizer'
   const showNodeContext = workspace === 'node' || workspace === 'search' || workspace === 'templates'
   const showCommonContext = showNodeContext || (workspace === 'common' && commonTab === 'galaxy')
+  const rerunCatalogNodes = catalog.galaxies.find(item => item.id === selection.galaxy)?.nodes ?? []
+  const orderedRerunNodeIds = [
+    ...rerunNodes.filter(id => rerunCatalogNodes.some(node => node.id === id)),
+    ...rerunCatalogNodes.map(node => node.id).filter(id => !rerunNodes.includes(id)),
+  ]
   return (
     <main className="app">
       <aside className="sidebar" aria-label="主工作区">
@@ -733,9 +827,52 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             模板与复制
           </button>
         </nav>
-        {searchTask ? (
+        {searchQueue.length ? (
+          <div className="sidebar-queue" aria-label="搜索任务队列">
+            <strong>搜索任务</strong>
+            {searchQueue.map(item => (
+              <button
+                key={item.snapshot.taskId}
+                className="task-chip"
+                onClick={() => {
+                  switchWorkspace('search')
+                  setSearchTask(taskFromQueue(item))
+                }}
+              >
+                <span className={`run-dot ${item.status}`} />
+                <span>
+                  <strong>
+                    {item.snapshot.node} ·{' '}
+                    {item.status === 'waiting'
+                      ? '等待'
+                      : item.status === 'running'
+                        ? '搜索中'
+                        : item.status === 'success'
+                          ? '完成'
+                          : item.status === 'canceled'
+                            ? '已停止'
+                            : '失败'}
+                  </strong>
+                  <small>
+                    {item.status === 'waiting'
+                      ? '—'
+                      : formatDuration(
+                          item.run
+                            ? Math.max(
+                                0,
+                                Math.round((Date.parse(item.run.finishedAt) - Date.parse(item.run.startedAt)) / 1000),
+                              )
+                            : elapsedSeconds,
+                        )}
+                  </small>
+                </span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {!searchQueue.length && searchTask ? (
           <button className="task-chip" onClick={() => switchWorkspace('search')}>
-            <span className={`run-dot ${searchTask.status === 'running' ? 'running' : searchTask.status}`} />
+            <span className={`run-dot ${searchTask.status}`} />
             <span>
               <strong>
                 {searchTask.snapshot.node}{' '}
@@ -782,10 +919,11 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
               </button>
             )
           ) : null}
-          {workspace === 'rerun' ? (
-            <button className="primary" onClick={() => void rerunCurrentGalaxy()} disabled={busy || taskRunning}>
-              {busy ? '重跑中…' : `重跑 ${selection.galaxy.toUpperCase()}`}
-            </button>
+          {workspace === 'rerun' && galaxyRerun?.status === 'running' ? (
+            <>
+              <button onClick={stopCurrent}>停止当前节点</button>
+              <button onClick={stopAll}>停止整个批次</button>
+            </>
           ) : null}
         </div>
       </header>
@@ -902,25 +1040,84 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         </div>
       </section>
       {message ? (
-        <p className="notice" role="status">
-          {message}
-        </p>
+        <div className="notice" role="status">
+          <p>{message}</p>
+          {errorDetail ? (
+            <details>
+              <summary>查看详情</summary>
+              <pre>{errorDetail}</pre>
+            </details>
+          ) : null}
+        </div>
       ) : null}
       {workspace === 'rerun' ? (
-        galaxyRerun ? (
-          <GalaxyRerunPanel progress={galaxyRerun} onOpen={openGalaxyResult} />
-        ) : (
-          <section className="panel rerun-empty">
-            <div className="empty-symbol" aria-hidden="true">
-              ↻
+        <>
+          <section className="panel rerun-selection" aria-label="选择重跑节点">
+            <h2>本次重跑</h2>
+            <p>选择节点并调整顺序。启动时自动保存并冻结搜索设置。</p>
+            <p>
+              {searchConfig
+                ? `${searchConfig.profile} · ${searchConfig.max_simulations} 次 · ${searchConfig.max_wall_seconds} 秒 · ${searchConfig.workers} Workers${searchDirty ? ' · 待自动保存' : ''}`
+                : '搜索设置加载中'}
+            </p>
+            <div className="rerun-order">
+              {orderedRerunNodeIds.map(nodeId => {
+                const index = rerunNodes.indexOf(nodeId)
+                return (
+                  <div key={nodeId}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={index >= 0}
+                        onChange={event =>
+                          setRerunNodes(current =>
+                            event.target.checked ? [...current, nodeId] : current.filter(id => id !== nodeId),
+                          )
+                        }
+                      />
+                      {nodeId}
+                    </label>
+                    <button
+                      aria-label={`上移 ${nodeId}`}
+                      disabled={index <= 0}
+                      onClick={() =>
+                        setRerunNodes(current => {
+                          const next = [...current]
+                          ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
+                          return next
+                        })
+                      }
+                    >
+                      ↑
+                    </button>
+                    <button
+                      aria-label={`下移 ${nodeId}`}
+                      disabled={index < 0 || index >= rerunNodes.length - 1}
+                      onClick={() =>
+                        setRerunNodes(current => {
+                          const next = [...current]
+                          ;[next[index + 1], next[index]] = [next[index], next[index + 1]]
+                          return next
+                        })
+                      }
+                    >
+                      ↓
+                    </button>
+                  </div>
+                )
+              })}
             </div>
-            <h2>检查 {selection.galaxy.toUpperCase()} 的默认配置</h2>
-            <p>按节点顺序运行默认版本，并使用当前 Galaxy 的默认公共配置。只报告阵型或装配变化，不会自动采用结果。</p>
-            <button className="primary" onClick={() => void rerunCurrentGalaxy()} disabled={busy || taskRunning}>
-              {busy ? '正在重跑…' : `开始重跑 ${selection.galaxy.toUpperCase()}`}
+            <p>顺序：{rerunNodes.join(' → ') || '未选择节点'}</p>
+            <button
+              className="primary"
+              onClick={() => void rerunCurrentGalaxy()}
+              disabled={rerunStarting || rerunActive || taskRunning || !rerunNodes.length}
+            >
+              开始重跑所选节点
             </button>
           </section>
-        )
+          {galaxyRerun ? <GalaxyRerunPanel progress={galaxyRerun} onOpen={openGalaxyResult} /> : null}
+        </>
       ) : null}
       {workspace === 'templates' ? (
         <section className="management panel workspace-view">
@@ -1014,11 +1211,29 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
               Optimizer 公共
             </button>
           </div>
-          {commonTab === 'galaxy' && commonReadOnly && searchTask ? (
-            <LockedNotice node={searchTask.snapshot.node} label="该 Galaxy Common" />
+          {commonTab === 'galaxy' && commonReadOnly ? (
+            <LockedNotice
+              node={
+                activeQueueItem?.snapshot.node ??
+                galaxyRerun?.currentNode ??
+                searchTask?.snapshot.node ??
+                selection.node
+              }
+              label="该 Galaxy Common"
+              kind={rerunActive ? '重跑' : '搜索'}
+            />
           ) : null}
-          {commonTab === 'optimizer' && optimizerReadOnly && searchTask ? (
-            <LockedNotice node={searchTask.snapshot.node} label="Optimizer 公共配置" />
+          {commonTab === 'optimizer' && optimizerReadOnly ? (
+            <LockedNotice
+              node={
+                activeQueueItem?.snapshot.node ??
+                galaxyRerun?.currentNode ??
+                searchTask?.snapshot.node ??
+                selection.node
+              }
+              label="Optimizer 公共配置"
+              kind={rerunActive ? '重跑' : '搜索'}
+            />
           ) : null}
           <fieldset className="editor-lock" disabled={commonTab === 'galaxy' ? commonReadOnly : optimizerReadOnly}>
             {common && commonTab === 'galaxy' ? (
@@ -1099,8 +1314,17 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 </button>
               ))}
             </div>
-            {nodeReadOnly && searchTask ? (
-              <LockedNotice node={searchTask.snapshot.node} label="该 Node Version" />
+            {nodeReadOnly ? (
+              <LockedNotice
+                node={
+                  activeQueueItem?.snapshot.node ??
+                  galaxyRerun?.currentNode ??
+                  searchTask?.snapshot.node ??
+                  selection.node
+                }
+                label="该 Node Version"
+                kind={rerunActive ? '重跑' : '搜索'}
+              />
             ) : null}
             <fieldset className="editor-lock" disabled={nodeReadOnly}>
               {node && editorTab === 'formation' ? (
@@ -1138,13 +1362,15 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           selection={selection}
           busy={busy}
           dirty={searchDirty}
-          readOnly={taskRunning}
+          readOnly={false}
           task={searchTask}
           elapsedSeconds={elapsedSeconds}
           activeRun={activeRun}
           changes={changes.length}
           onOpenSettings={() => setSearchSettingsOpen(true)}
           onStart={() => void start()}
+          onStopCurrent={stopCurrent}
+          onStopAll={stopAll}
           onUseBest={useBest}
         />
       ) : null}
@@ -1152,7 +1378,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         <SearchSettingsDialog
           config={searchConfig}
           dirty={searchDirty}
-          readOnly={taskRunning}
+          readOnly={false}
           source={configSources.search}
           onChange={next => {
             setSearchConfig(next)
@@ -1404,6 +1630,8 @@ function SearchWorkspace({
   changes,
   onOpenSettings,
   onStart,
+  onStopCurrent,
+  onStopAll,
   onUseBest,
 }: {
   node: NodeConfig | null
@@ -1421,6 +1649,8 @@ function SearchWorkspace({
   changes: number
   onOpenSettings: () => void
   onStart: () => void
+  onStopCurrent: () => void
+  onStopAll: () => void
   onUseBest: () => void
 }) {
   const running = task?.status === 'running'
@@ -1492,10 +1722,12 @@ function SearchWorkspace({
         </div>
       </div>
       <section className="panel search-command">
-        <button className="primary start-search" onClick={onStart} disabled={busy || running || !search}>
+        <button className="primary start-search" onClick={onStart} disabled={busy || !search}>
           <Icon name="play" />
-          {running ? `${task.snapshot.node} 搜索中…` : '开始搜索'}
+          加入搜索队列
         </button>
+        {running ? <button onClick={onStopCurrent}>停止当前</button> : null}
+        {running ? <button onClick={onStopAll}>停止全部</button> : null}
         <p className="search-summary">
           <strong>{profile}</strong>
           <span>{search?.goal ?? '—'}</span>
@@ -1514,23 +1746,41 @@ function SearchWorkspace({
           <div>
             <h2>运行状态</h2>
             <p>
-              {progress?.trim() || (running ? '正在准备 Optimizer…' : activeRun ? '任务已结束。' : '尚未启动任务。')}
+              {running
+                ? '当前任务正在运行'
+                : task?.status === 'waiting'
+                  ? '等待前序任务完成'
+                  : activeRun
+                    ? '任务已结束。'
+                    : '尚未启动任务。'}
             </p>
           </div>
           <span className={`run-dot ${running ? 'running' : (task?.status ?? (activeRun ? 'completed' : ''))}`} />
         </div>
         <dl>
           <dt>状态</dt>
-          <dd>{running ? '搜索中' : activeRun ? (activeRun.error ? '失败' : '已完成') : '空闲'}</dd>
+          <dd>
+            {running
+              ? '搜索中'
+              : task?.status === 'waiting'
+                ? '等待'
+                : task?.status === 'canceled'
+                  ? '已停止'
+                  : activeRun
+                    ? activeRun.error
+                      ? '失败'
+                      : '已完成'
+                    : '空闲'}
+          </dd>
           <dt>时间</dt>
           <dd>{runSeconds}s</dd>
           <dt>进度</dt>
-          <dd>{running ? progress?.trim() || '准备中' : activeRun ? '完成' : '—'}</dd>
+          <dd>{running ? progress?.trim() || '准备中' : '—'}</dd>
           <dt>Workers</dt>
           <dd>{snapshot?.search.workers ?? search?.workers ?? '—'}</dd>
         </dl>
         <details className="console">
-          <summary>Optimizer 输出 / 日志</summary>
+          <summary>Optimizer 输出 / 日志（最近 200 KB）</summary>
           <pre className="logs">{taskLogs || (running ? '等待 Optimizer 输出…' : '尚未启动任务。')}</pre>
         </details>
       </section>
@@ -1547,7 +1797,17 @@ function SearchWorkspace({
           <div className="result-empty">
             <span aria-hidden="true">◎</span>
             <strong>还没有搜索结果</strong>
-            <p>{activeRun?.error ?? '搜索完成后，Best Found 会直接显示在这里。'}</p>
+            <p>
+              {activeRun?.error
+                ? runErrorSummary(activeRun.error, activeRun.canceled)
+                : '搜索完成后，Best Found 会直接显示在这里。'}
+            </p>
+            {activeRun?.error ? (
+              <details>
+                <summary>查看详情</summary>
+                <pre>{activeRun.error}</pre>
+              </details>
+            ) : null}
           </div>
         )}
       </section>
@@ -1635,16 +1895,23 @@ function BestFound({
             <dd>{best.boss_damage}</dd>
           </div>
         ) : null}
-        {saved !== null && saved > 0 ? (
+        {saved !== null ? (
           <div>
-            <dt>节省 FR</dt>
+            <dt>Saved FR</dt>
             <dd>{saved.toFixed(2)}</dd>
           </div>
         ) : null}
-        {typeof improvement.percent === 'number' ? (
+        {typeof improvement.percent === 'number' ||
+        (saved !== null && typeof baseline?.fleet_resources_used === 'number' && baseline.fleet_resources_used > 0) ? (
           <div>
-            <dt>改善</dt>
-            <dd>{improvement.percent.toFixed(2)}%</dd>
+            <dt>改善比例</dt>
+            <dd>
+              {(typeof improvement.percent === 'number'
+                ? improvement.percent
+                : (saved! / baseline!.fleet_resources_used!) * 100
+              ).toFixed(2)}
+              %
+            </dd>
           </div>
         ) : null}
       </dl>
@@ -1712,10 +1979,10 @@ function Label({ text, children }: { text: string; children: React.ReactNode }) 
   )
 }
 
-function LockedNotice({ node, label }: { node: string; label: string }) {
+function LockedNotice({ node, label, kind = '搜索' }: { node: string; label: string; kind?: '搜索' | '重跑' }) {
   return (
     <p className="lock-notice" role="status">
-      {label}正在被 {node} 搜索任务使用，任务结束后可编辑。
+      {label}正在被 {node} {kind}任务使用，任务结束后可编辑。
     </p>
   )
 }

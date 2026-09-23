@@ -284,7 +284,8 @@ export class DataRepository {
     const source = await readFile(effective.path, 'utf8')
     const sourceObject = JSON.parse(source)
     const current = optimizerConfigSchema.parse(sourceObject)
-    if (effective.source === 'local' && isDeepStrictEqual(current, parsed)) return
+    if (effective.source === 'local' && isDeepStrictEqual(current, parsed) && isDeepStrictEqual(sourceObject, parsed))
+      return
     const newline = source.includes('\r\n') ? '\r\n' : '\n'
     const indent = source.match(/\r?\n([ \t]+)"/)?.[1] ?? '  '
     const trailingNewline = /\r?\n$/.test(source)

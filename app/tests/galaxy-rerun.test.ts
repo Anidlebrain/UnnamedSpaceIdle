@@ -96,6 +96,37 @@ afterEach(async () => {
 })
 
 describe('GalaxyRerunService', () => {
+  it('runs selected nodes in requested order with one frozen Search draft', async () => {
+    const fixture = await setup()
+    const staged: Array<{ node: string; max: number }> = []
+    const runner = new OptimizerRunner(
+      fixture.repo,
+      fixture.root,
+      () => {},
+      async selection => {
+        const config = JSON.parse(await readFile(join(fixture.mapGalaxy, `${selection.node}.json`), 'utf8'))
+        staged.push({ node: selection.node, max: config.search.max_simulations })
+        await writeFile(
+          join(fixture.mapGalaxy, `${selection.node}.result.json`),
+          JSON.stringify({
+            base_config: { resolver: { friendly_input: { galaxy: 6, node: selection.node } } },
+            verified_baseline: { formation: [] },
+            best_result: { formation: [] },
+          }),
+        )
+        return 0
+      },
+    )
+    const service = new GalaxyRerunService(fixture.repo, runner, () => {})
+    const search = { ...node('B1', 'x').search, max_simulations: 7 }
+    const progress = await service.run({ galaxy: 'g6', nodes: ['B3', 'B1'], search })
+    expect(staged).toEqual([
+      { node: 'B3', max: 7 },
+      { node: 'B1', max: 7 },
+    ])
+    expect(progress.nodes.map(item => item.node)).toEqual(['B3', 'B1'])
+    expect(progress.nodes.every(item => item.run?.task?.search.max_simulations === 7)).toBe(true)
+  })
   it('uses only Galaxy defaults, runs serially, filters FR-only changes, continues failures, and never writes Manager data', async () => {
     const fixture = await setup()
     const managerPaths = [
