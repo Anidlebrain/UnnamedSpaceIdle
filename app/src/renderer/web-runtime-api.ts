@@ -11,6 +11,7 @@ import type {
 } from '../shared/contracts'
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
 import { nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
+import { effectiveShipCounts } from '../shared/ship-counts'
 import { preserveShipSelectorFormat, shipSelectorToId } from '../shared/ship-selectors'
 
 const clone = <T>(value: T): T => structuredClone(value)
@@ -410,6 +411,7 @@ export function createBrowserApi(): FleetManagerApi {
           boss: clone(staged.boss),
           hazards: clone(staged.hazards),
           supports: clone(staged.supports),
+          player_state: { ...clone(staged.player_state), ships: effectiveShipCounts(staged, common) },
         },
         startedAt: new Date().toISOString(),
       }
@@ -441,7 +443,14 @@ export function createBrowserApi(): FleetManagerApi {
           commonConfigHash: '',
           optimizerConfigHash: '',
           optimizerConfigVersion: '',
-          environment: { hazards: [], supports: [], player_state: clone(nodes.get(key(request))!.player_state) },
+          environment: {
+            hazards: [],
+            supports: [],
+            player_state: {
+              ...clone(nodes.get(key(request))!.player_state),
+              ships: effectiveShipCounts(nodes.get(key(request))!, commons.get(commonKey(request))!),
+            },
+          },
           startedAt: new Date().toISOString(),
         },
         status: 'waiting',
@@ -505,6 +514,7 @@ export function createBrowserApi(): FleetManagerApi {
                 boss: clone(current.boss),
                 hazards: clone(current.hazards),
                 supports: clone(current.supports),
+                player_state: { ...clone(current.player_state), ships: effectiveShipCounts(current, common) },
               },
               startedAt: now,
             }

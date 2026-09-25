@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { nodeConfigSchema, optimizerConfigSchema } from '../src/shared/schemas'
+import { commonConfigSchema, nodeConfigSchema, optimizerConfigSchema } from '../src/shared/schemas'
+import { effectiveShipCounts } from '../src/shared/ship-counts'
 import { runErrorSummary } from '../src/shared/run-errors'
 import { restoreContexts } from '../src/renderer/state-model'
 import type { Catalog } from '../src/shared/contracts'
@@ -69,6 +70,32 @@ describe('V1.2 shared contracts', () => {
     })
     expect(parsed.ship_types).toEqual(['HeavyCruiser'])
     expect(parsed.allowed_mod_slots).toHaveProperty('HeavyCruiser')
+  })
+  it('adds Galaxy ships to Node extras and keeps legacy absolute counts', () => {
+    const node = nodeConfigSchema.parse({
+      galaxy: 6,
+      node: 'B13',
+      hazards: [],
+      supports: [],
+      player_state: { fleet_resources: 190, ships: { Fighter: 0, HeavyCruiser: 1 } },
+      baseline: { enabled: true, formation: {}, loadouts: {} },
+      search: {
+        profile: 'fast',
+        goal: 'best',
+        simulation_clock: 'offline_fixed_step',
+        max_wall_seconds: 1,
+        max_simulations: 1,
+        workers: 1,
+      },
+    })
+    const common = commonConfigSchema.parse({
+      permanent: { damage_scale: 1, health_scale: 1 },
+      temporary: { damage_scale: 0, health_scale: 0 },
+      ships: { Fighter: 1, Corvette: 2, 'Heavy Cruiser': 0 },
+    })
+    expect(effectiveShipCounts(node, common)).toEqual({ Fighter: 1, Corvette: 2, HeavyCruiser: 1 })
+    expect(effectiveShipCounts(node, { ...common, ships: undefined })).toEqual({ Fighter: 0, HeavyCruiser: 1 })
+    expect(() => commonConfigSchema.parse({ ...common, ships: { Fighter: -1 } })).toThrow()
   })
   it('classifies raw failures into short Chinese summaries', () => {
     expect(runErrorSummary('BASELINE VALIDATION FAILED')).toBe('基线配置无效')

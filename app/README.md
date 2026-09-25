@@ -38,6 +38,7 @@
 - Galaxy 重跑过程只做变化发现，不自动执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found；用户可从节点详情手动使用单个 Best Found。
 - 五个独立工作区：节点配置、公共配置、搜索、Galaxy 重跑、模板与复制。Galaxy / Optimizer 公共不再作为当前 Node Tab。
 - Node 结构化编辑按阵型、舰队状态、装配、环境排列，覆盖 Formation、Fleet Resources、各舰种数量、Loadout、Boss、Hazards 与 Supports；Raw JSON 收入高级区。完整字段审计见 [`docs/node-field-audit.md`](docs/node-field-audit.md)。
+- Galaxy Common 可保存 `ships` 公共舰船数量；启用后 Node `player_state.ships` 表示各舰种额外数量，搜索使用两者相加的有效数量。舰队状态页同时显示公共、节点和搜索数量。未设置 `common.ships` 的旧 Galaxy 仍按节点原有绝对数量运行。
 - Search 偏好独立保存在忽略的 `fleetSimulation/map/search_config.json`，缺失时回退提交的 `poc/search_config.json`；点击开始即自动保存、回读确认、写入任务快照并覆盖到 staged Node。
 - Optimizer 公共配置优先读取忽略的 `fleetSimulation/map/optimizer_v2_daily.json`，缺失时回退提交的 `poc` 默认文件；日常编辑不再污染 Git。
 - Loadout 选择由当前 `allowed_mod_slots` 有序数组驱动：`None + 1 Mod` 显示开关，多个 Mod 显示下拉，无合法 Mod 显示不可用；保存仍保持既有字符串 ID 或数字索引表示。
@@ -76,6 +77,7 @@ pnpm test
 ## 数据边界
 
 - `app/data/`：个人本地正式配置、Galaxy/Node 版本和 Common Profile；整个目录已加入 Git 忽略，不提交任何个人数据。
+- G6 本机配置已按公共 `1/2/1/1/0` 迁移，全部 Node Version 的有效舰船数量保持不变；B12 和 BB2 保留原有的额外 1 艘重型巡洋舰。迁移脚本为 `scripts/migrate-g6-ships.mjs`，仅用于尚未迁移的 G6 数据，执行前会在 `app/runtime/` 备份原始文件。
 - `app/runtime/`：最近一次任务快照等运行时状态；已加入 Git 忽略。
 - `fleetSimulation/map/`：Git 忽略的本机运行与配置覆盖层；包含 staged Node/Common、Search 偏好和可选 Optimizer 公共覆盖。
 - `fleetSimulation/poc/search_config.json`、`poc/optimizer_v2_daily.json`：Git 跟踪的默认 / fallback，不由日常 Manager 编辑覆盖。

@@ -16,6 +16,13 @@ const normalizeNodeShips = (input: unknown): unknown => {
   return value
 }
 
+const normalizeCommonShips = (input: unknown): unknown => {
+  if (!input || typeof input !== 'object') return input
+  const value = structuredClone(input) as Record<string, any>
+  if (value.ships) value.ships = canonicalShipRecord(value.ships)
+  return value
+}
+
 export const jsonObject = z.object({}).passthrough()
 const scaleSchema = jsonObject.extend({ damage_scale: z.number(), health_scale: z.number() })
 // The Optimizer accepts both internal Mod IDs and the documented numeric Mod
@@ -55,7 +62,15 @@ const rawNodeConfigSchema = jsonObject.extend({
   search: searchConfigSchema,
 })
 export const nodeConfigSchema = z.preprocess(normalizeNodeShips, rawNodeConfigSchema)
-export const commonConfigSchema = jsonObject.extend({ permanent: scaleSchema, temporary: scaleSchema })
+export const commonConfigSchema = z.preprocess(
+  normalizeCommonShips,
+  jsonObject.extend({
+    permanent: scaleSchema,
+    temporary: scaleSchema,
+    // Absent in older Galaxy data: those Nodes keep their original absolute ship counts.
+    ships: z.record(z.number().int().nonnegative()).optional(),
+  }),
+)
 const optimizerRangeSchema = jsonObject.extend({
   min: z.number().int().nonnegative(),
   max: z.number().int().nonnegative(),

@@ -75,7 +75,22 @@ let report: Record<string, unknown> = { galaxy, node, smokeBudget, startedAt: ne
 try {
   const originalNode = JSON.parse(nodeBefore.bytes!.toString('utf8'))
   const originalCommon = JSON.parse(commonBefore.bytes!.toString('utf8'))
-  const smokeNode = { ...originalNode, search: { ...originalNode.search, ...smokeBudget } }
+  const commonShips = { Fighter: 1, Corvette: 2, Frigate: 1, Cruiser: 1, HeavyCruiser: 0 }
+  const smokeNode = {
+    ...originalNode,
+    player_state: {
+      ...originalNode.player_state,
+      ships: Object.fromEntries(
+        Object.entries(commonShips).map(([ship, count]) => [
+          ship,
+          (originalNode.player_state.ships[ship] ?? 0) - Number(count),
+        ]),
+      ),
+    },
+    search: { ...originalNode.search, ...smokeBudget },
+  }
+  if (Object.values(smokeNode.player_state.ships).some(count => Number(count) < 0))
+    throw new Error('Smoke Node has fewer ships than the selected Galaxy common counts.')
   temporaryDataRoot = await mkdtemp(join(tmpdir(), 'optimizer-real-smoke-'))
   const managerGalaxy = join(temporaryDataRoot, 'galaxies', galaxy)
   await mkdir(join(managerGalaxy, 'nodes', node, 'versions'), { recursive: true })
@@ -90,7 +105,7 @@ try {
   )
   await writeFile(
     join(managerGalaxy, 'common', 'versions', 'smoke.json'),
-    `${JSON.stringify(originalCommon, null, 2)}\n`,
+    `${JSON.stringify({ ...originalCommon, ships: commonShips }, null, 2)}\n`,
   )
 
   const output: string[] = []
@@ -113,6 +128,8 @@ try {
   const resultAfter = await snapshot(join(mapGalaxy, `${node}.result.json`))
   if (run.exitCode !== 0 || run.error || !run.result)
     throw new Error(run.error ?? `Optimizer returned exit code ${run.exitCode}`)
+  if (JSON.stringify(run.task?.environment.player_state?.ships) !== JSON.stringify(commonShips))
+    throw new Error('Search task did not use the combined Galaxy and Node ship counts.')
   if (!run.result.best_result) throw new Error('New Result has no best_result.')
   if (!resultAfter.bytes || resultBefore.hash === resultAfter.hash)
     throw new Error('Result content was not newly generated.')

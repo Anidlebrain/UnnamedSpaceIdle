@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../../src/shared/bridge'
 import type { NodeConfig } from '../../src/shared/schemas'
+import { commonConfigSchema } from '../../src/shared/schemas'
 import type { GalaxyRerunProgress, SearchQueueItem, SearchTaskSnapshot } from '../../src/shared/contracts'
 import { App } from '../../src/renderer/App'
 
@@ -423,6 +424,32 @@ describe('Renderer preload contract', () => {
     const raw = (screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value
     expect(raw).toContain('"fleet_resources": 79.67')
     expect(raw).toContain('"HeavyCruiser": 7')
+  })
+
+  it('shows Galaxy, Node and effective ship counts separately', async () => {
+    api.load.mockResolvedValueOnce({
+      node: { ...node, player_state: { fleet_resources: 190, ships: { Fighter: 0, HeavyCruiser: 1 } } },
+      common: commonConfigSchema.parse({
+        permanent: { damage_scale: 1, health_scale: 1 },
+        temporary: { damage_scale: 0, health_scale: 0 },
+        ships: { Fighter: 1, Corvette: 2, HeavyCruiser: 0 },
+      }),
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '舰队状态' }))
+    expect(screen.getByText('公共 1 + 节点 0 = 搜索 1')).toBeTruthy()
+    expect(screen.getByText('公共 0 + 节点 1 = 搜索 1')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('ships.HeavyCruiser'), { target: { value: '2' } })
+    expect(screen.getByText('公共 0 + 节点 2 = 搜索 2')).toBeTruthy()
+  })
+
+  it('edits Galaxy public ship counts through the structured Common editor', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '公共配置' }))
+    fireEvent.change(screen.getByLabelText('common.ships.Fighter'), { target: { value: '2' } })
+    expect((screen.getByLabelText('Common JSON 编辑器') as HTMLTextAreaElement).value).toContain('"Fighter": 2')
   })
 
   it('edits Boss, Hazards, and Supports without Raw JSON', async () => {

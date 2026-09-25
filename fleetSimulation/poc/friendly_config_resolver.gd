@@ -112,20 +112,10 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 	if not bool(scales_result.get("ok", false)):
 		return scales_result
 	var scales: Dictionary = scales_result.scales
-	var ships := {}
-	for ship_selector in player.ships:
-		var ship_result := _resolve_ship_selector(ship_selector, false)
-		if not bool(ship_result.ok):
-			return _error("Invalid player_state.ships key: %s" % ship_result.error)
-		var ship_id: String = ship_result.ship
-		if ship_id not in db.fleet_ships:
-			return _error("Unknown player ship in original DB: %s" % ship_id)
-		if ship_id in ships:
-			return _error("Duplicate player ship after numeric conversion: %s" % ship_id)
-		var available := int(player.ships[ship_selector])
-		if available < 0:
-			return _error("ships.%s must be non-negative" % ship_id)
-		ships[ship_id] = {"enabled": available > 0, "available": available}
+	var ships_result := _resolve_player_ships(player.ships, common)
+	if not bool(ships_result.get("ok", false)):
+		return ships_result
+	var ships: Dictionary = ships_result.ships
 
 	var search: Dictionary = friendly.get("search", {}) if friendly.get("search", {}) is Dictionary else {}
 	var profile := str(search.get("profile", "fast"))
@@ -222,6 +212,35 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 	}
 	_print_summary(galaxy_number, node_name, resolved)
 	return {"ok": true, "config": resolved}
+
+
+func _resolve_player_ships(node_ships, common: Dictionary) -> Dictionary:
+	if not node_ships is Dictionary:
+		return _error("player_state.ships must be an object")
+	var sources := [{"name": "player_state.ships", "values": node_ships}]
+	if common.has("ships"):
+		if not common.ships is Dictionary:
+			return _error("common.json.ships must be an object")
+		sources.push_front({"name": "common.json.ships", "values": common.ships})
+	var ships := {}
+	for source in sources:
+		var seen := {}
+		for ship_selector in source["values"]:
+			var ship_result := _resolve_ship_selector(ship_selector, false)
+			if not bool(ship_result.ok):
+				return _error("Invalid %s key: %s" % [source["name"], ship_result.error])
+			var ship_id: String = ship_result.ship
+			if ship_id not in db.fleet_ships:
+				return _error("Unknown player ship in original DB: %s" % ship_id)
+			if ship_id in seen:
+				return _error("Duplicate %s ship after numeric conversion: %s" % [source["name"], ship_id])
+			seen[ship_id] = true
+			var available := int(source["values"][ship_selector])
+			if available < 0:
+				return _error("%s.%s must be non-negative" % [source["name"], ship_id])
+			var total := int(ships.get(ship_id, {}).get("available", 0)) + available
+			ships[ship_id] = {"enabled": total > 0, "available": total}
+	return {"ok": true, "ships": ships}
 
 
 func _resolve_scales(player: Dictionary, common: Dictionary) -> Dictionary:
@@ -384,6 +403,12 @@ func _validate_candidate(candidate: Dictionary, ships: Dictionary, label: String
 
 
 func run_numeric_input_unit_tests(allowed_mod_slots: Dictionary) -> Dictionary:
+	var combined_ships := _resolve_player_ships(
+		{"5": 1, "Fighter": 0},
+		{"ships": {"Fighter": 1, "Corvette": 2, "Frigate": 1, "Cruiser": 1, "HeavyCruiser": 0}}
+	)
+	var legacy_ships := _resolve_player_ships({"Fighter": 1}, {})
+	var invalid_common_ships := _resolve_player_ships({}, {"ships": {"5": 1, "Heavy Cruiser": 2}})
 	var normalized := _normalize_candidate({
 		"enabled": true,
 		"formation": {
@@ -415,11 +440,21 @@ func run_numeric_input_unit_tests(allowed_mod_slots: Dictionary) -> Dictionary:
 		and candidate.get("loadouts", {}).get("Frigate", {}).get("secondary") == "ArmorMod"
 		and candidate.get("loadouts", {}).get("Cruiser", {}).get("secondary") == "CruiserSingleArmorTank"
 		and not bool(invalid_slot.get("ok", false))
+		and bool(combined_ships.get("ok", false))
+		and int(combined_ships.ships.Fighter.available) == 1
+		and int(combined_ships.ships.Corvette.available) == 2
+		and int(combined_ships.ships.HeavyCruiser.available) == 1
+		and bool(legacy_ships.get("ok", false))
+		and int(legacy_ships.ships.Fighter.available) == 1
+		and not bool(invalid_common_ships.get("ok", false))
 	)
 	return {
 		"passed": passed,
 		"normalized": normalized,
 		"invalid_slot": invalid_slot,
+		"combined_ships": combined_ships,
+		"legacy_ships": legacy_ships,
+		"invalid_common_ships": invalid_common_ships,
 	}
 
 

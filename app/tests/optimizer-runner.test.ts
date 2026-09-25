@@ -77,6 +77,39 @@ async function setup() {
   }
 }
 describe('OptimizerRunner', () => {
+  it('stages Node extras and Galaxy ships for one additive search snapshot', async () => {
+    const x = await setup()
+    await x.repo.save(x.s, {
+      ...node,
+      player_state: { fleet_resources: 190, ships: { Fighter: 0, HeavyCruiser: 1 } },
+    })
+    await x.repo.saveCommon(x.s, {
+      ...common,
+      ships: { Fighter: 1, Corvette: 2, HeavyCruiser: 0 },
+    })
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      async () => {
+        await writeFile(join(x.map, 'B1.result.json'), JSON.stringify(result))
+        return 0
+      },
+    )
+    const queued = await runner.enqueue({ ...x.s, versionName: '默认', commonName: '默认', search: node.search })
+    expect(queued.snapshot.environment.player_state?.ships).toEqual({ Fighter: 1, Corvette: 2, HeavyCruiser: 1 })
+    await vi.waitFor(() => expect(runner.getQueue()[0].status).toBe('success'))
+    expect(JSON.parse(await readFile(join(x.map, 'B1.json'), 'utf8')).player_state.ships).toEqual({
+      Fighter: 0,
+      HeavyCruiser: 1,
+    })
+    expect(JSON.parse(await readFile(join(x.map, 'common.json'), 'utf8')).ships).toEqual({
+      Fighter: 1,
+      Corvette: 2,
+      HeavyCruiser: 0,
+    })
+    await rm(x.root, { recursive: true, force: true })
+  })
   it('rejects a duplicate active target and replaces its prior visible task on rerun', async () => {
     const x = await setup()
     let release!: () => void

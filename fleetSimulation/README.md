@@ -30,6 +30,8 @@ Friendly Config 的舰种既可沿用英文名，也可使用数字：`1=Fighter
 
 `run_optimizer.bat` 根据 Galaxy 和 Node 参数读取 `map/<galaxy>/<node>.json`，不写死 G6。Galaxy 公共倍率来自同目录 `common.json`：`permanent` 是长期最终倍率，`temporary` 是手工加算增量，`effective = permanent + temporary`；节点文件不再保存这两个 scale。使用已验证的 Godot 4.7.2 隔离测试工程，并采用当前已确认解锁的 Standard Galaxy Mod 集合。Fast / Balanced 默认使用 `offline_fixed_step`；Runner 通过 Godot 官方 `--fixed-fps 60` 关闭墙钟同步，但仍逐 tick 执行原版 60 Hz physics。可把 `search.simulation_clock` 改为 `realtime` 做 Reference / Debug。配置或 Baseline 验证失败时命令返回非零退出码，且不会覆盖已有的节点 JSON/TXT 或兼容 `latest` 输出。
 
+`common.json` 还可设置 `ships` 公共舰船数量。设置后，节点 `player_state.ships` 表示该节点额外数量，Resolver 按舰种相加后交给原版战斗与搜索。未设置 `common.ships` 时，节点舰船数量继续按旧格式作为绝对数量读取。Fleet Manager 的 G6 本机数据使用公共 `Fighter 1 / Corvette 2 / Frigate 1 / Cruiser 1 / HeavyCruiser 0`；B12 和 BB2 现有的重型巡洋舰仍作为节点额外数量保留。
+
 跨 Galaxy 的搜索空间、部署模式与精炼规则优先来自本机 `map/optimizer_v2_daily.json`，不存在时回退到提交的 `poc/optimizer_v2_daily.json`。BAT 会显示实际来源并把唯一有效文件复制到隔离 Godot 工程；Fleet Manager 只写 `map` 覆盖，因此日常设置不会修改 Git 默认文件。`allowed_mod_slots` 是按舰种、槽位保存的有序候选数组，`null` 是 None，数字 Loadout 值按数组索引解析；v3 当前只对 Primary 与 Secondary 做笛卡尔积。Standard Galaxy 的 Tertiary 仍由原版 `Fleet.get_ship_mods()` 按 Galaxy scope 自动附加，不是当前手动搜索维度。
 
 更精确地说，daily JSON 是跨 Galaxy 搜索空间、部署模式与精炼规则的来源；Friendly Config 的 Node `search.max_simulations`、`search.max_wall_seconds`、`search.simulation_clock`、`search.workers` 会在 Runner 合并后覆盖其中同名回退值，objective 则由 `boss.alive` 推导。Fleet Manager 维护 `map/search_config.json`（回退 `poc/search_config.json`），启动时才把确认值覆盖进 staged Node；直接 BAT 运行仍使用 Node 自带 `search`。完整 Source of Truth 表见 [`../app/docs/search-config-source-of-truth.md`](../app/docs/search-config-source-of-truth.md)。

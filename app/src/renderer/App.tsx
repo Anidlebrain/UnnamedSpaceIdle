@@ -14,6 +14,7 @@ import type {
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../shared/bridge'
 import { diffFormation } from '../shared/formation-diff'
+import { effectiveShipCounts } from '../shared/ship-counts'
 import {
   preserveShipSelectorFormat,
   SHIP_TYPES,
@@ -1409,9 +1410,11 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             ) : null}
             <fieldset className="editor-lock" disabled={nodeReadOnly}>
               {node && editorTab === 'formation' ? (
-                <FormationEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
+                <FormationEditor config={node} common={common} optimizer={optimizerConfig} onChange={tableChange} />
               ) : null}
-              {node && editorTab === 'fleet' ? <FleetStateEditor config={node} onChange={tableChange} /> : null}
+              {node && editorTab === 'fleet' ? (
+                <FleetStateEditor config={node} common={common} onChange={tableChange} />
+              ) : null}
               {node && optimizerConfig && editorTab === 'loadout' ? (
                 <LoadoutEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
               ) : null}
@@ -1576,9 +1579,19 @@ function SearchSettingsDialog({
   )
 }
 
-function FleetStateEditor({ config, onChange }: { config: NodeConfig; onChange: (value: NodeConfig) => void }) {
+function FleetStateEditor({
+  config,
+  common,
+  onChange,
+}: {
+  config: NodeConfig
+  common: CommonConfig | null
+  onChange: (value: NodeConfig) => void
+}) {
   const knownOrder: string[] = SHIP_TYPES.map(ship => ship.id)
-  const ships = [...new Set([...knownOrder, ...Object.keys(config.player_state.ships)])].sort((a, b) => {
+  const total = common ? effectiveShipCounts(config, common) : config.player_state.ships
+  const hasCommonShips = Boolean(common?.ships)
+  const ships = [...new Set([...knownOrder, ...Object.keys(total)])].sort((a, b) => {
     const left = knownOrder.indexOf(shipSelectorToId(a) || a)
     const right = knownOrder.indexOf(shipSelectorToId(b) || b)
     return (left < 0 ? 999 : left) - (right < 0 ? 999 : right) || a.localeCompare(b)
@@ -1598,7 +1611,11 @@ function FleetStateEditor({ config, onChange }: { config: NodeConfig; onChange: 
       <div className="section-heading">
         <div>
           <h3>舰队状态</h3>
-          <p>当前可用 Fleet Resources 与已解锁舰种数量；阵型只能使用数量大于 0 的舰种。</p>
+          <p>
+            {hasCommonShips
+              ? '节点填写额外舰船数量；搜索时与 Galaxy 公共舰船数量相加。'
+              : '当前可用 Fleet Resources 与已解锁舰种数量；阵型只能使用数量大于 0 的舰种。'}
+          </p>
         </div>
       </div>
       <Label text="Fleet Resources">
@@ -1622,6 +1639,12 @@ function FleetStateEditor({ config, onChange }: { config: NodeConfig; onChange: 
               value={config.player_state.ships[ship] ?? 0}
               onChange={event => updateShip(ship, event.target.value)}
             />
+            {hasCommonShips ? (
+              <small>
+                公共 {common?.ships?.[ship] ?? 0} + 节点 {config.player_state.ships[ship] ?? 0} = 搜索{' '}
+                {total[ship] ?? 0}
+              </small>
+            ) : null}
           </Label>
         ))}
       </div>
@@ -2202,15 +2225,22 @@ function ActionMenu({
 
 function FormationEditor({
   config,
+  common,
   optimizer,
   onChange,
 }: {
   config: NodeConfig
+  common: CommonConfig | null
   optimizer: OptimizerConfig | null
   onChange: (n: NodeConfig) => void
 }) {
   const slots = ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'B2', 'B3', 'B4', 'B5']
-  const available = new Set(Object.keys(config.player_state.ships).map(ship => shipSelectorToId(ship) || ship))
+  const counts = common ? effectiveShipCounts(config, common) : config.player_state.ships
+  const available = new Set(
+    Object.entries(counts)
+      .filter(([, count]) => count > 0)
+      .map(([ship]) => ship),
+  )
   const searchable = new Set(optimizer?.ship_types ?? SHIP_TYPES.map(item => item.id))
   const selected = new Set(Object.values(config.baseline.formation).map(shipSelectorToId))
   const options = SHIP_TYPES.filter(
@@ -2416,6 +2446,11 @@ function ModSlotControl({
 function CommonEditor({ config, onChange }: { config: CommonConfig; onChange: (value: CommonConfig) => void }) {
   const update = (group: 'permanent' | 'temporary', field: 'damage_scale' | 'health_scale', value: string) =>
     onChange({ ...config, [group]: { ...config[group], [field]: Number(value) } })
+  const updateShip = (ship: string, value: string) =>
+    onChange({
+      ...config,
+      ships: { ...config.ships, [ship]: Math.max(0, Math.trunc(Number(value))) },
+    })
   return (
     <section className="config-section common-form">
       <div className="section-heading">
@@ -2445,6 +2480,26 @@ function CommonEditor({ config, onChange }: { config: CommonConfig; onChange: (v
           </Label>
         </fieldset>
       ))}
+      <div className="section-heading">
+        <div>
+          <h3>公共舰船数量</h3>
+          <p>本 Galaxy 所有节点共用；节点的额外数量会与此相加。</p>
+        </div>
+      </div>
+      <div className="fleet-ship-grid">
+        {SHIP_TYPES.map(ship => (
+          <Label text={ship.name} key={ship.id}>
+            <input
+              aria-label={`common.ships.${ship.id}`}
+              type="number"
+              min="0"
+              step="1"
+              value={config.ships?.[ship.id] ?? 0}
+              onChange={event => updateShip(ship.id, event.target.value)}
+            />
+          </Label>
+        ))}
+      </div>
     </section>
   )
 }

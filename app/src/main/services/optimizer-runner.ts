@@ -3,6 +3,7 @@ import { stat, readFile, writeFile, mkdir } from 'node:fs/promises'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 import { optimizerResultSchema, type OptimizerResult } from '../../shared/schemas'
+import { effectiveShipCounts } from '../../shared/ship-counts'
 import type { SearchConfig } from '../../shared/schemas'
 import type {
   CopyResult,
@@ -81,7 +82,10 @@ export class OptimizerRunner {
           boss: structuredClone(node.boss),
           hazards: structuredClone(node.hazards),
           supports: structuredClone(node.supports),
-          player_state: structuredClone(node.player_state),
+          player_state: {
+            ...structuredClone(node.player_state),
+            ships: effectiveShipCounts(node, values.common),
+          },
         },
         startedAt: new Date().toISOString(),
       }
@@ -226,7 +230,10 @@ export class OptimizerRunner {
           boss: structuredClone(stagedNode.boss),
           hazards: structuredClone(stagedNode.hazards),
           supports: structuredClone(stagedNode.supports),
-          player_state: structuredClone(stagedNode.player_state),
+          player_state: {
+            ...structuredClone(stagedNode.player_state),
+            ships: effectiveShipCounts(stagedNode, prepared.common),
+          },
         },
         startedAt: new Date().toISOString(),
       }
@@ -286,7 +293,10 @@ export class OptimizerRunner {
               boss: structuredClone(stagedNode.boss),
               hazards: structuredClone(stagedNode.hazards),
               supports: structuredClone(stagedNode.supports),
-              player_state: structuredClone(stagedNode.player_state),
+              player_state: {
+                ...structuredClone(stagedNode.player_state),
+                ships: effectiveShipCounts(stagedNode, prepared.common),
+              },
             },
             startedAt: new Date().toISOString(),
           }
