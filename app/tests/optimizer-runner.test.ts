@@ -56,6 +56,14 @@ async function setup() {
     join(base, 'nodes', 'B1', 'meta.json'),
     JSON.stringify({ default_version: 'default', versions: [{ id: 'default', name: '默认' }] }),
   )
+  for (const id of ['B2', 'B3']) {
+    await mkdir(join(base, 'nodes', id, 'versions'), { recursive: true })
+    await writeFile(join(base, 'nodes', id, 'versions', 'default.json'), JSON.stringify({ ...node, node: id }))
+    await writeFile(
+      join(base, 'nodes', id, 'meta.json'),
+      JSON.stringify({ default_version: 'default', versions: [{ id: 'default', name: '默认' }] }),
+    )
+  }
   await writeFile(join(base, 'common', 'versions', 'default.json'), JSON.stringify(common))
   await writeFile(
     join(base, 'common', 'meta.json'),
@@ -69,7 +77,7 @@ async function setup() {
   }
 }
 describe('OptimizerRunner', () => {
-  it('runs enqueued searches serially and keeps each result', async () => {
+  it('rejects a duplicate active target and replaces its prior visible task on rerun', async () => {
     const x = await setup()
     let release!: () => void
     let calls = 0
@@ -89,15 +97,16 @@ describe('OptimizerRunner', () => {
     )
     const request = { ...x.s, versionName: '默认', commonName: '默认', search: node.search }
     await runner.enqueue(request)
-    await runner.enqueue(request)
+    await expect(runner.enqueue(request)).rejects.toThrow('已在等待或搜索中')
     await vi.waitFor(() => expect(calls).toBe(1))
-    expect(calls).toBe(1)
-    expect(runner.getQueue().map(item => item.status)).toEqual(['running', 'waiting'])
     release()
-    await vi.waitFor(() => expect(runner.getQueue().map(item => item.status)).toEqual(['success', 'success']))
+    await vi.waitFor(() => expect(runner.getQueue().map(item => item.status)).toEqual(['success']))
+    const oldId = runner.getQueue()[0].snapshot.taskId
+    await runner.enqueue(request)
+    await vi.waitFor(() => expect(runner.getQueue().map(item => item.status)).toEqual(['success']))
     expect(calls).toBe(2)
-    expect(runner.getQueue()[0].run?.task?.taskId).not.toBe(runner.getQueue()[1].run?.task?.taskId)
-    expect((await runner.useBest(runner.getQueue()[0].snapshot.taskId)).error).toContain('后续搜索覆盖')
+    expect(runner.getQueue()).toHaveLength(1)
+    expect(runner.getQueue()[0].snapshot.taskId).not.toBe(oldId)
     await rm(x.root, { recursive: true, force: true })
   })
   it('stops current or all queued tasks and releases the runner lock', async () => {
@@ -114,13 +123,13 @@ describe('OptimizerRunner', () => {
     )
     const request = { ...x.s, versionName: '默认', commonName: '默认', search: node.search }
     await runner.enqueue(request)
-    await runner.enqueue(request)
+    await runner.enqueue({ ...request, node: 'B2' })
     await vi.waitFor(() => expect(releases.length).toBe(1))
     await runner.stopCurrentTask()
     releases.shift()!()
     await vi.waitFor(() => expect(runner.getQueue().map(item => item.status)).toEqual(['canceled', 'running']))
     await vi.waitFor(() => expect(releases.length).toBe(1))
-    await runner.enqueue(request)
+    await runner.enqueue({ ...request, node: 'B3' })
     await runner.stopAllTasks()
     releases.shift()!()
     await vi.waitFor(() =>
@@ -153,6 +162,10 @@ describe('OptimizerRunner', () => {
   it('locks concurrent tasks and releases after task completion', async () => {
     const x = await setup()
     let release!: () => void
+    let signalStarted!: () => void
+    const started = new Promise<void>(resolve => {
+      signalStarted = resolve
+    })
     const r = new OptimizerRunner(
       x.repo,
       x.root,
@@ -160,10 +173,11 @@ describe('OptimizerRunner', () => {
       () =>
         new Promise(n => {
           release = () => n(0)
+          signalStarted()
         }),
     )
     const first = r.run(x.s)
-    await new Promise(n => setTimeout(n, 50))
+    await started
     await expect(r.run(x.s)).rejects.toThrow('already running')
     release()
     await first
@@ -265,7 +279,15 @@ describe('OptimizerRunner', () => {
   })
   it('auto-saves and stages the exact Search draft used by the task snapshot', async () => {
     const x = await setup()
-    const requested = { ...node.search, max_simulations: 200, max_wall_seconds: 200, workers: 4 }
+    const requested = {
+      ...node.search,
+      profile: 'balanced' as const,
+      goal: 'best' as const,
+      simulation_clock: 'realtime' as const,
+      max_simulations: 200,
+      max_wall_seconds: 200,
+      workers: 4,
+    }
     const runner = new OptimizerRunner(
       x.repo,
       x.root,
@@ -303,6 +325,30 @@ describe('OptimizerRunner', () => {
 })
 
 describe('Best Found copy transaction', () => {
+  it('can apply a completed Galaxy rerun node by its own task snapshot', async () => {
+    const x = await setup()
+    const changed = { ...node, baseline: { ...node.baseline, formation: { A1: 'Fighter' } } }
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      async (_selection, mode) => {
+        if (mode === 'search') await writeFile(join(x.map, 'B1.result.json'), JSON.stringify(result))
+        else await writeFile(join(x.map, 'B1.json'), JSON.stringify(changed))
+        return 0
+      },
+    )
+    const [rerun] = await runner.runQueue(
+      [x.s],
+      () => {},
+      () => {},
+    )
+    expect(rerun.task?.taskId).toBeTruthy()
+    const applied = await runner.useBest(rerun.task!.taskId)
+    expect(applied.error).toBeUndefined()
+    expect((await x.repo.load(x.s)).node.baseline.formation).toEqual({ A1: 'Fighter' })
+    await rm(x.root, { recursive: true, force: true })
+  })
   it('stages, runs copy mode, validates and updates only the selected Version', async () => {
     const x = await setup()
     const other = await x.repo.createVersion(x.s, 'Other')

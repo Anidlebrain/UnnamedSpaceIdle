@@ -18,12 +18,12 @@
 | 用户概念 | 默认值 | 覆盖规则 | 最终生效位置 |
 | --- | --- | --- | --- |
 | 战斗目标 objective | daily JSON 可含 `objective=normal`，但 Friendly Resolver 默认由 Boss 状态推导 | `boss.alive=true` → `boss`；否则 `normal`。Runner 无条件用 Resolver 结果覆盖 daily objective | `fleet_optimizer_search.gd` 的 `objective`，决定普通战/Boss 排序与结果字段 |
-| Baseline 目标 goal | Node 缺失时 `best` | Node `search.goal` 完整覆盖；只接受 `best` / `beat_baseline` | `_goal`；`beat_baseline` 要求 `baseline.enabled=true`，控制是否必须严格改善已验证 Baseline |
+| 优化目标 goal | Node 缺失时 `best` | Node `search.goal` 完整覆盖；只接受 `best` / `beat_baseline` | Resolver 校验并传入 `_goal`。当前 v3 在结果中记录 `search_goal`，但最终候选仍由 Best Found 排序，`beat_baseline` 不改变推荐；旧版 v2 才在没有严格改善时保留 Baseline。`beat_baseline` 仍要求 `baseline.enabled=true` |
 | 最大模拟次数 | Node 缺失时 1,000,000；daily 顶层也有回退值 | Node `search.max_simulations` 覆盖 daily 顶层同名字段 | `_settings.max_simulations`；限制已计数的真实模拟，并为 Boss 精炼预留模拟数 |
-| 最长墙钟时间 | Node 缺失时 300 秒；daily 顶层也有回退值 | Node `search.max_wall_seconds` 覆盖 daily 顶层同名字段 | `_settings.max_wall_seconds`；覆盖初始化后的搜索、精炼与最终验证预留判断 |
-| 搜索档位 profile | Node 缺失时 `fast` | Node `search.profile` 完整覆盖 | `_profile`；选择 fast / balanced / exhaustive 的调度行为 |
+| 最长墙钟时间 | Node 缺失时 300 秒；daily 顶层也有回退值 | Node `search.max_wall_seconds` 覆盖 daily 顶层同名字段 | `_settings.max_wall_seconds`；v3 计入 Godot 启动后的初始化、搜索与精炼，提前预留收尾时间；正在执行的战斗可能使总耗时略超限制 |
+| 搜索方式 profile | Node 缺失时 `fast` | Node `search.profile` 完整覆盖 | v3 `fast` 的调度约 25% 尝试全局候选、其余尝试改进已有候选；`balanced` 约 40% 尝试全局候选；`exhaustive` 逐项遍历配置空间，只有全部完成才可声明穷举。v2 公共归一化还会调整 fast 的探测/报价默认预算 |
 | 模拟时钟 simulation_clock | fast/balanced 默认 `offline_fixed_step`，exhaustive 默认 `realtime` | Node `search.simulation_clock` 覆盖；BAT 同时据此决定是否传 `--fixed-fps 60` | Battle Config 与 Runner / Optimizer 的模拟时钟 |
-| Worker 数 | Node 缺失时 1，范围强制 1–4 | daily 当前没有 workers；即使未来添加，Node `search.workers` 仍优先 | `_settings.workers`，决定独立 Godot worker 数；是 Node 层日常控制项 |
+| 并行进程 workers | Node 缺失时 1，范围强制 1–4 | daily 当前没有 workers；即使未来添加，Node `search.workers` 仍优先 | `_settings.workers` 是请求的独立 Godot worker 数；启动失败可回退单进程，结果中的 `workers_effective` 才是实际并行数 |
 | 部署模式 mode | daily JSON 当前 `realistic` | Node 没有对应覆盖字段；`practice_unlimited` 仅兼容归一化为 `practice` | 候选部署语义（真实 Overdeploy / practice），与 simulation_clock 无关 |
 | 舰种、组数、Mod 搜索空间 | daily JSON | Node 不覆盖 | `ship_types`、`group_ranges`、`max_total_groups`、`max_groups_per_ship`、展开后的 `allowed_loadouts` |
 | Galaxy 倍率 | `common.json` 必填；历史路径才回退 player_state 旧字段 | `effective = permanent + temporary` | Resolver 写入 `player_damage_scale` / `player_health_scale` |
@@ -45,7 +45,7 @@
 
 ## Manager UI 与本机配置决策
 
-- “搜索”页编辑独立 Search Draft；默认只显示紧凑摘要，详细字段进入 Dialog，点击搜索时自动保存。
+- “搜索”页编辑独立 Search Draft；默认只显示紧凑摘要。Dialog 常用项是搜索方式与共同生效的时间/模拟次数预算；并行进程、模拟时钟和当前 v3 不改变推荐的 goal 放高级设置。点击加入队列时自动保存。
 - Search 使用 `map/search_config.json → poc/search_config.json`；Optimizer 公共使用 `map/optimizer_v2_daily.json → poc/optimizer_v2_daily.json`。UI 显示当前来源。
 - `poc` 只保存可提交默认值，`map` 是已忽略的本机实际配置，日常修改不会污染 Git。
 - Galaxy rerun 启动时自动校验并保存当前 Search 草稿，冻结后把同一份 Search 记录到所选节点的 Task Snapshot 与 staged Node，不依赖此前手动搜索或保存。

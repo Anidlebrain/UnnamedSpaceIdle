@@ -2,6 +2,15 @@
 
 这是舰队优化器管理应用的 V1.2 工作台实现，基于 Electron、React、Vite、TypeScript、Zod 和 Vitest。
 
+## V1.2.1 可用性调整
+
+- Galaxy / Node / Version / Common 与搜索设置的主要下拉使用统一的限高列表；打开时把当前项尽量放在可视区域中部，Node / Version / Common 可输入筛选。
+- 同一 Galaxy / Node / Version 在等待或运行时不能重复加入。再次搜索已结束的目标会替换其当前任务条目；完成、失败和已停止任务保留提醒，点击查看后从左侧导航移除。本次会话的结果仍可在当前搜索页查看，没有增加历史功能。
+- Galaxy 重跑在开始前用全宽多列网格选择节点，提供全选/全取消单按钮、勾选和顺序调整；运行后收起选择区，让等待、当前、完成、变化和失败结果占满宽度，停止按钮位于结果区。
+- Galaxy 重跑的“已完成”包含“有变化”和“配置未变”；变化只比较阵型与装配。运行中及结束后的已完成节点可点击查看对应结果，失败节点可点击查看错误；变化节点用绿色标示。重跑详情可在批次结束后手动使用 Best Found，目标绑定该节点的任务快照并保留 Version 哈希冲突保护。
+- Best Found 按纵向 1–5、横向 B/A 显示 Formation，右侧按舰种显示 Loadout；运行状态缩成单条信息区，日志仍默认折叠。
+- 搜索页只显示配置摘要。设置 Dialog 的常用项是搜索方式和共同约束的时间/模拟次数预算；并行进程、模拟时钟、优化目标进入高级设置。当前 v3 记录 `goal` 但不据此改变 Best Found 推荐，界面明确说明这一点。
+
 ## V1.2 搜索任务
 
 - 搜索页“加入搜索队列”会先校验并保存独立 Search Config，再冻结 Node、Common、Search 和 Optimizer 公共配置哈希；队列在 Main 串行执行。左侧可切换查看每项状态、日志、结果和错误。队列历史仅保留本次应用会话。
@@ -26,7 +35,7 @@
 - 复用现有 `run_optimizer.bat <galaxy> <node> --c` 应用 Best Found；只有 BAT 成功且修改后的 Node JSON 通过结构与身份校验后，才原子覆盖当前 Manager Version。
 - 串行重跑当前 Galaxy 中所选 Node 的默认 Version，按列表顺序执行并使用该 Galaxy 的默认 Common；整批任务持有全局 Optimizer 锁。
 - 批量结果按 `formation_key`（缺失时回退到结构化 Formation/Loadout diff）过滤，仅重点列出需要重新配置的节点；失败节点独立显示且不会复用旧 Result。
-- Galaxy 重跑只做变化发现，不执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found。
+- Galaxy 重跑过程只做变化发现，不自动执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found；用户可从节点详情手动使用单个 Best Found。
 - 五个独立工作区：节点配置、公共配置、搜索、Galaxy 重跑、模板与复制。Galaxy / Optimizer 公共不再作为当前 Node Tab。
 - Node 结构化编辑按阵型、舰队状态、装配、环境排列，覆盖 Formation、Fleet Resources、各舰种数量、Loadout、Boss、Hazards 与 Supports；Raw JSON 收入高级区。完整字段审计见 [`docs/node-field-audit.md`](docs/node-field-audit.md)。
 - Search 偏好独立保存在忽略的 `fleetSimulation/map/search_config.json`，缺失时回退提交的 `poc/search_config.json`；点击开始即自动保存、回读确认、写入任务快照并覆盖到 staged Node。

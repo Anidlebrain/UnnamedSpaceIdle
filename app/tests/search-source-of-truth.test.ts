@@ -5,17 +5,30 @@ import { join } from 'node:path'
 const fleetRoot = join('..', 'fleetSimulation')
 
 describe('daily search source of truth', () => {
-  it('keeps staged Node search as the final Godot budget, clock, and worker input', async () => {
+  it('keeps all six staged Node search fields on the Resolver and Godot path', async () => {
     const runner = await readFile(join(fleetRoot, 'poc', 'fleet_test_runner.gd'), 'utf8')
     const optimizer = await readFile(join(fleetRoot, 'poc', 'fleet_optimizer_v2.gd'), 'utf8')
+    const resolver = await readFile(join(fleetRoot, 'poc', 'friendly_config_resolver.gd'), 'utf8')
+    const searchV3 = await readFile(join(fleetRoot, 'poc', 'fleet_optimizer_search.gd'), 'utf8')
     const bat = await readFile(join(fleetRoot, 'run_optimizer.bat'), 'utf8')
+    const godotLauncher = await readFile(join(fleetRoot, 'tools', 'run_godot_optimizer.ps1'), 'utf8')
 
     expect(runner).toContain('optimizer_settings.search = config.optimizer.get("search", {}).duplicate(true)')
+    expect(resolver).toContain('"profile": profile')
+    expect(resolver).toContain('"goal": goal')
+    expect(resolver).toContain('"simulation_clock": simulation_clock')
+    expect(resolver).toContain('"max_wall_seconds": float(search.get("max_wall_seconds", 300.0))')
+    expect(resolver).toContain('"max_simulations": int(search.get("max_simulations", 1000000))')
+    expect(resolver).toContain('"workers": clampi(int(search.get("workers", 1)), 1, 4)')
+    expect(optimizer).toContain('_profile = str(search.get("profile"')
+    expect(optimizer).toContain('_goal = str(search.get("goal"')
     expect(optimizer).toContain('_settings.max_simulations = int(search.max_simulations)')
     expect(optimizer).toContain('_settings.max_wall_seconds = float(search.max_wall_seconds)')
     expect(optimizer).toContain('search.get("workers", _settings.get("workers", 1))')
     expect(optimizer).toMatch(/search\.get\(\s*"simulation_clock"/)
     expect(bat).toContain('$value.search.simulation_clock')
+    expect(godotLauncher).toContain('"--fixed-fps", "60"')
+    expect(searchV3).toContain('"search_goal": _goal')
   })
 
   it('persists Manager Search independently and selects local Optimizer config before fallback', async () => {

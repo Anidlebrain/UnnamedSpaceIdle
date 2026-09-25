@@ -30,6 +30,7 @@ import {
   type ModSlot,
 } from '../shared/mod-catalog'
 import { GalaxyRerunPanel } from './GalaxyRerunPanel'
+import { SmartSelect } from './SmartSelect'
 import { runErrorSummary } from '../shared/run-errors'
 import {
   commonDomainKey,
@@ -63,14 +64,9 @@ const formatDuration = (seconds: number) =>
     .padStart(2, '0')}:${Math.floor(seconds % 60)
     .toString()
     .padStart(2, '0')}`
-const taskDuration = (task: SearchTaskState) =>
-  task.finishedAt
-    ? Math.max(
-        0,
-        Math.round((Date.parse(task.finishedAt) - Date.parse(task.runningAt ?? task.snapshot.startedAt)) / 1000),
-      )
-    : 0
-
+const profileName = (profile: SearchConfig['profile']) =>
+  profile === 'fast' ? '日常搜索' : profile === 'balanced' ? '扩大探索' : '遍历搜索'
+const goalName = (goal: SearchConfig['goal']) => (goal === 'best' ? '寻找最佳方案' : '必须优于当前方案（v3 仅记录）')
 function storedSearchSelection(catalog: Catalog): Selection | null {
   try {
     const stored = JSON.parse(localStorage.getItem(LAST_SEARCH_KEY) ?? 'null') as Partial<Selection> | null
@@ -143,6 +139,8 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const [savedOptimizerSource, setSavedOptimizerSource] = useState('')
   const [searchTask, setSearchTask] = useState<SearchTaskState | null>(null)
   const [searchQueue, setSearchQueue] = useState<SearchQueueItem[]>([])
+  const [viewedTaskIds, setViewedTaskIds] = useState<Set<string>>(() => new Set())
+  const [appliedTaskIds, setAppliedTaskIds] = useState<Set<string>>(() => new Set())
   const [rerunNodes, setRerunNodes] = useState<string[]>([])
   const [galaxyRerun, setGalaxyRerun] = useState<GalaxyRerunProgress | null>(null)
   const [rerunStarting, setRerunStarting] = useState(false)
@@ -181,6 +179,16 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             : optimizerDirty
           : false
   const taskRunning = searchQueue.some(item => item.status === 'running') || searchTask?.status === 'running'
+  const duplicateTarget = searchQueue.some(
+    item =>
+      ['waiting', 'running'].includes(item.status) &&
+      item.snapshot.galaxy === selection.galaxy &&
+      item.snapshot.node === selection.node &&
+      item.snapshot.version === selection.version,
+  )
+  const visibleQueue = searchQueue.filter(
+    item => ['waiting', 'running'].includes(item.status) || !viewedTaskIds.has(item.snapshot.taskId),
+  )
   const activeQueueItem = searchQueue.find(item => item.status === 'running')
   const activeLock = activeQueueItem ? taskFromQueue(activeQueueItem) : searchTask
   const queuedNodeLocked = searchQueue.some(
@@ -381,19 +389,28 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     ? `${galaxyRerun?.galaxy}/${galaxyDetail.node}/${galaxyDetail.version}/${galaxyDetail.common}`
     : ''
   const selectionKey = `${selection.galaxy}/${selection.node}/${selection.version}/${selection.common}`
-  const activeRun =
-    detailKey === selectionKey
-      ? galaxyDetail?.run
-      : searchTask
+  const viewingGalaxyDetail = Boolean(galaxyDetail && detailKey === selectionKey)
+  const activeRun = viewingGalaxyDetail
+    ? (galaxyDetail?.run ??
+      (galaxyDetail?.error
         ? {
-            exitCode: searchTask.exitCode ?? (searchTask.status === 'failed' ? -1 : 0),
-            startedAt: searchTask.runningAt ?? searchTask.snapshot.startedAt,
-            finishedAt: searchTask.finishedAt ?? searchTask.snapshot.startedAt,
-            result: searchTask.result,
-            error: searchTask.error,
-            task: searchTask.snapshot,
+            exitCode: -1,
+            startedAt: galaxyDetail.startedAt ?? galaxyRerun!.startedAt,
+            finishedAt: galaxyDetail.finishedAt ?? galaxyRerun!.finishedAt ?? galaxyRerun!.startedAt,
+            error: galaxyDetail.error,
+            canceled: galaxyDetail.status === 'canceled',
           }
-        : null
+        : null))
+    : searchTask
+      ? {
+          exitCode: searchTask.exitCode ?? (searchTask.status === 'failed' ? -1 : 0),
+          startedAt: searchTask.runningAt ?? searchTask.snapshot.startedAt,
+          finishedAt: searchTask.finishedAt ?? searchTask.snapshot.startedAt,
+          result: searchTask.result,
+          error: searchTask.error,
+          task: searchTask.snapshot,
+        }
+      : null
   const changes = useMemo(
     () => (activeRun?.result ? diffFormation(activeRun.result.verified_baseline, activeRun.result.best_result) : []),
     [activeRun],
@@ -621,8 +638,12 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     }
   }
   const useBest = () => {
-    if (!searchTask?.result?.best_result || searchTask.status !== 'completed') return
-    const task = searchTask.snapshot
+    const source = viewingGalaxyDetail ? galaxyDetail?.run : undefined
+    const task = viewingGalaxyDetail ? source?.task : searchTask?.snapshot
+    const hasBest = viewingGalaxyDetail
+      ? galaxyDetail?.status === 'succeeded' && Boolean(source?.result?.best_result)
+      : searchTask?.status === 'completed' && Boolean(searchTask.result?.best_result)
+    if (!task || !hasBest || rerunActive) return
     const targetKey = nodeDomainKey(task)
     const targetDirty = isDirty(nodeDrafts.current.get(targetKey)) || isDirty(searchDrafts.current.get(targetKey))
     if (targetDirty) {
@@ -632,6 +653,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     void act(`Best Found 已写入 ${task.node} / ${task.versionName}。`, async () => {
       const result = await api.useBest(task.taskId)
       if (result.error || !result.node) throw new Error(result.error ?? 'Copy 未返回有效 Node。')
+      setAppliedTaskIds(current => new Set(current).add(task.taskId))
       const source = format(result.node)
       const draft = { value: result.node, source, savedSource: source }
       nodeDrafts.current.set(targetKey, draft)
@@ -793,6 +815,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     ...rerunNodes.filter(id => rerunCatalogNodes.some(node => node.id === id)),
     ...rerunCatalogNodes.map(node => node.id).filter(id => !rerunNodes.includes(id)),
   ]
+  const showRerunResult = galaxyRerun?.galaxy === selection.galaxy
   return (
     <main className="app">
       <aside className="sidebar" aria-label="主工作区">
@@ -827,16 +850,18 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             模板与复制
           </button>
         </nav>
-        {searchQueue.length ? (
+        {visibleQueue.length ? (
           <div className="sidebar-queue" aria-label="搜索任务队列">
             <strong>搜索任务</strong>
-            {searchQueue.map(item => (
+            {visibleQueue.map(item => (
               <button
                 key={item.snapshot.taskId}
                 className="task-chip"
                 onClick={() => {
                   switchWorkspace('search')
                   setSearchTask(taskFromQueue(item))
+                  if (!['waiting', 'running'].includes(item.status))
+                    setViewedTaskIds(current => new Set(current).add(item.snapshot.taskId))
                 }}
               >
                 <span className={`run-dot ${item.status}`} />
@@ -870,17 +895,14 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             ))}
           </div>
         ) : null}
-        {!searchQueue.length && searchTask ? (
+        {!searchQueue.length && searchTask && ['waiting', 'running'].includes(searchTask.status) ? (
           <button className="task-chip" onClick={() => switchWorkspace('search')}>
             <span className={`run-dot ${searchTask.status}`} />
             <span>
               <strong>
-                {searchTask.snapshot.node}{' '}
-                {searchTask.status === 'running' ? '搜索中' : searchTask.status === 'completed' ? '已完成' : '失败'}
+                {searchTask.snapshot.node} {searchTask.status === 'running' ? '搜索中' : '等待'}
               </strong>
-              <small>
-                {formatDuration(searchTask.status === 'running' ? elapsedSeconds : taskDuration(searchTask))}
-              </small>
+              <small>{formatDuration(elapsedSeconds)}</small>
             </span>
           </button>
         ) : null}
@@ -919,12 +941,6 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
               </button>
             )
           ) : null}
-          {workspace === 'rerun' && galaxyRerun?.status === 'running' ? (
-            <>
-              <button onClick={stopCurrent}>停止当前节点</button>
-              <button onClick={stopAll}>停止整个批次</button>
-            </>
-          ) : null}
         </div>
       </header>
       <section className="contextbar" aria-label="当前配置上下文">
@@ -935,36 +951,37 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           </div>
         ) : (
           <Label text="Galaxy">
-            <select value={selection.galaxy} onChange={e => update('galaxy', e.target.value)}>
-              {catalog.galaxies.map(g => (
-                <option key={g.id} value={g.id}>
-                  {g.id.toUpperCase()}
-                </option>
-              ))}
-            </select>
+            <SmartSelect
+              label="Galaxy"
+              value={selection.galaxy}
+              onChange={value => update('galaxy', value)}
+              disabled={workspace === 'rerun' && (rerunStarting || rerunActive)}
+              options={catalog.galaxies.map(g => ({ value: g.id, label: g.id.toUpperCase() }))}
+            />
           </Label>
         )}
         {showNodeContext ? (
           <Label text="节点">
-            <select value={selection.node} onChange={e => update('node', e.target.value)}>
-              {currentGalaxy?.nodes.map(n => (
-                <option key={n.id} value={n.id}>
-                  {n.id}
-                </option>
-              ))}
-            </select>
+            <SmartSelect
+              label="节点"
+              value={selection.node}
+              onChange={value => update('node', value)}
+              searchable
+              options={currentGalaxy?.nodes.map(n => ({ value: n.id, label: n.id })) ?? []}
+            />
           </Label>
         ) : null}
         {showNodeContext ? (
           <Label text="版本">
-            <select value={selection.version} onChange={e => update('version', e.target.value)}>
-              {currentNode?.versions.map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.name}
-                  {v.isDefault ? ' ★' : ''}
-                </option>
-              ))}
-            </select>
+            <SmartSelect
+              label="版本"
+              value={selection.version}
+              onChange={value => update('version', value)}
+              searchable
+              options={
+                currentNode?.versions.map(v => ({ value: v.id, label: `${v.name}${v.isDefault ? ' ★' : ''}` })) ?? []
+              }
+            />
             <ActionMenu
               label="管理版本"
               resetKey={`${workspace}/${selection.galaxy}/${selection.node}`}
@@ -994,14 +1011,15 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         ) : null}
         {showCommonContext ? (
           <Label text="公共配置">
-            <select value={selection.common} onChange={e => update('common', e.target.value)}>
-              {currentGalaxy?.commons.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.isDefault ? ' ★' : ''}
-                </option>
-              ))}
-            </select>
+            <SmartSelect
+              label="公共配置"
+              value={selection.common}
+              onChange={value => update('common', value)}
+              searchable
+              options={
+                currentGalaxy?.commons.map(c => ({ value: c.id, label: `${c.name}${c.isDefault ? ' ★' : ''}` })) ?? []
+              }
+            />
             <ActionMenu
               label="管理公共配置"
               resetKey={`${workspace}/${selection.galaxy}/${selection.node}`}
@@ -1051,100 +1069,161 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         </div>
       ) : null}
       {workspace === 'rerun' ? (
-        <>
+        <div className={`rerun-workspace ${showRerunResult ? 'has-results' : 'configuring'}`}>
           <section className="panel rerun-selection" aria-label="选择重跑节点">
-            <h2>本次重跑</h2>
-            <p>选择节点并调整顺序。启动时自动保存并冻结搜索设置。</p>
-            <p>
-              {searchConfig
-                ? `${searchConfig.profile} · ${searchConfig.max_simulations} 次 · ${searchConfig.max_wall_seconds} 秒 · ${searchConfig.workers} Workers${searchDirty ? ' · 待自动保存' : ''}`
-                : '搜索设置加载中'}
-            </p>
-            <div className="rerun-order">
-              {orderedRerunNodeIds.map(nodeId => {
-                const index = rerunNodes.indexOf(nodeId)
-                return (
-                  <div key={nodeId}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={index >= 0}
-                        onChange={event =>
-                          setRerunNodes(current =>
-                            event.target.checked ? [...current, nodeId] : current.filter(id => id !== nodeId),
-                          )
-                        }
-                      />
-                      {nodeId}
-                    </label>
-                    <button
-                      aria-label={`上移 ${nodeId}`}
-                      disabled={index <= 0}
-                      onClick={() =>
-                        setRerunNodes(current => {
-                          const next = [...current]
-                          ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
-                          return next
-                        })
-                      }
-                    >
-                      ↑
-                    </button>
-                    <button
-                      aria-label={`下移 ${nodeId}`}
-                      disabled={index < 0 || index >= rerunNodes.length - 1}
-                      onClick={() =>
-                        setRerunNodes(current => {
-                          const next = [...current]
-                          ;[next[index + 1], next[index]] = [next[index], next[index + 1]]
-                          return next
-                        })
-                      }
-                    >
-                      ↓
-                    </button>
-                  </div>
-                )
-              })}
-            </div>
-            <p>顺序：{rerunNodes.join(' → ') || '未选择节点'}</p>
-            <button
-              className="primary"
-              onClick={() => void rerunCurrentGalaxy()}
-              disabled={rerunStarting || rerunActive || taskRunning || !rerunNodes.length}
+            <details
+              className="rerun-selection-details"
+              open={!showRerunResult}
+              key={showRerunResult ? 'result' : 'selection'}
             >
-              开始重跑所选节点
-            </button>
+              <summary>
+                <strong>{showRerunResult ? (rerunActive ? '查看本次节点顺序' : '调整下次重跑') : '本次重跑'}</strong>
+                <span>
+                  已选 {rerunNodes.length} / {rerunCatalogNodes.length} 个节点
+                </span>
+              </summary>
+              <div className="rerun-selection-body">
+                <p>选择节点并调整顺序。启动时自动保存并冻结搜索设置。</p>
+                <p>
+                  {searchConfig
+                    ? `${profileName(searchConfig.profile)} · 最长 ${searchConfig.max_wall_seconds} 秒 / 最多 ${searchConfig.max_simulations} 次 · ${searchConfig.workers} 个并行进程${searchDirty ? ' · 待自动保存' : ''}`
+                    : '搜索设置加载中'}
+                </p>
+                <div className="rerun-selection-tools">
+                  <strong className="rerun-selected-count">从左到右、从上到下按序号执行</strong>
+                  <button
+                    onClick={() =>
+                      setRerunNodes(current =>
+                        current.length === rerunCatalogNodes.length
+                          ? []
+                          : [
+                              ...current.filter(id => rerunCatalogNodes.some(node => node.id === id)),
+                              ...rerunCatalogNodes.map(node => node.id).filter(id => !current.includes(id)),
+                            ],
+                      )
+                    }
+                    disabled={rerunActive || rerunStarting || !rerunCatalogNodes.length}
+                  >
+                    {rerunNodes.length === rerunCatalogNodes.length ? '全取消' : '全选'}
+                  </button>
+                </div>
+                <div className="rerun-order">
+                  {orderedRerunNodeIds.map(nodeId => {
+                    const index = rerunNodes.indexOf(nodeId)
+                    const nodeStatus = showRerunResult
+                      ? galaxyRerun?.nodes.find(item => item.node === nodeId)?.status
+                      : undefined
+                    return (
+                      <div key={nodeId} className={index >= 0 ? 'selected' : 'unselected'}>
+                        <label>
+                          <input
+                            type="checkbox"
+                            checked={index >= 0}
+                            disabled={rerunActive || rerunStarting}
+                            onChange={event =>
+                              setRerunNodes(current =>
+                                event.target.checked ? [...current, nodeId] : current.filter(id => id !== nodeId),
+                              )
+                            }
+                          />
+                          <span className="rerun-rank">{index >= 0 ? index + 1 : '—'}</span>
+                          {nodeId}
+                        </label>
+                        {nodeStatus ? (
+                          <small>
+                            {nodeStatus === 'running'
+                              ? '搜索中'
+                              : nodeStatus === 'queued'
+                                ? '等待'
+                                : nodeStatus === 'failed'
+                                  ? '失败'
+                                  : nodeStatus === 'succeeded'
+                                    ? '完成'
+                                    : '已停止'}
+                          </small>
+                        ) : null}
+                        <button
+                          aria-label={`上移 ${nodeId}`}
+                          disabled={rerunActive || rerunStarting || index <= 0}
+                          onClick={() =>
+                            setRerunNodes(current => {
+                              const next = [...current]
+                              ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
+                              return next
+                            })
+                          }
+                        >
+                          ↑
+                        </button>
+                        <button
+                          aria-label={`下移 ${nodeId}`}
+                          disabled={rerunActive || rerunStarting || index < 0 || index >= rerunNodes.length - 1}
+                          onClick={() =>
+                            setRerunNodes(current => {
+                              const next = [...current]
+                              ;[next[index + 1], next[index]] = [next[index], next[index + 1]]
+                              return next
+                            })
+                          }
+                        >
+                          ↓
+                        </button>
+                      </div>
+                    )
+                  })}
+                </div>
+                <button
+                  className="primary"
+                  onClick={() => void rerunCurrentGalaxy()}
+                  disabled={rerunStarting || rerunActive || taskRunning || !rerunNodes.length}
+                >
+                  开始重跑所选节点
+                </button>
+              </div>
+            </details>
           </section>
-          {galaxyRerun ? <GalaxyRerunPanel progress={galaxyRerun} onOpen={openGalaxyResult} /> : null}
-        </>
+          {showRerunResult && galaxyRerun ? (
+            <GalaxyRerunPanel
+              progress={galaxyRerun}
+              onOpen={openGalaxyResult}
+              onStopCurrent={stopCurrent}
+              onStopAll={stopAll}
+            />
+          ) : null}
+        </div>
       ) : null}
       {workspace === 'templates' ? (
         <section className="management panel workspace-view">
           <div>
             <h2>Node 创建与模板</h2>
             <div className="inline">
-              <select value={createMode} onChange={e => setCreateMode(e.target.value as 'selection' | 'template')}>
-                <option value="selection">复制当前 Node / Version</option>
-                <option value="template">从模板创建</option>
-              </select>
+              <SmartSelect
+                label="创建来源"
+                value={createMode}
+                onChange={value => setCreateMode(value as 'selection' | 'template')}
+                options={[
+                  { value: 'selection', label: '复制当前 Node / Version' },
+                  { value: 'template', label: '从模板创建' },
+                ]}
+              />
               {createMode === 'template' ? (
-                <select value={template} onChange={e => setTemplate(e.target.value)}>
-                  <option value="">选择模板</option>
-                  {catalog.templates.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.name}
-                    </option>
-                  ))}
-                </select>
+                <SmartSelect
+                  label="创建模板"
+                  value={template}
+                  onChange={setTemplate}
+                  searchable
+                  options={[
+                    { value: '', label: '选择模板' },
+                    ...catalog.templates.map(t => ({ value: t.id, label: t.name })),
+                  ]}
+                />
               ) : null}
-              <select value={newNodeGalaxy || selection.galaxy} onChange={e => setNewNodeGalaxy(e.target.value)}>
-                {catalog.galaxies.map(g => (
-                  <option key={g.id} value={g.id}>
-                    {g.id.toUpperCase()}
-                  </option>
-                ))}
-              </select>
+              <SmartSelect
+                label="新 Node Galaxy"
+                value={newNodeGalaxy || selection.galaxy}
+                onChange={setNewNodeGalaxy}
+                options={catalog.galaxies.map(g => ({ value: g.id, label: g.id.toUpperCase() }))}
+              />
               <input
                 aria-label="新 Node ID"
                 placeholder="新 Node，例如 B23"
@@ -1167,14 +1246,16 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
               <button onClick={saveTemplate} disabled={busy}>
                 当前 Version 存为模板
               </button>
-              <select value={template} onChange={e => setTemplate(e.target.value)}>
-                <option value="">选择模板</option>
-                {catalog.templates.map(t => (
-                  <option key={t.id} value={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
+              <SmartSelect
+                label="管理模板"
+                value={template}
+                onChange={setTemplate}
+                searchable
+                options={[
+                  { value: '', label: '选择模板' },
+                  ...catalog.templates.map(t => ({ value: t.id, label: t.name })),
+                ]}
+              />
               <button onClick={renameTemplate} disabled={!template || busy}>
                 重命名
               </button>
@@ -1361,12 +1442,16 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           versionName={currentVersion?.name ?? selection.version}
           selection={selection}
           busy={busy}
+          duplicateTarget={duplicateTarget}
           dirty={searchDirty}
           readOnly={false}
-          task={searchTask}
+          task={viewingGalaxyDetail ? null : searchTask}
+          viewOnly={viewingGalaxyDetail}
+          optimizerBusy={optimizerReadOnly}
           elapsedSeconds={elapsedSeconds}
           activeRun={activeRun}
           changes={changes.length}
+          applied={Boolean(activeRun?.task && appliedTaskIds.has(activeRun.task.taskId))}
           onOpenSettings={() => setSearchSettingsOpen(true)}
           onStart={() => void start()}
           onStopCurrent={stopCurrent}
@@ -1472,7 +1557,7 @@ function SearchSettingsDialog({
         <div className="dialog-heading">
           <div>
             <h2 id="search-settings-title">搜索设置</h2>
-            <p>低频执行偏好；下次点击“开始搜索”时自动保存并重新读取确认。</p>
+            <p>下次点击“加入搜索队列”时自动保存并重新读取确认。</p>
           </div>
           <span className="config-source">{source === 'local' ? 'map 本机配置' : 'poc 默认值'}</span>
         </div>
@@ -1581,15 +1666,16 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
           />
         </Label>
         <Label text="Boss 搜索优先级">
-          <select
-            aria-label="Boss 搜索优先级"
+          <SmartSelect
+            label="Boss 搜索优先级"
             disabled={!alive}
             value={String(boss.priority ?? 'efficiency')}
-            onChange={event => updateBoss('priority', event.target.value)}
-          >
-            <option value="efficiency">效率（efficiency）</option>
-            <option value="kill_cost">击杀总成本（kill_cost）</option>
-          </select>
+            onChange={value => updateBoss('priority', value)}
+            options={[
+              { value: 'efficiency', label: '效率（efficiency）' },
+              { value: 'kill_cost', label: '击杀总成本（kill_cost）' },
+            ]}
+          />
         </Label>
       </fieldset>
       <div className="environment-config">
@@ -1622,12 +1708,16 @@ function SearchWorkspace({
   versionName,
   selection,
   busy,
+  duplicateTarget,
   dirty,
   readOnly,
   task,
+  viewOnly,
+  optimizerBusy,
   elapsedSeconds,
   activeRun,
   changes,
+  applied,
   onOpenSettings,
   onStart,
   onStopCurrent,
@@ -1641,12 +1731,16 @@ function SearchWorkspace({
   versionName: string
   selection: Selection
   busy: boolean
+  duplicateTarget: boolean
   dirty: boolean
   readOnly: boolean
   task: SearchTaskState | null
+  viewOnly: boolean
+  optimizerBusy: boolean
   elapsedSeconds: number
   activeRun: RunResult | null | undefined
   changes: number
+  applied: boolean
   onOpenSettings: () => void
   onStart: () => void
   onStopCurrent: () => void
@@ -1660,11 +1754,16 @@ function SearchWorkspace({
     : activeRun
       ? Math.max(0, Math.round((Date.parse(activeRun.finishedAt) - Date.parse(activeRun.startedAt)) / 1000))
       : elapsedSeconds
-  const progress = taskLogs
-    .split(/\r?\n/)
-    .reverse()
-    .find(line => /(\d+\/\d+|Evaluated:|Best updated|Final|Initializing|完成)/i.test(line))
-  const snapshot = task?.snapshot
+  const logLines = taskLogs.split(/\r?\n/).reverse()
+  const progressLine = logLines.find(line => /^(Evaluated: \d+|\d+\/\d+ \|)/.test(line))
+  const evaluated = progressLine?.match(/^(?:Evaluated: )?(\d+(?:\/\d+)?)/)?.[1] ?? '—'
+  const phase = logLines.find(line => /^\[\d+\/\d+\] /.test(line))?.replace(/^\[\d+\/\d+\] /, '')
+  const workerLine = logLines
+    .find(line => /Workers: (?:\d+|starting|single-process)/.test(line))
+    ?.match(/Workers: (\d+|starting|single-process)/)?.[1]
+  const effectiveWorkers =
+    typeof activeRun?.result?.workers_effective === 'number' ? activeRun.result.workers_effective : undefined
+  const snapshot = task?.snapshot ?? (viewOnly ? activeRun?.task : undefined)
   const target = snapshot ?? {
     galaxy: selection.galaxy,
     node: selection.node,
@@ -1678,11 +1777,11 @@ function SearchWorkspace({
   }
   const boss = (environment.boss ?? {}) as Record<string, unknown>
   const bossAlive = Boolean(boss.alive)
-  const profile = search?.profile === 'fast' ? '快速' : search?.profile === 'balanced' ? '均衡' : '穷举'
+  const profile = search ? profileName(search.profile) : '—'
   return (
     <section className="search-workspace workspace-view">
       <div className="search-context panel" aria-label="搜索目标与战斗环境">
-        <strong className="context-title">{snapshot ? '任务快照' : '搜索目标'}</strong>
+        <strong className="context-title">{viewOnly ? 'Galaxy 重跑结果' : snapshot ? '任务快照' : '搜索目标'}</strong>
         <div>
           <span>Galaxy</span>
           <strong>{target.galaxy.toUpperCase()}</strong>
@@ -1722,7 +1821,12 @@ function SearchWorkspace({
         </div>
       </div>
       <section className="panel search-command">
-        <button className="primary start-search" onClick={onStart} disabled={busy || !search}>
+        <button
+          className="primary start-search"
+          onClick={onStart}
+          disabled={busy || !search || duplicateTarget}
+          title={duplicateTarget ? '该 Node / Version 已在等待或搜索中' : undefined}
+        >
           <Icon name="play" />
           加入搜索队列
         </button>
@@ -1730,10 +1834,10 @@ function SearchWorkspace({
         {running ? <button onClick={onStopAll}>停止全部</button> : null}
         <p className="search-summary">
           <strong>{profile}</strong>
-          <span>{search?.goal ?? '—'}</span>
-          <span>{search?.max_simulations ?? '—'} 次</span>
-          <span>{search?.max_wall_seconds ?? '—'} 秒</span>
-          <span>{search?.workers ?? '—'} Workers</span>
+          <span>
+            预算：最长 {search?.max_wall_seconds ?? '—'} 秒 / 最多 {search?.max_simulations ?? '—'} 次模拟
+          </span>
+          <span>{search?.workers ?? '—'} 个并行进程</span>
           {dirty ? <em>待自动保存</em> : <small>{searchSource === 'local' ? '本机配置' : 'poc 默认'}</small>}
         </p>
         <button className="search-settings-button" onClick={onOpenSettings} disabled={readOnly}>
@@ -1742,42 +1846,65 @@ function SearchWorkspace({
         </button>
       </section>
       <section className="panel run-status">
-        <div className="panel-heading compact">
-          <div>
-            <h2>运行状态</h2>
-            <p>
-              {running
-                ? '当前任务正在运行'
-                : task?.status === 'waiting'
-                  ? '等待前序任务完成'
-                  : activeRun
-                    ? '任务已结束。'
-                    : '尚未启动任务。'}
-            </p>
-          </div>
-          <span className={`run-dot ${running ? 'running' : (task?.status ?? (activeRun ? 'completed' : ''))}`} />
-        </div>
+        <h2>运行状态</h2>
         <dl>
-          <dt>状态</dt>
-          <dd>
-            {running
-              ? '搜索中'
-              : task?.status === 'waiting'
-                ? '等待'
-                : task?.status === 'canceled'
-                  ? '已停止'
-                  : activeRun
-                    ? activeRun.error
-                      ? '失败'
-                      : '已完成'
-                    : '空闲'}
-          </dd>
-          <dt>时间</dt>
-          <dd>{runSeconds}s</dd>
-          <dt>进度</dt>
-          <dd>{running ? progress?.trim() || '准备中' : '—'}</dd>
-          <dt>Workers</dt>
-          <dd>{snapshot?.search.workers ?? search?.workers ?? '—'}</dd>
+          <div>
+            <dt>当前任务</dt>
+            <dd>
+              {task
+                ? `${task.snapshot.galaxy.toUpperCase()} / ${task.snapshot.node} · ${task.snapshot.versionName}`
+                : viewOnly
+                  ? `${selection.galaxy.toUpperCase()} / ${selection.node} · ${versionName}`
+                  : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt>状态</dt>
+            <dd>
+              {running
+                ? '搜索中'
+                : task?.status === 'waiting'
+                  ? '等待'
+                  : task?.status === 'canceled'
+                    ? '已停止'
+                    : activeRun
+                      ? activeRun.error
+                        ? '失败'
+                        : '已完成'
+                      : '空闲'}
+            </dd>
+          </div>
+          <div>
+            <dt>已耗时</dt>
+            <dd>{formatDuration(runSeconds)}</dd>
+          </div>
+          <div>
+            <dt>Evaluated / Progress</dt>
+            <dd>
+              {running
+                ? evaluated
+                : typeof activeRun?.result?.simulations_used === 'number'
+                  ? activeRun.result.simulations_used
+                  : evaluated}
+            </dd>
+          </div>
+          <div>
+            <dt>并行进程</dt>
+            <dd>
+              {effectiveWorkers ??
+                (workerLine === 'starting'
+                  ? '启动中'
+                  : workerLine === 'single-process'
+                    ? '1'
+                    : (workerLine ?? snapshot?.search.workers ?? search?.workers ?? '—'))}
+            </dd>
+          </div>
+          {running && phase ? (
+            <div className="status-phase">
+              <dt>阶段</dt>
+              <dd>{phase}</dd>
+            </div>
+          ) : null}
         </dl>
         <details className="console">
           <summary>Optimizer 输出 / 日志（最近 200 KB）</summary>
@@ -1789,8 +1916,9 @@ function SearchWorkspace({
           <BestFound
             result={activeRun.result}
             changes={changes}
-            busy={busy || running}
-            target={task?.snapshot}
+            applied={applied}
+            busy={busy || running || optimizerBusy}
+            target={viewOnly ? activeRun?.task : task?.snapshot}
             onUseBest={onUseBest}
           />
         ) : (
@@ -1818,12 +1946,14 @@ function SearchWorkspace({
 function BestFound({
   result,
   changes,
+  applied,
   busy,
   target,
   onUseBest,
 }: {
   result: NonNullable<RunResult['result']>
   changes: number
+  applied: boolean
   busy: boolean
   target?: SearchTaskState['snapshot']
   onUseBest: () => void
@@ -1835,7 +1965,6 @@ function BestFound({
     typeof baseline?.fleet_resources_used === 'number' && typeof best.fleet_resources_used === 'number'
       ? baseline.fleet_resources_used - best.fleet_resources_used
       : null
-  const positions = ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'B2', 'B3', 'B4', 'B5']
   const byPosition = new Map(best.formation.map(entry => [entry.position, entry]))
   const loadouts = new Map<string, { primary?: unknown; secondary?: unknown; tertiary?: unknown }>()
   for (const [ship, value] of Object.entries(best.ship_loadouts ?? {})) {
@@ -1866,9 +1995,9 @@ function BestFound({
           <h2>Best Found</h2>
           <p>{changes ? `相对当前配置有 ${changes} 项阵型或装配变化。` : 'Best Found 与当前配置一致。'}</p>
         </div>
-        <button className="success use-best" onClick={onUseBest} disabled={busy || changes === 0}>
+        <button className="success use-best" onClick={onUseBest} disabled={busy || changes === 0 || !target || applied}>
           <Icon name="check" />
-          使用最优配置
+          {applied ? '已同步到配置' : '使用最优配置'}
         </button>
       </div>
       {target ? (
@@ -1918,27 +2047,33 @@ function BestFound({
       <div className="best-grid">
         <section>
           <h3>最终编队</h3>
-          <div className="best-formation">
-            {(['A', 'B'] as const).map(row => (
-              <div className="formation-row" key={row}>
-                <strong className="formation-row-label">{row}</strong>
-                <div className="formation-row-cells">
-                  {positions
-                    .filter(position => position.startsWith(row))
-                    .map(position => {
-                      const entry = byPosition.get(position)
-                      const ship = entry ? shipSelectorToId(entry.ship) : null
-                      return (
-                        <div
-                          className={`formation-cell ${ship ? `ship-${ship.toLowerCase()}` : 'ship-empty'}`}
-                          key={position}
-                        >
-                          <b>{position}</b>
-                          <span>{entry ? shipDisplayName(entry.ship) : '空位'}</span>
-                        </div>
-                      )
-                    })}
-                </div>
+          <div className="best-formation" role="table" aria-label="最终编队 B/A 横向、1 到 5 纵向">
+            <div className="formation-header" role="row">
+              <span />
+              <strong role="columnheader">B</strong>
+              <strong role="columnheader">A</strong>
+            </div>
+            {[1, 2, 3, 4, 5].map(row => (
+              <div className="formation-row" role="row" key={row}>
+                <strong className="formation-row-label" role="rowheader">
+                  {row}
+                </strong>
+                {(['B', 'A'] as const).map(column => {
+                  const position = `${column}${row}`
+                  const entry = byPosition.get(position)
+                  const ship = entry ? shipSelectorToId(entry.ship) : null
+                  return (
+                    <div
+                      role="cell"
+                      aria-label={`${position} ${entry ? shipDisplayName(entry.ship, false) : '空位'}`}
+                      className={`formation-cell ${ship ? `ship-${ship.toLowerCase()}` : 'ship-empty'}`}
+                      key={position}
+                    >
+                      <b>{position}</b>
+                      <span>{entry ? shipDisplayName(entry.ship, false) : '空位'}</span>
+                    </div>
+                  )
+                })}
               </div>
             ))}
           </div>
@@ -1948,7 +2083,7 @@ function BestFound({
           <div className="best-loadouts">
             {orderedLoadouts.map(([ship, loadout]) => (
               <div className={`ship-${ship.toLowerCase()}`} key={ship}>
-                <strong>{shipDisplayName(ship)}</strong>
+                <strong>{shipDisplayName(ship, false)}</strong>
                 <dl>
                   <dt>Primary</dt>
                   <dd>{modText(loadout.primary)}</dd>
@@ -2115,18 +2250,18 @@ function FormationEditor({
                   return (
                     <label className="formation-slot" key={position}>
                       <span>{position}</span>
-                      <select
-                        aria-label={`${position} 舰种`}
+                      <SmartSelect
+                        label={`${position} 舰种`}
                         value={shipSelectorToId(raw)}
-                        onChange={event => update(position, event.target.value as ShipId | '')}
-                      >
-                        <option value="">空位</option>
-                        {options.map(ship => (
-                          <option key={ship.id} value={ship.id}>
-                            {ship.name} · {ship.id} · {ship.numeric}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={value => update(position, value as ShipId | '')}
+                        options={[
+                          { value: '', label: '空位' },
+                          ...options.map(ship => ({
+                            value: ship.id,
+                            label: `${ship.name} · ${ship.id} · ${ship.numeric}`,
+                          })),
+                        ]}
+                      />
                       <small>{shipDisplayName(raw)}</small>
                     </label>
                   )
@@ -2264,15 +2399,17 @@ function ModSlotControl({
     )
   }
   return (
-    <select aria-label={label} value={resolved ?? ''} onChange={event => onChange(event.target.value || null)}>
-      {allowsNone ? <option value="">无</option> : null}
-      {concrete.map(id => (
-        <option key={id} value={id}>
-          {modDisplayName(id, true)}
-        </option>
-      ))}
-      {resolved && !concrete.includes(resolved) ? <option value={resolved}>不兼容：{resolved}</option> : null}
-    </select>
+    <SmartSelect
+      label={label}
+      value={resolved ?? ''}
+      onChange={value => onChange(value || null)}
+      searchable
+      options={[
+        ...(allowsNone ? [{ value: '', label: '无' }] : []),
+        ...concrete.map(id => ({ value: id, label: modDisplayName(id, true) })),
+        ...(resolved && !concrete.includes(resolved) ? [{ value: resolved, label: `不兼容：${resolved}` }] : []),
+      ]}
+    />
   )
 }
 
@@ -2372,10 +2509,15 @@ function OptimizerConfigEditor({
         <fieldset>
           <legend>部署与搜索空间</legend>
           <Label text="部署模式 mode">
-            <select value={config.mode} onChange={event => onChange({ ...config, mode: event.target.value })}>
-              <option value="realistic">真实部署（realistic）</option>
-              <option value="practice">练习（practice）</option>
-            </select>
+            <SmartSelect
+              label="部署模式"
+              value={config.mode}
+              onChange={value => onChange({ ...config, mode: value })}
+              options={[
+                { value: 'realistic', label: '真实部署（realistic）' },
+                { value: 'practice', label: '练习（practice）' },
+              ]}
+            />
           </Label>
           <Label text="舰队总组数上限">
             <input
@@ -2508,58 +2650,103 @@ function SearchSettings({ config, onChange }: { config: SearchConfig; onChange: 
     onChange({ ...config, [field]: value })
   return (
     <div className="search-settings">
-      <Label text="搜索档位">
-        <select
-          value={config.profile}
-          onChange={event => update('profile', event.target.value as SearchConfig['profile'])}
-        >
-          <option value="fast">快速（fast）</option>
-          <option value="balanced">均衡（balanced）</option>
-          <option value="exhaustive">穷举（exhaustive）</option>
-        </select>
-      </Label>
-      <Label text="Baseline 策略 goal">
-        <select value={config.goal} onChange={event => update('goal', event.target.value as SearchConfig['goal'])}>
-          <option value="best">寻找最佳（best）</option>
-          <option value="beat_baseline">必须严格改善（beat_baseline）</option>
-        </select>
-      </Label>
-      <Label text="模拟时钟">
-        <select
-          value={config.simulation_clock}
-          onChange={event => update('simulation_clock', event.target.value as SearchConfig['simulation_clock'])}
-        >
-          <option value="offline_fixed_step">离线固定步长</option>
-          <option value="realtime">实时</option>
-        </select>
-      </Label>
-      <div className="numeric-settings">
-        <Label text="本次最大模拟次数">
-          <input
-            type="number"
-            min="1"
-            value={config.max_simulations}
-            onChange={event => update('max_simulations', Number(event.target.value))}
+      <div className="settings-group">
+        <h3>常用</h3>
+        <Label text="搜索方式">
+          <SmartSelect
+            label="搜索方式"
+            value={config.profile}
+            onChange={value => update('profile', value as SearchConfig['profile'])}
+            options={[
+              { value: 'fast', label: '日常搜索' },
+              { value: 'balanced', label: '扩大探索' },
+              { value: 'exhaustive', label: '遍历搜索' },
+            ]}
           />
         </Label>
-        <Label text="Worker 数">
-          <input
-            type="number"
-            min="1"
-            max="4"
-            value={config.workers}
-            onChange={event => update('workers', Number(event.target.value))}
-          />
-        </Label>
+        <p className="setting-help">
+          {config.profile === 'fast'
+            ? '全局探索约占四分之一，其余尝试改进已有候选。'
+            : config.profile === 'balanced'
+              ? '全局探索约占四成，会尝试更多不同舰队组合。'
+              : '按配置空间逐项搜索；只有全部完成时才可称为穷举结果。'}
+        </p>
+        <div className="budget-group">
+          <div>
+            <strong>搜索预算</strong>
+            <p>时间与模拟次数共同限制本次搜索；先达到限制时进入收尾，当前战斗可能继续完成。</p>
+          </div>
+          <div className="numeric-settings">
+            <Label text="最长时间（秒）">
+              <input
+                aria-label="最长时间（秒）"
+                type="number"
+                min="1"
+                value={config.max_wall_seconds}
+                onChange={event => update('max_wall_seconds', Number(event.target.value))}
+              />
+            </Label>
+            <Label text="最多模拟（次）">
+              <input
+                aria-label="最多模拟（次）"
+                type="number"
+                min="1"
+                step="1"
+                value={config.max_simulations}
+                onChange={event => update('max_simulations', Number(event.target.value))}
+              />
+            </Label>
+          </div>
+        </div>
       </div>
-      <Label text="本次最长时间（秒）">
-        <input
-          type="number"
-          min="1"
-          value={config.max_wall_seconds}
-          onChange={event => update('max_wall_seconds', Number(event.target.value))}
-        />
-      </Label>
+      <details className="settings-advanced">
+        <summary>高级设置</summary>
+        <div className="settings-group">
+          <Label text="并行进程">
+            <input
+              aria-label="并行进程"
+              type="number"
+              min="1"
+              max="4"
+              step="1"
+              value={config.workers}
+              onChange={event => update('workers', Number(event.target.value))}
+            />
+          </Label>
+          <p className="setting-help">
+            同时运行的 Godot Worker 数（1–4）。启动失败时会回退到单进程；并行数不保证等比提速。
+          </p>
+          <Label text="模拟时钟">
+            <SmartSelect
+              label="模拟时钟"
+              value={config.simulation_clock}
+              onChange={value => update('simulation_clock', value as SearchConfig['simulation_clock'])}
+              options={[
+                { value: 'offline_fixed_step', label: '固定 60Hz 物理步进' },
+                { value: 'realtime', label: '实时同步（对照 / 调试）' },
+              ]}
+            />
+          </Label>
+          <p className="setting-help">
+            固定步进不等待现实时间推进物理帧；实时同步用于对照。这个选择独立于搜索方式，并会传到 Godot 启动参数。
+          </p>
+          <Label text="优化目标">
+            <SmartSelect
+              label="优化目标"
+              value={config.goal}
+              onChange={value => update('goal', value as SearchConfig['goal'])}
+              options={[
+                { value: 'best', label: goalName('best') },
+                { value: 'beat_baseline', label: goalName('beat_baseline') },
+              ]}
+            />
+          </Label>
+          <p className="setting-help">
+            当前 v3 仍会搜索到预算结束，并按 Best Found 推荐；“必须优于当前方案”仅记录在任务中，不改变 v3 推荐。旧版 v2
+            才会在没有严格改善时保留 Baseline。
+          </p>
+        </div>
+      </details>
     </div>
   )
 }

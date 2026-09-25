@@ -274,6 +274,8 @@ export function createBrowserApi(): FleetManagerApi {
     webQueueRunning = false
   }
   let lastSearch: RunResult | undefined
+  const completedRuns = new Map<string, RunResult>()
+  const latestResultByNode = new Map<string, string>()
   const api: FleetManagerApi = {
     runtime: 'web',
     previewImport: async () => ({ galaxies: [] }),
@@ -398,7 +400,7 @@ export function createBrowserApi(): FleetManagerApi {
       const task: SearchTaskSnapshot = {
         ...request,
         search: clone(searchConfig),
-        taskId: uid('task'),
+        taskId: 'taskId' in request && typeof request.taskId === 'string' ? request.taskId : uid('task'),
         nodeConfigHash: hash(current),
         stagedNodeConfigHash: hash(staged),
         commonConfigHash: hash(common),
@@ -416,9 +418,20 @@ export function createBrowserApi(): FleetManagerApi {
         listener({ taskId: task.taskId, line: '读取配置…\n搜索候选阵型…\n验证 Best Found…\n完成。\n' }),
       )
       lastSearch = sampleRun(selection, task)
+      const priorResult = latestResultByNode.get(key(selection))
+      if (priorResult) completedRuns.delete(priorResult)
+      completedRuns.set(task.taskId, lastSearch)
+      latestResultByNode.set(key(selection), task.taskId)
       return clone(lastSearch)
     },
     enqueueSearch: async request => {
+      const sameTarget = (item: SearchQueueItem) =>
+        item.snapshot.galaxy === request.galaxy &&
+        item.snapshot.node === request.node &&
+        item.snapshot.version === request.version
+      if (queue.some(item => sameTarget(item) && ['waiting', 'running'].includes(item.status)))
+        throw new Error('该 Node / Version 已在等待或搜索中。')
+      for (let index = queue.length - 1; index >= 0; index--) if (sameTarget(queue[index])) queue.splice(index, 1)
       const item: SearchQueueItem = {
         snapshot: {
           ...request,
@@ -472,26 +485,63 @@ export function createBrowserApi(): FleetManagerApi {
         finishedAt: now,
         nodes: target.nodes
           .filter(node => typeof request === 'string' || request.nodes.includes(node.id))
-          .map((node, index) => ({
-            node: node.id,
-            version: node.defaultVersion,
-            common: target.defaultCommon,
-            status: 'succeeded',
-            startedAt: now,
-            finishedAt: now,
-            changed: index === 0,
-            run: sampleRun({ galaxy, node: node.id, version: node.defaultVersion, common: target.defaultCommon }),
-          })),
+          .map((node, index) => {
+            const selection = { galaxy, node: node.id, version: node.defaultVersion, common: target.defaultCommon }
+            const current = clone(nodes.get(key(selection))!)
+            const common = clone(commons.get(commonKey(selection))!)
+            const search = clone(typeof request === 'string' ? searchConfig : request.search)
+            const task: SearchTaskSnapshot = {
+              ...selection,
+              versionName: node.versions.find(item => item.id === node.defaultVersion)?.name ?? node.defaultVersion,
+              commonName: target.commons.find(item => item.id === target.defaultCommon)?.name ?? target.defaultCommon,
+              search,
+              taskId: `${uid('rerun')}-${index}`,
+              nodeConfigHash: hash(current),
+              stagedNodeConfigHash: hash({ ...current, search }),
+              commonConfigHash: hash(common),
+              optimizerConfigHash: hash(optimizerConfig),
+              optimizerConfigVersion: `sha256:${hash(optimizerConfig)}`,
+              environment: {
+                boss: clone(current.boss),
+                hazards: clone(current.hazards),
+                supports: clone(current.supports),
+              },
+              startedAt: now,
+            }
+            const run = sampleRun(selection, task)
+            const priorResult = latestResultByNode.get(key(selection))
+            if (priorResult) completedRuns.delete(priorResult)
+            completedRuns.set(task.taskId, run)
+            latestResultByNode.set(key(selection), task.taskId)
+            return {
+              node: node.id,
+              version: node.defaultVersion,
+              common: target.defaultCommon,
+              status: 'succeeded' as const,
+              startedAt: now,
+              finishedAt: now,
+              changed: index === 0,
+              run,
+            }
+          }),
       }
       progressListeners.forEach(listener => listener(clone(progress)))
       return progress
     },
     useBest: async taskId => {
-      const task = lastSearch?.task
+      const run = completedRuns.get(taskId) ?? lastSearch
+      const task = run?.task
       const now = new Date().toISOString()
-      if (!task || task.taskId !== taskId || !lastSearch?.result?.best_result)
+      if (!task || task.taskId !== taskId || !run?.result?.best_result)
         return { exitCode: -1, startedAt: now, finishedAt: now, error: '搜索任务不存在或已失效。' }
       const selection: Selection = task
+      if (latestResultByNode.get(key(selection)) !== taskId)
+        return {
+          exitCode: -1,
+          startedAt: now,
+          finishedAt: now,
+          error: '该节点的结果已被后续搜索覆盖，请重新搜索后再应用。',
+        }
       if (hash(nodes.get(key(selection))) !== task.nodeConfigHash)
         return {
           exitCode: -1,
@@ -500,17 +550,25 @@ export function createBrowserApi(): FleetManagerApi {
           error: '目标 Version 在搜索后已变化，未应用 Best Found。',
         }
       const current = clone(nodes.get(key(selection))!)
-      const best = lastSearch.result.best_result.formation
-      for (const entry of best) {
+      const best = run.result.best_result
+      const formation: NodeConfig['baseline']['formation'] = {}
+      for (const entry of best.formation) {
         const ship = shipSelectorToId(entry.ship)
         if (ship) {
-          current.baseline.formation[entry.position] = preserveShipSelectorFormat(
-            current.baseline.formation[entry.position],
-            ship,
-          )
+          formation[entry.position] = preserveShipSelectorFormat(current.baseline.formation[entry.position], ship)
         }
       }
-      nodes.set(key(selection), current)
+      current.baseline.formation = formation
+      for (const [ship, loadout] of Object.entries(best.ship_loadouts ?? {})) {
+        const id = shipSelectorToId(ship)
+        if (!id) continue
+        current.baseline.loadouts[id] = {
+          primary: loadout.primary ?? null,
+          secondary: loadout.secondary ?? null,
+          tertiary_mods: loadout.tertiary_mods ?? [],
+        }
+      }
+      nodes.set(key(selection), nodeConfigSchema.parse(current))
       persistWorkspace()
       return { exitCode: 0, startedAt: now, finishedAt: now, node: clone(current) }
     },

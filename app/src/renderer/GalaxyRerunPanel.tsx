@@ -21,9 +21,13 @@ function elapsed(start?: string, end?: string, now = Date.now()) {
 export function GalaxyRerunPanel({
   progress,
   onOpen,
+  onStopCurrent,
+  onStopAll,
 }: {
   progress: GalaxyRerunProgress
   onOpen: (node: GalaxyRerunNode) => void
+  onStopCurrent: () => void
+  onStopAll: () => void
 }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -35,6 +39,8 @@ export function GalaxyRerunPanel({
   const failed = progress.nodes.filter(node => node.status === 'failed')
   const canceled = progress.nodes.filter(node => node.status === 'canceled')
   const unchanged = progress.nodes.filter(node => node.status === 'succeeded' && !node.changed).length
+  const waiting = progress.nodes.filter(node => node.status === 'queued').length
+  const current = progress.nodes.find(node => node.status === 'running')
   return (
     <section className="panel galaxy-rerun" aria-label="Galaxy 全局重跑">
       <div className="rerun-heading">
@@ -45,32 +51,85 @@ export function GalaxyRerunPanel({
             {progress.currentNode ? ` · 当前 ${progress.currentNode}` : ''}
           </p>
         </div>
-        <span className={`run-state ${progress.status}`}>{progress.status === 'running' ? '运行中' : '已完成'}</span>
+        <div className="rerun-heading-actions">
+          <span className={`run-state ${progress.status}`}>{progress.status === 'running' ? '运行中' : '已完成'}</span>
+          {progress.status === 'running' ? (
+            <>
+              <button onClick={onStopCurrent}>停止当前节点</button>
+              <button onClick={onStopAll}>停止整个批次</button>
+            </>
+          ) : null}
+        </div>
       </div>
-      {progress.status === 'running' ? (
-        <div className="rerun-nodes">
-          {progress.nodes.map(node => (
-            <div className={`rerun-node ${node.status}`} key={node.node}>
+      <div className="rerun-counts" aria-label="重跑状态汇总">
+        <span>
+          等待 <strong>{waiting}</strong>
+        </span>
+        <span>
+          当前 <strong>{current?.node ?? '—'}</strong>
+        </span>
+        <span>
+          已完成 <strong>{progress.nodes.filter(node => node.status === 'succeeded').length}</strong>
+        </span>
+        <span>
+          变化 <strong>{changed.length}</strong>
+        </span>
+        <span>
+          失败 <strong>{failed.length}</strong>
+        </span>
+      </div>
+      <p className="rerun-status-hint">
+        已完成包含“有变化”和“配置未变”；有变化表示 Best Found 的阵型或装配与本次验证的 Baseline
+        不同。点击已结束的节点查看详情。
+      </p>
+      <div className="rerun-nodes" aria-label="节点重跑进度">
+        {progress.nodes.map(node => {
+          const label =
+            node.status === 'succeeded'
+              ? node.changed
+                ? '✓ 完成 · 有变化'
+                : '✓ 完成 · 配置未变'
+              : statusLabel[node.status]
+          const inspectable =
+            (node.status === 'succeeded' && Boolean(node.run?.result)) ||
+            ((node.status === 'failed' || node.status === 'canceled') && Boolean(node.error || node.run?.error))
+          const content = (
+            <>
               <strong>{node.node}</strong>
-              <span>{statusLabel[node.status]}</span>
+              <span>{label}</span>
               <span>{elapsed(node.startedAt, node.finishedAt, now)}</span>
               {node.error ? <small>{runErrorSummary(node.error, node.status === 'canceled')}</small> : null}
+            </>
+          )
+          return inspectable ? (
+            <button
+              type="button"
+              className={`rerun-node ${node.status}${node.changed ? ' changed' : ''}`}
+              key={node.node}
+              onClick={() => onOpen(node)}
+              aria-label={`${node.node} ${label}，查看详情`}
+            >
+              {content}
+            </button>
+          ) : (
+            <div className={`rerun-node ${node.status}`} key={node.node}>
+              {content}
             </div>
-          ))}
-        </div>
-      ) : (
+          )
+        })}
+      </div>
+      <p className="rerun-summary">
+        {unchanged} 个节点配置不变，已从变化结果过滤；{canceled.length} 个已停止。
+      </p>
+      {changed.length || progress.status !== 'running' ? (
         <>
-          <p className="rerun-summary">
-            发现 {changed.length} 个配置变化；{unchanged} 个节点配置不变，已从结果列表过滤；{failed.length} 个失败；
-            {canceled.length} 个已停止。
-          </p>
           <h3>需要重新配置的节点</h3>
           {changed.length ? (
             <div className="changed-nodes">
               {changed.map(node => (
                 <button key={node.node} onClick={() => onOpen(node)}>
                   <strong>{node.node}</strong>
-                  <span>查看 Baseline / Best Found / Diff</span>
+                  <span>查看 Best Found 结果</span>
                   <small>耗时 {elapsed(node.startedAt, node.finishedAt)}</small>
                 </button>
               ))}
@@ -78,28 +137,28 @@ export function GalaxyRerunPanel({
           ) : (
             <p>没有发现 Formation / Loadout 变化。</p>
           )}
-          {failed.length ? (
-            <>
-              <h3>失败节点</h3>
-              <div className="failed-nodes">
-                {failed.map(node => (
-                  <div key={node.node}>
-                    <strong>{node.node}</strong>
-                    <span>
-                      {runErrorSummary(node.error)}{' '}
-                      <details>
-                        <summary>查看详情</summary>
-                        <pre>{node.error}</pre>
-                      </details>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </>
-          ) : null}
-          {canceled.length ? <p>已停止：{canceled.map(node => node.node).join('、')}</p> : null}
         </>
-      )}
+      ) : null}
+      {failed.length ? (
+        <>
+          <h3>失败节点</h3>
+          <div className="failed-nodes">
+            {failed.map(node => (
+              <div key={node.node}>
+                <strong>{node.node}</strong>
+                <span>
+                  {runErrorSummary(node.error)}{' '}
+                  <details>
+                    <summary>查看详情</summary>
+                    <pre>{node.error}</pre>
+                  </details>
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : null}
+      {canceled.length ? <p>已停止：{canceled.map(node => node.node).join('、')}</p> : null}
     </section>
   )
 }
