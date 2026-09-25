@@ -1,5 +1,5 @@
 import type { GalaxyRerunProgress, GalaxyRerunRequest, RunResult, Selection } from '../../shared/contracts'
-import { hasFormationOrLoadoutChange } from '../../shared/formation-diff'
+import { hasRerunChange } from '../../shared/formation-diff'
 import { DataRepository } from './data-repository'
 import { OptimizerRunner } from './optimizer-runner'
 
@@ -60,7 +60,7 @@ export class GalaxyRerunService {
           node.run = { ...run, result: undefined, error: validationError }
         } else {
           node.status = 'succeeded'
-          node.changed = hasFormationOrLoadoutChange(run.result!.verified_baseline, run.result!.best_result)
+          node.changed = hasRerunChange(run.result!.verified_baseline, run.result!.best_result)
         }
         progress.completed++
         this.publish(progress)

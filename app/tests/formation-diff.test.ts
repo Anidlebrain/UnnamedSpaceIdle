@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { diffFormation, hasFormationOrLoadoutChange } from '../src/shared/formation-diff'
+import {
+  diffFormation,
+  hasFormationOrLoadoutChange,
+  hasRerunChange,
+  usedFrIntegerChange,
+} from '../src/shared/formation-diff'
 type Entry = {
   position: string
   ship: string
@@ -46,5 +51,24 @@ describe('hasFormationOrLoadoutChange', () => {
         candidate({ position: 'A1', ship: 'Fighter', secondary_mod: 'Shield' }),
       ),
     ).toBe(true)
+  })
+})
+
+describe('Used FR integer comparison', () => {
+  const formation = { position: 'A1', ship: 'Fighter' }
+  it('ignores decimals within the same integer, even when formation changes', () => {
+    const baseline = candidate(formation, 15.89)
+    const best = candidate({ ...formation, ship: 'Corvette' }, 15.01)
+    expect(usedFrIntegerChange(baseline, best)).toEqual({ baselineUsed: 15, bestUsed: 15, saved: 0 })
+    expect(hasRerunChange(baseline, best)).toBe(false)
+  })
+  it('counts crossing an integer boundary as one FR of change', () => {
+    const baseline = candidate(formation, 15.01)
+    const best = candidate(formation, 14.99)
+    expect(usedFrIntegerChange(baseline, best)).toEqual({ baselineUsed: 15, bestUsed: 14, saved: 1 })
+    expect(hasRerunChange(baseline, best)).toBe(true)
+  })
+  it('falls back to configuration changes if Used FR is unavailable', () => {
+    expect(hasRerunChange({ formation: [formation] }, { formation: [{ ...formation, ship: 'Corvette' }] })).toBe(true)
   })
 })

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { GalaxyRerunNode, GalaxyRerunProgress } from '../shared/contracts'
+import { usedFrIntegerChange } from '../shared/formation-diff'
 import { runErrorSummary } from '../shared/run-errors'
 
 const statusLabel = {
@@ -16,6 +17,15 @@ function elapsed(start?: string, end?: string, now = Date.now()) {
   if (!Number.isFinite(milliseconds) || milliseconds < 0) return '—'
   const seconds = Math.floor(milliseconds / 1000)
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`
+}
+
+function usedFrSummary(node: GalaxyRerunNode) {
+  const result = node.run?.result
+  if (!result) return null
+  const usedFr = usedFrIntegerChange(result.verified_baseline, result.best_result)
+  if (!usedFr) return null
+  const difference = usedFr.saved > 0 ? `减少 ${usedFr.saved}` : usedFr.saved < 0 ? `增加 ${-usedFr.saved}` : '变化 0'
+  return `Used FR 取整：${usedFr.baselineUsed} → ${usedFr.bestUsed}（${difference}）`
 }
 
 export function GalaxyRerunPanel({
@@ -79,16 +89,17 @@ export function GalaxyRerunPanel({
         </span>
       </div>
       <p className="rerun-status-hint">
-        已完成包含“有变化”和“配置未变”；有变化表示 Best Found 的阵型或装配与本次验证的 Baseline
-        不同。点击已结束的节点查看详情。
+        有变化按本次验证的 Baseline 与 Best Found 的 Used FR 各自向下取整后比较；整数相同视为无有效变化。 结果缺少 Used
+        FR 时回退比较阵型和装配。点击已结束的节点查看详情。
       </p>
       <div className="rerun-nodes" aria-label="节点重跑进度">
         {progress.nodes.map(node => {
+          const usedFr = usedFrSummary(node)
           const label =
             node.status === 'succeeded'
               ? node.changed
                 ? '✓ 完成 · 有变化'
-                : '✓ 完成 · 配置未变'
+                : '✓ 完成 · 无有效变化'
               : statusLabel[node.status]
           const inspectable =
             (node.status === 'succeeded' && Boolean(node.run?.result)) ||
@@ -98,6 +109,7 @@ export function GalaxyRerunPanel({
               <strong>{node.node}</strong>
               <span>{label}</span>
               <span>{elapsed(node.startedAt, node.finishedAt, now)}</span>
+              {usedFr ? <small className="rerun-fr-change">{usedFr}</small> : null}
               {node.error ? <small>{runErrorSummary(node.error, node.status === 'canceled')}</small> : null}
             </>
           )
@@ -119,23 +131,24 @@ export function GalaxyRerunPanel({
         })}
       </div>
       <p className="rerun-summary">
-        {unchanged} 个节点配置不变，已从变化结果过滤；{canceled.length} 个已停止。
+        {unchanged} 个节点无有效变化，已从变化结果过滤；{canceled.length} 个已停止。
       </p>
       {changed.length || progress.status !== 'running' ? (
         <>
-          <h3>需要重新配置的节点</h3>
+          <h3>发现变化的节点</h3>
           {changed.length ? (
             <div className="changed-nodes">
               {changed.map(node => (
                 <button key={node.node} onClick={() => onOpen(node)}>
                   <strong>{node.node}</strong>
                   <span>查看 Best Found 结果</span>
+                  <small>{usedFrSummary(node) ?? '阵型或装配有变化'}</small>
                   <small>耗时 {elapsed(node.startedAt, node.finishedAt)}</small>
                 </button>
               ))}
             </div>
           ) : (
-            <p>没有发现 Formation / Loadout 变化。</p>
+            <p>没有发现有效变化。</p>
           )}
         </>
       ) : null}

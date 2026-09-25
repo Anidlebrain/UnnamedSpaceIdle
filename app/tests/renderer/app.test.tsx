@@ -95,8 +95,8 @@ const galaxyResult = {
         finishedAt: '2026-01-01T00:00:01.000Z',
         task: searchTask(),
         result: {
-          verified_baseline: { formation: [{ position: 'A1', ship: 'Fighter' }] },
-          best_result: { formation: [{ position: 'A1', ship: 'Fighter' }] },
+          verified_baseline: { formation: [{ position: 'A1', ship: 'Fighter' }], fleet_resources_used: 15.89 },
+          best_result: { formation: [{ position: 'A1', ship: 'Corvette' }], fleet_resources_used: 15.01 },
         },
       },
     },
@@ -119,8 +119,8 @@ const galaxyResult = {
         finishedAt: '2026-01-01T00:00:03.000Z',
         task: searchTask('B3'),
         result: {
-          verified_baseline: { formation: [{ position: 'A1', ship: 'Fighter' }] },
-          best_result: { formation: [{ position: 'A1', ship: 'Corvette' }] },
+          verified_baseline: { formation: [{ position: 'A1', ship: 'Fighter' }], fleet_resources_used: 15.01 },
+          best_result: { formation: [{ position: 'A1', ship: 'Corvette' }], fleet_resources_used: 14.99 },
         },
       },
     },
@@ -296,14 +296,18 @@ describe('Renderer preload contract', () => {
     await screen.findByText('当前节点')
     fireEvent.click(screen.getByRole('button', { name: 'Galaxy 重跑' }))
     fireEvent.click(screen.getByRole('button', { name: '开始重跑所选节点' }))
-    await screen.findByText('需要重新配置的节点')
+    await screen.findByText('发现变化的节点')
     expect(api.rerunGalaxy).toHaveBeenCalledWith(expect.objectContaining({ galaxy: 'g6', nodes: ['B1'] }))
-    expect(screen.getByText(/1 个节点配置不变，已从变化结果过滤/)).toBeTruthy()
+    expect(screen.getByText(/1 个节点无有效变化，已从变化结果过滤/)).toBeTruthy()
+    expect(within(screen.getByLabelText('节点重跑进度')).getByText('Used FR 取整：15 → 14（减少 1）')).toBeTruthy()
     const changed = screen.getByRole('button', { name: /B3.*查看 Best Found 结果/ })
     expect(changed).toBeTruthy()
     expect(screen.getAllByText(/未知运行错误/).length).toBeGreaterThan(0)
     fireEvent.click(changed)
     await screen.findByText('Best Found')
+    expect(
+      within(document.querySelector('.best-found') as HTMLElement).getByText(/Used FR 取整：15 → 14，减少 1/),
+    ).toBeTruthy()
     expect(api.load).toHaveBeenLastCalledWith({ galaxy: 'g6', node: 'B3', version: 'default', common: 'default' })
     expect(screen.getByText('最终编队')).toBeTruthy()
     api.useBest.mockResolvedValueOnce({
@@ -323,11 +327,17 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('button', { name: '开始重跑所选节点' }))
     const grid = await screen.findByLabelText('节点重跑进度')
     expect(within(grid).getByRole('button', { name: /B3.*完成 · 有变化.*查看详情/ }).className).toContain('changed')
-    expect(within(grid).getByRole('button', { name: /B1.*完成 · 配置未变.*查看详情/ }).className).not.toContain(
+    expect(within(grid).getByRole('button', { name: /B1.*完成 · 无有效变化.*查看详情/ }).className).not.toContain(
       'changed',
     )
-    fireEvent.click(within(grid).getByRole('button', { name: /B1.*完成 · 配置未变.*查看详情/ }))
+    expect(within(grid).getByText('Used FR 取整：15 → 15（变化 0）')).toBeTruthy()
+    fireEvent.click(within(grid).getByRole('button', { name: /B1.*完成 · 无有效变化.*查看详情/ }))
     await screen.findByText('Best Found')
+    expect(
+      within(document.querySelector('.best-found') as HTMLElement).getByText(
+        /Used FR 取整：15 → 15，变化 0。阵型或装配有 1 项差异/,
+      ),
+    ).toBeTruthy()
     expect((screen.getByRole('button', { name: '使用最优配置' }) as HTMLButtonElement).disabled).toBe(true)
     fireEvent.click(screen.getByRole('button', { name: 'Galaxy 重跑' }))
     fireEvent.click(screen.getByRole('button', { name: /B2.*失败.*查看详情/ }))
@@ -363,6 +373,26 @@ describe('Renderer preload contract', () => {
     await waitFor(() =>
       expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain('"A2": 3'),
     )
+  })
+  it('adds an empty loadout when a ship enters the formation', async () => {
+    api.load.mockResolvedValueOnce({
+      node: {
+        ...node,
+        player_state: { fleet_resources: 1, ships: { Fighter: 1, Cruiser: 1 } },
+        baseline: { ...node.baseline, formation: { A1: 1, A2: 0 } },
+      },
+      common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '阵型' }))
+    fireEvent.click(screen.getByRole('combobox', { name: 'A2 舰种' }))
+    fireEvent.click(screen.getByRole('option', { name: '巡洋舰 · Cruiser · 4' }))
+    await waitFor(() => {
+      const raw = JSON.parse((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value)
+      expect(raw.baseline.formation.A2).toBe(4)
+      expect(raw.baseline.loadouts.Cruiser).toEqual({ primary: 0, secondary: 0 })
+    })
   })
   it('renders one-Mod slots as toggles, multi-Mod slots as dropdowns, and writes compatible values', async () => {
     api.loadOptimizerConfig.mockResolvedValueOnce({
@@ -469,6 +499,31 @@ describe('Renderer preload contract', () => {
     expect(raw).toContain('"priority": "kill_cost"')
     expect(raw).toContain('"B10"')
     expect(raw).toContain('"F3"')
+  })
+
+  it('keeps commas and newlines editable while parsing environment nodes', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '环境' }))
+    const hazards = screen.getByLabelText('Hazards') as HTMLTextAreaElement
+    const supports = screen.getByLabelText('Supports') as HTMLTextAreaElement
+
+    fireEvent.change(hazards, { target: { value: 'B10,' } })
+    expect(hazards.value).toBe('B10,')
+    fireEvent.change(hazards, { target: { value: 'B10,\nB11' } })
+    expect(hazards.value).toBe('B10,\nB11')
+    fireEvent.change(supports, { target: { value: 'F2\n' } })
+    expect(supports.value).toBe('F2\n')
+    fireEvent.change(supports, { target: { value: 'F2\nF3' } })
+    expect(supports.value).toBe('F2\nF3')
+
+    const raw = (screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value
+    expect(JSON.parse(raw).hazards).toEqual(['B10', 'B11'])
+    expect(JSON.parse(raw).supports).toEqual(['F2', 'F3'])
+    fireEvent.click(screen.getByRole('tab', { name: '阵型' }))
+    fireEvent.click(screen.getByRole('tab', { name: '环境' }))
+    expect((screen.getByLabelText('Hazards') as HTMLTextAreaElement).value).toBe('B10\nB11')
+    expect((screen.getByLabelText('Supports') as HTMLTextAreaElement).value).toBe('F2\nF3')
   })
 
   it('keeps public configuration on its own page and does not mutate Node JSON', async () => {
@@ -753,6 +808,42 @@ describe('Renderer preload contract', () => {
     expect(screen.getByLabelText('Galaxy 全局重跑')).toBeTruthy()
     fireEvent.click(screen.getByText('调整下次重跑'))
     expect(screen.getByRole('button', { name: '全选' })).toBeTruthy()
+  })
+  it('restores rerun checkboxes across pages and restart, and checks newly added nodes', async () => {
+    const catalogWith = (ids: string[]) => ({
+      galaxies: [
+        {
+          id: 'g6',
+          nodes: ids.map(id => ({
+            id,
+            defaultVersion: 'default',
+            versions: [{ id: 'default', name: '默认', isDefault: true }],
+          })),
+          defaultCommon: 'default',
+          commons: [{ id: 'default', name: '默认', isDefault: true }],
+        },
+      ],
+      templates: [],
+    })
+    api.catalog.mockResolvedValueOnce(catalogWith(['B1', 'B2']))
+    const first = render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: 'Galaxy 重跑' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: /B2/ }))
+    expect((screen.getByRole('checkbox', { name: /B2/ }) as HTMLInputElement).checked).toBe(false)
+
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Galaxy 重跑' }))
+    expect((screen.getByRole('checkbox', { name: /B2/ }) as HTMLInputElement).checked).toBe(false)
+
+    first.unmount()
+    api.catalog.mockResolvedValueOnce(catalogWith(['B1', 'B2', 'B3']))
+    render(<App />)
+    await screen.findByRole('checkbox', { name: /B3/ })
+    expect((screen.getByRole('checkbox', { name: /B1/ }) as HTMLInputElement).checked).toBe(true)
+    expect((screen.getByRole('checkbox', { name: /B2/ }) as HTMLInputElement).checked).toBe(false)
+    expect((screen.getByRole('checkbox', { name: /B3/ }) as HTMLInputElement).checked).toBe(true)
+    expect(screen.getByText('已选 2 / 3 个节点')).toBeTruthy()
   })
   it('gives a running Galaxy rerun the full results area and keeps both stop actions available', async () => {
     let finish!: (result: typeof galaxyResult) => void

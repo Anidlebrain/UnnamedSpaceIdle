@@ -127,7 +127,7 @@ describe('GalaxyRerunService', () => {
     expect(progress.nodes.map(item => item.node)).toEqual(['B3', 'B1'])
     expect(progress.nodes.every(item => item.run?.task?.search.max_simulations === 7)).toBe(true)
   })
-  it('uses only Galaxy defaults, runs serially, filters FR-only changes, continues failures, and never writes Manager data', async () => {
+  it('uses only Galaxy defaults, runs serially, compares integer Used FR, continues failures, and never writes Manager data', async () => {
     const fixture = await setup()
     const managerPaths = [
       join(fixture.managerGalaxy, 'common', 'versions', 'buff.json'),
@@ -150,11 +150,11 @@ describe('GalaxyRerunService', () => {
         await new Promise(resolve => setTimeout(resolve, 5))
         active--
         if (selection.node === 'B2') return 9
-        const changed = selection.node === 'B3'
+        const frChanged = selection.node === 'B3'
         const formation = [
           {
             position: 'A1',
-            ship: changed ? 'Corvette' : 'Fighter',
+            ship: 'Corvette',
             primary_mod: null,
             secondary_mod: null,
             tertiary_mods: [],
@@ -167,12 +167,12 @@ describe('GalaxyRerunService', () => {
             verified_baseline: {
               formation_key: 'baseline-key',
               formation: [{ ...formation[0], ship: 'Fighter' }],
-              fleet_resources_used: 10,
+              fleet_resources_used: frChanged ? 15.01 : 15.89,
             },
             best_result: {
-              formation_key: changed ? 'changed-key' : 'baseline-key',
+              formation_key: 'changed-key',
               formation,
-              fleet_resources_used: 5,
+              fleet_resources_used: frChanged ? 14.99 : 15.01,
             },
           }),
         )

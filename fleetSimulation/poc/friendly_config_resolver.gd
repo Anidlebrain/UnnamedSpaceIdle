@@ -326,6 +326,10 @@ func _normalize_candidate(candidate: Dictionary, label: String, allowed_mod_slot
 				return _error("%s.loadouts.%s.%s: %s" % [label, ship_type, slot, mod_result.error])
 			loadout[slot] = mod_result.mod
 		loadouts[ship_type] = loadout
+	if label == "baseline":
+		for ship_type in formation.values():
+			if ship_type not in loadouts:
+				loadouts[ship_type] = {"primary": null, "secondary": null}
 	normalized.loadouts = loadouts
 	return {"ok": true, "candidate": normalized}
 
@@ -426,6 +430,10 @@ func run_numeric_input_unit_tests(allowed_mod_slots: Dictionary) -> Dictionary:
 		"formation": {"A1": 1},
 		"loadouts": {"1": {"primary": 2, "secondary": 0}},
 	}, "numeric_invalid", allowed_mod_slots)
+	var missing_baseline_loadout := _normalize_candidate({
+		"formation": {"A1": 4},
+		"loadouts": {},
+	}, "baseline", allowed_mod_slots)
 	var candidate: Dictionary = normalized.get("candidate", {})
 	var passed: bool = (
 		bool(normalized.get("ok", false))
@@ -439,6 +447,9 @@ func run_numeric_input_unit_tests(allowed_mod_slots: Dictionary) -> Dictionary:
 		and candidate.get("loadouts", {}).get("Corvette", {}).get("secondary") == "ShieldMod"
 		and candidate.get("loadouts", {}).get("Frigate", {}).get("secondary") == "ArmorMod"
 		and candidate.get("loadouts", {}).get("Cruiser", {}).get("secondary") == "CruiserSingleArmorTank"
+		and bool(missing_baseline_loadout.get("ok", false))
+		and missing_baseline_loadout.get("candidate", {}).get("loadouts", {}).has("Cruiser")
+		and missing_baseline_loadout.get("candidate", {}).get("loadouts", {}).get("Cruiser", {}).get("primary") == null
 		and not bool(invalid_slot.get("ok", false))
 		and bool(combined_ships.get("ok", false))
 		and int(combined_ships.ships.Fighter.available) == 1
@@ -452,6 +463,7 @@ func run_numeric_input_unit_tests(allowed_mod_slots: Dictionary) -> Dictionary:
 		"passed": passed,
 		"normalized": normalized,
 		"invalid_slot": invalid_slot,
+		"missing_baseline_loadout": missing_baseline_loadout,
 		"combined_ships": combined_ships,
 		"legacy_ships": legacy_ships,
 		"invalid_common_ships": invalid_common_ships,

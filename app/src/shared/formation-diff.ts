@@ -7,6 +7,28 @@ export type FormationChange = {
   after: unknown
 }
 type Candidate = NonNullable<OptimizerResult['best_result']>
+export function usedFrIntegerChange(baseline: Candidate | null | undefined, best: Candidate | null | undefined) {
+  const before = baseline?.fleet_resources_used
+  const after = best?.fleet_resources_used
+  if (
+    typeof before !== 'number' ||
+    typeof after !== 'number' ||
+    !Number.isFinite(before) ||
+    !Number.isFinite(after) ||
+    before < 0 ||
+    after < 0
+  )
+    return null
+  const baselineUsed = Math.floor(before)
+  const bestUsed = Math.floor(after)
+  return { baselineUsed, bestUsed, saved: baselineUsed - bestUsed }
+}
+
+export function hasRerunChange(baseline: Candidate | null | undefined, best: Candidate | null | undefined): boolean {
+  const usedFr = usedFrIntegerChange(baseline, best)
+  return usedFr ? usedFr.saved !== 0 : hasFormationOrLoadoutChange(baseline, best)
+}
+
 export function diffFormation(
   baseline: Candidate | null | undefined,
   best: Candidate | null | undefined,

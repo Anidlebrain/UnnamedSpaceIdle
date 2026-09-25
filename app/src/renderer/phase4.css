@@ -1678,6 +1678,7 @@ th {
 .galaxy-rerun .rerun-nodes { grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); max-height: min(42vh, 24rem); overflow: auto; }
 .galaxy-rerun .rerun-node { min-width: 0; padding: .35rem .5rem; text-align: start; white-space: normal; }
 .galaxy-rerun .rerun-node span { min-width: 0; }
+.galaxy-rerun .rerun-fr-change { grid-column: 1 / -1; color: var(--color-ink-2); }
 .galaxy-rerun .rerun-node.changed { border-color: var(--color-success); background: color-mix(in srgb, var(--color-success) 10%, var(--color-paper)); }
 .galaxy-rerun .rerun-node.changed span { color: var(--color-success); }
 .galaxy-rerun button.rerun-node { cursor: pointer; }

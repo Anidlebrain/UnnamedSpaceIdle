@@ -73,6 +73,34 @@ describe('DataRepository', () => {
     await repo.importMap()
     await expect(repo.importMap()).rejects.toThrow('will not overwrite')
   })
+  it('stages missing baseline loadouts as no Mod without rewriting the saved Version', async () => {
+    const { repo, root } = await fixture()
+    await repo.importMap()
+    const selection = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
+    const original: NodeConfig = {
+      ...node,
+      baseline: {
+        enabled: true,
+        formation: { A1: 4, A2: 1 },
+        loadouts: { Fighter: { primary: 1, secondary: 0 } },
+      },
+    }
+    const savedPath = join(root, 'data', 'galaxies', 'g6', 'nodes', 'B1', 'versions', 'default.json')
+    await writeFile(savedPath, `${JSON.stringify(original, null, 2)}\n`)
+    const before = await readFile(savedPath, 'utf8')
+
+    const loaded = await repo.load(selection)
+    expect(loaded.node.baseline.loadouts).toMatchObject({
+      Fighter: { primary: 1, secondary: 0 },
+      Cruiser: { primary: 0, secondary: 0 },
+    })
+    await repo.stageValues(selection, loaded.node, loaded.common)
+    expect(JSON.parse(await readFile(join(root, 'map', 'g6', 'B1.json'), 'utf8')).baseline.loadouts.Cruiser).toEqual({
+      primary: 0,
+      secondary: 0,
+    })
+    expect(await readFile(savedPath, 'utf8')).toBe(before)
+  })
   it('loads the committed Search fallback and persists user changes only under map', async () => {
     const { repo, root } = await fixture()
     await repo.importMap()

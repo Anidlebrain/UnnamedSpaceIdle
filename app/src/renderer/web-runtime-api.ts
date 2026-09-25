@@ -12,6 +12,7 @@ import type {
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
 import { nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
 import { effectiveShipCounts } from '../shared/ship-counts'
+import { hasRerunChange } from '../shared/formation-diff'
 import { preserveShipSelectorFormat, shipSelectorToId } from '../shared/ship-selectors'
 
 const clone = <T>(value: T): T => structuredClone(value)
@@ -530,7 +531,7 @@ export function createBrowserApi(): FleetManagerApi {
               status: 'succeeded' as const,
               startedAt: now,
               finishedAt: now,
-              changed: index === 0,
+              changed: hasRerunChange(run.result?.verified_baseline, run.result?.best_result),
               run,
             }
           }),

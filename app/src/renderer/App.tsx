@@ -13,7 +13,7 @@ import type {
 } from '../shared/contracts'
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../shared/bridge'
-import { diffFormation } from '../shared/formation-diff'
+import { diffFormation, hasRerunChange, usedFrIntegerChange } from '../shared/formation-diff'
 import { effectiveShipCounts } from '../shared/ship-counts'
 import {
   preserveShipSelectorFormat,
@@ -59,6 +59,38 @@ type EditorTab = 'formation' | 'fleet' | 'loadout' | 'environment'
 type CommonTab = 'galaxy' | 'optimizer'
 const LAST_SEARCH_KEY = 'fleet-manager-last-search-v1'
 const LAST_LOCATION_KEY = 'fleet-manager-location-v1'
+const RERUN_SELECTIONS_KEY = 'fleet-manager-rerun-selections-v1'
+type RerunSelection = { known: string[]; selected: string[] }
+type RerunSelections = Record<string, RerunSelection>
+function storedRerunSelections(): RerunSelections {
+  try {
+    const stored: unknown = JSON.parse(localStorage.getItem(RERUN_SELECTIONS_KEY) ?? '{}')
+    if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return {}
+    return Object.fromEntries(
+      Object.entries(stored).filter((entry): entry is [string, RerunSelection] => {
+        const value = entry[1] as Partial<RerunSelection> | null
+        return Boolean(
+          value &&
+          Array.isArray(value.known) &&
+          value.known.every(id => typeof id === 'string') &&
+          Array.isArray(value.selected) &&
+          value.selected.every(id => typeof id === 'string'),
+        )
+      }),
+    )
+  } catch {
+    return {}
+  }
+}
+function selectedRerunNodes(nodes: string[], saved?: RerunSelection): string[] {
+  if (!saved) return nodes
+  const current = new Set(nodes)
+  const known = new Set(saved.known)
+  return [
+    ...new Set(saved.selected.filter(id => current.has(id))),
+    ...nodes.filter(id => !known.has(id) && !saved.selected.includes(id)),
+  ]
+}
 const formatDuration = (seconds: number) =>
   `${Math.floor(seconds / 60)
     .toString()
@@ -142,7 +174,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const [searchQueue, setSearchQueue] = useState<SearchQueueItem[]>([])
   const [viewedTaskIds, setViewedTaskIds] = useState<Set<string>>(() => new Set())
   const [appliedTaskIds, setAppliedTaskIds] = useState<Set<string>>(() => new Set())
-  const [rerunNodes, setRerunNodes] = useState<string[]>([])
+  const [rerunSelections, setRerunSelections] = useState<RerunSelections>(storedRerunSelections)
   const [galaxyRerun, setGalaxyRerun] = useState<GalaxyRerunProgress | null>(null)
   const [rerunStarting, setRerunStarting] = useState(false)
   const [galaxyDetail, setGalaxyDetail] = useState<GalaxyRerunNode | null>(null)
@@ -276,7 +308,6 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             common: galaxy?.defaultCommon ?? '',
           })
         } else setSelection(contexts[page])
-        setRerunNodes(next.galaxies.find(item => item.id === contexts.rerunGalaxy)?.nodes.map(item => item.id) ?? [])
         void api.searchQueue().then(setSearchQueue)
       })
       .catch(error => setMessage(`无法读取 Manager / Optimizer 配置：${(error as Error).message}`))
@@ -314,6 +345,9 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     if (pageContextsRef.current)
       localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ workspace, contexts: pageContextsRef.current }))
   }, [workspace, selection])
+  useEffect(() => {
+    localStorage.setItem(RERUN_SELECTIONS_KEY, JSON.stringify(rerunSelections))
+  }, [rerunSelections])
   useEffect(() => {
     if (!searchTask || searchTask.status !== 'running') return
     const updateElapsed = () =>
@@ -442,7 +476,6 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     setGalaxyDetail(null)
     if (next === 'rerun') {
       const galaxy = catalog.galaxies.find(item => item.id === contexts.rerunGalaxy) ?? catalog.galaxies[0]
-      setRerunNodes(galaxy?.nodes.map(item => item.id) ?? [])
       const first = galaxy?.nodes[0]
       setSelection({
         galaxy: galaxy?.id ?? '',
@@ -467,8 +500,6 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     cacheCurrentDraft()
     const next = updateSelection(catalog, selection, field, value)
     setCurrentSelection(next)
-    if (workspace === 'rerun' && field === 'galaxy')
-      setRerunNodes(catalog.galaxies.find(item => item.id === value)?.nodes.map(item => item.id) ?? [])
     if (field === 'galaxy') setNewNodeGalaxy(value)
   }
   const update = <K extends keyof Selection>(field: K, value: Selection[K]) => applyUpdate(field, value)
@@ -681,7 +712,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       const failed = result.nodes.filter(item => item.status === 'failed').length
       const changed = result.nodes.filter(item => item.changed).length
       const canceled = result.nodes.filter(item => item.status === 'canceled').length
-      setMessage(`Galaxy 重跑结束：发现 ${changed} 个配置变化，${failed} 个失败，${canceled} 个已停止。`)
+      setMessage(`Galaxy 重跑结束：发现 ${changed} 个有效变化，${failed} 个失败，${canceled} 个已停止。`)
     } catch (error) {
       setMessage(`Galaxy 重跑失败：${runErrorSummary(error)}`)
       setErrorDetail(String((error as Error).message ?? error).slice(0, 4000))
@@ -812,6 +843,15 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const showNodeContext = workspace === 'node' || workspace === 'search' || workspace === 'templates'
   const showCommonContext = showNodeContext || (workspace === 'common' && commonTab === 'galaxy')
   const rerunCatalogNodes = catalog.galaxies.find(item => item.id === selection.galaxy)?.nodes ?? []
+  const rerunCatalogNodeIds = rerunCatalogNodes.map(node => node.id)
+  const rerunNodes = selectedRerunNodes(rerunCatalogNodeIds, rerunSelections[selection.galaxy])
+  const setRerunNodes = (update: (current: string[]) => string[]) => {
+    const selected = update(rerunNodes)
+    setRerunSelections(current => ({
+      ...current,
+      [selection.galaxy]: { known: rerunCatalogNodeIds, selected },
+    }))
+  }
   const orderedRerunNodeIds = [
     ...rerunNodes.filter(id => rerunCatalogNodes.some(node => node.id === id)),
     ...rerunCatalogNodes.map(node => node.id).filter(id => !rerunNodes.includes(id)),
@@ -1418,7 +1458,13 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
               {node && optimizerConfig && editorTab === 'loadout' ? (
                 <LoadoutEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
               ) : null}
-              {node && editorTab === 'environment' ? <EnvironmentEditor config={node} onChange={tableChange} /> : null}
+              {node && editorTab === 'environment' ? (
+                <EnvironmentEditor
+                  key={`${workspace}:${nodeDomainKey(selection)}`}
+                  config={node}
+                  onChange={tableChange}
+                />
+              ) : null}
               <details className="advanced">
                 <summary>高级：原始 JSON</summary>
                 <div>
@@ -1655,15 +1701,35 @@ function FleetStateEditor({
 function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange: (value: NodeConfig) => void }) {
   const boss = (config.boss ?? {}) as Record<string, unknown>
   const alive = Boolean(boss.alive)
+  const [nodeText, setNodeText] = useState({
+    hazards: config.hazards.map(String).join('\n'),
+    supports: config.supports.map(String).join('\n'),
+  })
+  const lastEmittedNodes = useRef<Partial<Pick<NodeConfig, 'hazards' | 'supports'>>>({})
+  useEffect(() => {
+    setNodeText(current => {
+      const hazards =
+        config.hazards === lastEmittedNodes.current.hazards ? current.hazards : config.hazards.map(String).join('\n')
+      const supports =
+        config.supports === lastEmittedNodes.current.supports
+          ? current.supports
+          : config.supports.map(String).join('\n')
+      return hazards === current.hazards && supports === current.supports ? current : { hazards, supports }
+    })
+  }, [config.hazards, config.supports])
   const updateBoss = (field: string, value: unknown) => onChange({ ...config, boss: { ...boss, [field]: value } })
-  const updateNodes = (field: 'hazards' | 'supports', value: string) =>
+  const updateNodes = (field: 'hazards' | 'supports', value: string) => {
+    const nodes = value
+      .split(/[\n,，]+/)
+      .map(item => item.trim().toUpperCase())
+      .filter(Boolean)
+    lastEmittedNodes.current[field] = nodes
+    setNodeText(current => ({ ...current, [field]: value }))
     onChange({
       ...config,
-      [field]: value
-        .split(/[\n,，]+/)
-        .map(item => item.trim().toUpperCase())
-        .filter(Boolean),
+      [field]: nodes,
     })
+  }
   return (
     <section className="config-section node-basics">
       <div className="section-heading">
@@ -1705,7 +1771,7 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
         <Label text="Hazards（每行或逗号分隔）">
           <textarea
             aria-label="Hazards"
-            value={config.hazards.map(String).join('\n')}
+            value={nodeText.hazards}
             onChange={event => updateNodes('hazards', event.target.value)}
             placeholder="例如 B10"
           />
@@ -1713,7 +1779,7 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
         <Label text="Supports（每行或逗号分隔）">
           <textarea
             aria-label="Supports"
-            value={config.supports.map(String).join('\n')}
+            value={nodeText.supports}
             onChange={event => updateNodes('supports', event.target.value)}
             placeholder="例如 F2"
           />
@@ -1939,6 +2005,7 @@ function SearchWorkspace({
           <BestFound
             result={activeRun.result}
             changes={changes}
+            fromRerun={viewOnly}
             applied={applied}
             busy={busy || running || optimizerBusy}
             target={viewOnly ? activeRun?.task : task?.snapshot}
@@ -1969,6 +2036,7 @@ function SearchWorkspace({
 function BestFound({
   result,
   changes,
+  fromRerun,
   applied,
   busy,
   target,
@@ -1976,6 +2044,7 @@ function BestFound({
 }: {
   result: NonNullable<RunResult['result']>
   changes: number
+  fromRerun: boolean
   applied: boolean
   busy: boolean
   target?: SearchTaskState['snapshot']
@@ -1983,6 +2052,7 @@ function BestFound({
 }) {
   const best = result.best_result!
   const baseline = result.verified_baseline
+  const usedFr = usedFrIntegerChange(baseline, best)
   const improvement = (result.improvement_vs_baseline ?? {}) as Record<string, unknown>
   const saved =
     typeof baseline?.fleet_resources_used === 'number' && typeof best.fleet_resources_used === 'number'
@@ -2016,9 +2086,19 @@ function BestFound({
       <div className="best-found-heading">
         <div>
           <h2>Best Found</h2>
-          <p>{changes ? `相对当前配置有 ${changes} 项阵型或装配变化。` : 'Best Found 与当前配置一致。'}</p>
+          <p>
+            {usedFr
+              ? `Used FR 取整：${usedFr.baselineUsed} → ${usedFr.bestUsed}，${usedFr.saved > 0 ? `减少 ${usedFr.saved}` : usedFr.saved < 0 ? `增加 ${-usedFr.saved}` : '变化 0'}。${changes ? `阵型或装配有 ${changes} 项差异。` : ''}`
+              : changes
+                ? `相对当前配置有 ${changes} 项阵型或装配变化。`
+                : 'Best Found 与当前配置一致。'}
+          </p>
         </div>
-        <button className="success use-best" onClick={onUseBest} disabled={busy || changes === 0 || !target || applied}>
+        <button
+          className="success use-best"
+          onClick={onUseBest}
+          disabled={busy || (fromRerun ? !hasRerunChange(baseline, best) : changes === 0) || !target || applied}
+        >
           <Icon name="check" />
           {applied ? '已同步到配置' : '使用最优配置'}
         </button>
@@ -2248,6 +2328,9 @@ function FormationEditor({
   )
   const update = (position: string, ship: ShipId | '') => {
     const previous = config.baseline.formation[position]
+    const numeric = Object.values(config.baseline.formation).some(
+      value => typeof value === 'number' || (typeof value === 'string' && /^[0-5]$/.test(value.trim())),
+    )
     onChange({
       ...config,
       baseline: {
@@ -2256,6 +2339,13 @@ function FormationEditor({
           ...config.baseline.formation,
           [position]: preserveShipSelectorFormat(previous, ship),
         },
+        loadouts:
+          ship && !Object.hasOwn(config.baseline.loadouts, ship)
+            ? {
+                ...config.baseline.loadouts,
+                [ship]: { primary: numeric ? 0 : null, secondary: numeric ? 0 : null },
+              }
+            : config.baseline.loadouts,
       },
     })
   }

@@ -13,6 +13,16 @@ const normalizeNodeShips = (input: unknown): unknown => {
         typeof ship === 'string' && !/^\d+$/.test(ship.trim()) ? shipSelectorToId(ship) || ship : ship,
       ]),
     )
+  if (value.baseline?.formation && value.baseline?.loadouts) {
+    const numeric = Object.values(value.baseline.formation).some(
+      ship => typeof ship === 'number' || (typeof ship === 'string' && /^[0-5]$/.test(ship.trim())),
+    )
+    for (const selector of Object.values(value.baseline.formation)) {
+      const ship = shipSelectorToId(selector)
+      if (ship && !Object.hasOwn(value.baseline.loadouts, ship))
+        value.baseline.loadouts[ship] = { primary: numeric ? 0 : null, secondary: numeric ? 0 : null }
+    }
+  }
   return value
 }
 

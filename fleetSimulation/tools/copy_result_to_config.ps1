@@ -78,13 +78,20 @@ try {
     }
     if ($foundLoadouts.Count -eq 0) { Fail 'result TXT Mods section is empty' }
 
+    $config = [IO.File]::ReadAllText($configPath) | ConvertFrom-Json
+    if ($null -eq $config.baseline) { Fail 'config JSON has no baseline object' }
+
     $loadouts = [ordered]@{}
+    if ($null -ne $config.baseline.loadouts) {
+        foreach ($entry in $config.baseline.loadouts.PSObject.Properties) {
+            $ship = if ($ships.ContainsKey($entry.Name)) { $ships[$entry.Name] } else { $entry.Name }
+            if (-not $foundLoadouts.ContainsKey($ship)) { $loadouts[$ship] = $entry.Value }
+        }
+    }
     foreach ($ship in @('Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser')) {
         if ($foundLoadouts.ContainsKey($ship)) { $loadouts[$ship] = $foundLoadouts[$ship] }
     }
 
-    $config = [IO.File]::ReadAllText($configPath) | ConvertFrom-Json
-    if ($null -eq $config.baseline) { Fail 'config JSON has no baseline object' }
     $config.baseline.enabled = $true
     $config.baseline.formation = [pscustomobject]$formation
     $config.baseline.loadouts = [pscustomobject]$loadouts
