@@ -11,23 +11,23 @@
     "group_ranges": {
         "Fighter": {
             "min": 0,
-            "max": 10
+            "max": 15
         },
         "Corvette": {
             "min": 0,
-            "max": 10
+            "max": 15
         },
         "Frigate": {
             "min": 0,
-            "max": 10
+            "max": 15
         },
         "Cruiser": {
             "min": 0,
-            "max": 10
+            "max": 15
         },
         "HeavyCruiser": {
             "min": 0,
-            "max": 10
+            "max": 15
         }
     },
     "allowed_mod_slots": {
@@ -79,13 +79,13 @@
             ]
         }
     },
-    "max_total_groups": 10,
+    "max_total_groups": 15,
     "max_groups_per_ship": {
-        "Fighter": 10,
-        "Corvette": 10,
-        "Frigate": 10,
-        "Cruiser": 10,
-        "HeavyCruiser": 10
+        "Fighter": 15,
+        "Corvette": 15,
+        "Frigate": 15,
+        "Cruiser": 15,
+        "HeavyCruiser": 15
     },
     "max_simulations": 1000000,
     "max_wall_seconds": 300,

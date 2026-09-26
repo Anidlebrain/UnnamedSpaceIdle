@@ -69,6 +69,7 @@ export class OptimizerRunner {
       const node = { ...values.node, search: structuredClone(search) }
       const snapshot: SearchTaskSnapshot = {
         ...selection,
+        formation_columns: node.formation_columns,
         versionName: request.versionName,
         commonName: request.commonName,
         search: structuredClone(search),
@@ -217,6 +218,7 @@ export class OptimizerRunner {
       const stagedNode = { ...prepared.node, search: structuredClone(savedSearch) }
       const task: SearchTaskSnapshot = {
         ...selection,
+        formation_columns: stagedNode.formation_columns,
         versionName: 'versionName' in request ? request.versionName : request.version,
         commonName: 'commonName' in request ? request.commonName : request.common,
         search: structuredClone(savedSearch),
@@ -280,6 +282,7 @@ export class OptimizerRunner {
           const stagedNode = { ...prepared.node, search: structuredClone(search) }
           const task: SearchTaskSnapshot = {
             ...selection,
+            formation_columns: stagedNode.formation_columns,
             versionName: selection.version,
             commonName: selection.common,
             search: structuredClone(search),

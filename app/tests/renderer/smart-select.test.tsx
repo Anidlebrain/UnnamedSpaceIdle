@@ -70,6 +70,6 @@ describe('SmartSelect', () => {
     const css = readFileSync('src/renderer/phase4.css', 'utf8')
     expect(css).toMatch(/\.smart-select-list\s*\{[^}]*max-height:\s*min\(17\.5rem,\s*45vh\)/)
     expect(css).toMatch(/\.smart-select-list\s*\{[^}]*overflow-y:\s*auto/)
-    expect(css).toMatch(/\.best-formation \.formation-row\s*\{[^}]*grid-template-columns:\s*2rem repeat\(2/)
+    expect(css).toMatch(/\.best-formation \.formation-row\s*\{[^}]*display:\s*grid/)
   })
 })

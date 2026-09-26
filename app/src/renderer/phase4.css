@@ -1689,8 +1689,8 @@ th {
 
 .best-grid { grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); gap: var(--space-lg); align-items: start; }
 .best-found { gap: var(--space-md); }
-.best-formation { gap: var(--space-xs); }
-.formation-header, .best-formation .formation-row { display: grid; grid-template-columns: 2rem repeat(2, minmax(0, 1fr)); gap: var(--space-xs); }
+.best-formation { gap: var(--space-xs); overflow-x: auto; }
+.formation-header, .best-formation .formation-row { display: grid; gap: var(--space-xs); }
 .formation-header strong { text-align: center; color: var(--color-focus); font-family: var(--font-mono); }
 .formation-row-label { min-height: 3.2rem; }
 .formation-cell { min-height: 3.2rem; align-content: center; }

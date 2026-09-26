@@ -6,6 +6,7 @@ export type ConfigSource = 'local' | 'default'
 export type SearchTaskRequest = Selection & { versionName: string; commonName: string; search: SearchConfig }
 export type SearchTaskSnapshot = SearchTaskRequest & {
   taskId: string
+  formation_columns?: number
   nodeConfigHash: string
   stagedNodeConfigHash: string
   commonConfigHash: string

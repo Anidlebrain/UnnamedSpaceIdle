@@ -13,6 +13,7 @@ import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '..
 import { nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
 import { effectiveShipCounts } from '../shared/ship-counts'
 import { hasRerunChange } from '../shared/formation-diff'
+import { formationColumns, formationResultError } from '../shared/formation-grid'
 import { preserveShipSelectorFormat, shipSelectorToId } from '../shared/ship-selectors'
 
 const clone = <T>(value: T): T => structuredClone(value)
@@ -63,7 +64,7 @@ let optimizerConfig: OptimizerConfig = {
   mode: 'realistic',
   ship_types: ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'],
   group_ranges: Object.fromEntries(
-    ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'].map(ship => [ship, { min: 0, max: 10 }]),
+    ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'].map(ship => [ship, { min: 0, max: 15 }]),
   ),
   allowed_mod_slots: {
     Fighter: { primary: [null, 'FighterMiniRailgunMod'], secondary: [null] },
@@ -72,9 +73,9 @@ let optimizerConfig: OptimizerConfig = {
     Cruiser: { primary: [null], secondary: [null, 'CruiserSingleArmorTank'] },
     HeavyCruiser: { primary: [null, 'HeavyCruiserBeamMod'], secondary: [null] },
   },
-  max_total_groups: 10,
+  max_total_groups: 15,
   max_groups_per_ship: Object.fromEntries(
-    ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'].map(ship => [ship, 10]),
+    ['Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser'].map(ship => [ship, 15]),
   ),
   max_simulations: 1_000_000,
   max_wall_seconds: 300,
@@ -401,6 +402,7 @@ export function createBrowserApi(): FleetManagerApi {
       const common = clone(commons.get(commonKey(selection))!)
       const task: SearchTaskSnapshot = {
         ...request,
+        formation_columns: current.formation_columns,
         search: clone(searchConfig),
         taskId: 'taskId' in request && typeof request.taskId === 'string' ? request.taskId : uid('task'),
         nodeConfigHash: hash(current),
@@ -502,6 +504,7 @@ export function createBrowserApi(): FleetManagerApi {
             const search = clone(typeof request === 'string' ? searchConfig : request.search)
             const task: SearchTaskSnapshot = {
               ...selection,
+              formation_columns: current.formation_columns,
               versionName: node.versions.find(item => item.id === node.defaultVersion)?.name ?? node.defaultVersion,
               commonName: target.commons.find(item => item.id === target.defaultCommon)?.name ?? target.defaultCommon,
               search,
@@ -562,6 +565,15 @@ export function createBrowserApi(): FleetManagerApi {
         }
       const current = clone(nodes.get(key(selection))!)
       const best = run.result.best_result
+      const columns = formationColumns(current.formation_columns)
+      const formationError = formationResultError(best.formation, run.result.base_config, columns)
+      if (formationError)
+        return {
+          exitCode: -1,
+          startedAt: now,
+          finishedAt: now,
+          error: formationError,
+        }
       const formation: NodeConfig['baseline']['formation'] = {}
       for (const entry of best.formation) {
         const ship = shipSelectorToId(entry.ship)

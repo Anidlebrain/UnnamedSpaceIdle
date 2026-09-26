@@ -31,6 +31,14 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 	if battle_id == "" or battle_id not in Fleet.fleet_battles:
 		return _error("Fleet node %s is not a battle node" % node_name)
 	var battle: Dictionary = Fleet.fleet_battles[battle_id]
+	var grid: Vector2 = battle.get("grid_size", Vector2(2, 5))
+	var configured_columns = friendly.get("formation_columns", 2)
+	if typeof(configured_columns) not in [TYPE_INT, TYPE_FLOAT] or float(configured_columns) != float(int(configured_columns)) or int(configured_columns) < 1 or int(configured_columns) > 26:
+		return _error("formation_columns must be an integer from 1 to 26")
+	if int(configured_columns) != int(grid.x):
+		return _error("formation_columns=%d does not match original %s grid: %d columns; set formation_columns to %d" % [int(configured_columns), node_name, int(grid.x), int(grid.x)])
+	if int(grid.y) != 5:
+		return _error("Original grid has %d slots per column; Friendly Config currently supports five" % int(grid.y))
 
 	var hazard_ids: Array = []
 	var hazard_details: Array = []
@@ -96,8 +104,8 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 		if remaining_hp > boss_max_hp:
 			return _error("Boss remaining_hp %s exceeds max_hp %s" % [remaining_hp, boss_max_hp])
 		priority = str(boss_input.get("priority", ""))
-		if priority not in ["efficiency", "kill_cost"]:
-			return _error("Boss priority must be efficiency or kill_cost: %s" % priority)
+		if priority not in ["efficiency", "kill_cost", "affordable_kill_cost"]:
+			return _error("Boss priority must be efficiency, kill_cost or affordable_kill_cost: %s" % priority)
 		objective = "boss"
 		boss_health = remaining_hp
 	elif command_ship != null:
@@ -146,7 +154,7 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 		if not bool(normalized_baseline.ok):
 			return _error(str(normalized_baseline.error))
 		baseline = normalized_baseline.candidate
-		var baseline_error := _validate_baseline(baseline, ships)
+		var baseline_error := _validate_baseline(baseline, ships, grid)
 		if baseline_error != "":
 			return _error(baseline_error)
 	var diagnostic: Dictionary = friendly.get("diagnostic", {}) if friendly.get("diagnostic", {}) is Dictionary else {}
@@ -160,11 +168,10 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 			if not bool(normalized_candidate.ok):
 				return _error(str(normalized_candidate.error))
 			diagnostic[candidate_name] = normalized_candidate.candidate
-			var candidate_error := _validate_candidate(normalized_candidate.candidate, ships, candidate_label)
+			var candidate_error := _validate_candidate(normalized_candidate.candidate, ships, candidate_label, grid)
 			if candidate_error != "":
 				return _error(candidate_error)
 
-	var grid: Vector2 = battle.get("grid_size", Vector2(2, 5))
 	var resolved := {
 		"galaxy_id": galaxy_id,
 		"fleet_event_id": str(fleet_event.fleet_event),
@@ -289,13 +296,13 @@ func _resolve_scales(player: Dictionary, common: Dictionary) -> Dictionary:
 	}}
 
 
-func _validate_baseline(baseline: Dictionary, ships: Dictionary) -> String:
-	return _validate_candidate(baseline, ships, "baseline")
+func _validate_baseline(baseline: Dictionary, ships: Dictionary, grid: Vector2 = Vector2(2, 5)) -> String:
+	return _validate_candidate(baseline, ships, "baseline", grid)
 
 
 func _normalize_candidate(candidate: Dictionary, label: String, allowed_mod_slots: Dictionary) -> Dictionary:
 	if not candidate.get("formation", {}) is Dictionary:
-		return _error("%s.formation must be an object keyed by A1..B5" % label)
+		return _error("%s.formation must be an object keyed by grid positions (A1, B1, C1, ...)" % label)
 	if not candidate.get("loadouts", {}) is Dictionary:
 		return _error("%s.loadouts must be an object" % label)
 	var normalized := candidate.duplicate(true)
@@ -305,7 +312,10 @@ func _normalize_candidate(candidate: Dictionary, label: String, allowed_mod_slot
 		if not bool(ship_result.ok):
 			return _error("%s.formation.%s: %s" % [label, position, ship_result.error])
 		if str(ship_result.ship) != "":
-			formation[position] = ship_result.ship
+			var key := str(position).to_upper()
+			if formation.has(key):
+				return _error("Duplicate %s position: %s" % [label, key])
+			formation[key] = ship_result.ship
 	normalized.formation = formation
 
 	var loadouts := {}
@@ -379,15 +389,15 @@ func _resolve_mod_selector(value, ship_type: String, slot: String, allowed_mod_s
 	return {"ok": true, "mod": options[int(selector)], "error": ""}
 
 
-func _validate_candidate(candidate: Dictionary, ships: Dictionary, label: String) -> String:
+func _validate_candidate(candidate: Dictionary, ships: Dictionary, label: String, grid: Vector2 = Vector2(2, 5)) -> String:
 	if not candidate.get("formation", {}) is Dictionary:
-		return "%s.formation must be an object keyed by A1..B5" % label
+		return "%s.formation must be an object keyed by grid positions (A1, B1, C1, ...)" % label
 	if not candidate.get("loadouts", {}) is Dictionary:
 		return "%s.loadouts must be an object" % label
 	var seen_ships := {}
 	for position in candidate.formation:
 		var position_name := str(position).to_upper()
-		if position_name.length() != 2 or position_name.substr(0, 1) not in ["A", "B"] or int(position_name.substr(1, 1)) < 1 or int(position_name.substr(1, 1)) > 5:
+		if position_name.length() != 2 or position_name.unicode_at(0) < 65 or position_name.unicode_at(0) >= 65 + int(grid.x) or int(position_name.substr(1, 1)) < 1 or int(position_name.substr(1, 1)) > int(grid.y):
 			return "Invalid %s position: %s" % [label, position]
 		var ship_type := str(candidate.formation[position])
 		if ship_type not in ships or not bool(ships[ship_type].enabled):

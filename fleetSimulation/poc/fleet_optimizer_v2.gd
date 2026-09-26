@@ -526,6 +526,7 @@ func _validate_settings() -> void:
 
 
 func _normalize_settings() -> void:
+	_configure_grid(_base_config.get("grid_size", [2, 5]))
 	var search: Dictionary = _settings.get("search", {}) if _settings.get("search", {}) is Dictionary else {}
 	_profile = str(search.get("profile", _settings.get("search_profile", "fast")))
 	_goal = str(search.get("goal", _settings.get("search_goal", "best")))
@@ -540,7 +541,7 @@ func _normalize_settings() -> void:
 	))
 	_base_config["simulation_clock"] = _settings.simulation_clock
 	var diagnostic: Dictionary = _settings.get("diagnostic", {}) if _settings.get("diagnostic", {}) is Dictionary else {}
-	_settings["smart_pruning"] = _profile == "fast" and not bool(diagnostic.get("disable_smart_prune", false))
+	_settings["smart_pruning"] = _profile == "fast" and _grid_size == [2, 5] and not bool(diagnostic.get("disable_smart_prune", false))
 	_settings["probe_formations_per_fleet"] = int(_settings.get("probe_formations_per_fleet", 1 if _profile == "fast" else _settings.get("representative_formations_per_fleet", 6)))
 	_settings["probe_budget"] = int(_settings.get("probe_budget", 20 if _profile == "fast" else _settings.max_simulations))
 	_settings["composition_quote_budget"] = int(_settings.get("composition_quote_budget", 20 if _profile == "fast" else 2147483647))
@@ -565,7 +566,7 @@ func _normalize_settings() -> void:
 					_settings.boss_remaining_hp = float(Fleet.fleet_event_refs[event_id].command_ship_original_health)
 	if str(_settings.get("mode", "")) == "practice_unlimited":
 		_settings.mode = "practice"
-	_settings["max_total_groups"] = mini(STANDARD_CELLS.size(), int(_settings.get("max_total_groups", STANDARD_CELLS.size())))
+	_settings["max_total_groups"] = mini(_cells.size(), int(_settings.get("max_total_groups", _cells.size())))
 	if not _settings.has("max_groups_per_ship"):
 		_settings["max_groups_per_ship"] = {}
 	for ship_type in _ship_types():
@@ -659,7 +660,7 @@ func _generate_fleet_candidates() -> Array:
 				first_loadouts[ship_type] = Array(_settings.allowed_loadouts[ship_type])[0]
 		var quote_formation := _build_formation(composition, first_loadouts)
 		for index in range(quote_formation.size()):
-			quote_formation[index].grid_position = STANDARD_CELLS[index].duplicate()
+			quote_formation[index].grid_position = _cells[index].duplicate()
 		var quote_config := _base_config.duplicate(true)
 		quote_config.formation = quote_formation
 		var quote_started := Time.get_ticks_usec()
@@ -745,11 +746,17 @@ func _quote_composition_order(compositions: Array) -> Array:
 
 
 func _append_compositions(ship_types: Array, index: int, current: Dictionary, results: Array) -> void:
+	var used := 0
+	for value in current.values():
+		used += int(value)
+	var capacity := int(_settings.get("max_total_groups", _cells.size())) - used
+	if capacity < 0:
+		return
 	if index == ship_types.size():
 		var total := 0
 		for count in current.values():
 			total += int(count)
-		if total == 0 or total > int(_settings.get("max_total_groups", STANDARD_CELLS.size())):
+		if total == 0 or total > int(_settings.get("max_total_groups", _cells.size())):
 			return
 		for ship_type in ship_types:
 			if int(current.get(ship_type, 0)) > 0 and not _ship_enabled(ship_type):
@@ -758,7 +765,11 @@ func _append_compositions(ship_types: Array, index: int, current: Dictionary, re
 		return
 	var ship_type: String = ship_types[index]
 	var range_data: Dictionary = _settings.group_ranges.get(ship_type, {"min": 0, "max": 0})
-	for count in range(int(range_data.get("min", 0)), int(range_data.get("max", 0)) + 1):
+	var maximum := mini(capacity, int(range_data.get("max", 0)))
+	maximum = mini(maximum, int(_settings.get("max_groups_per_ship", {}).get(ship_type, _cells.size())))
+	if not _ship_enabled(ship_type):
+		maximum = 0
+	for count in range(int(range_data.get("min", 0)), maximum + 1):
 		current[ship_type] = count
 		_append_compositions(ship_types, index + 1, current, results)
 	current.erase(ship_type)
@@ -831,7 +842,7 @@ func _with_baseline_aligned_representative(composition: Dictionary, loadouts: Di
 			occupied[position] = true
 		else:
 			free_positions.append(_grid_from_position(position))
-	for cell in STANDARD_CELLS:
+	for cell in _cells:
 		if not occupied.has(_position_name(cell)) and cell not in free_positions:
 			free_positions.append(cell.duplicate())
 	for ship_type in _ship_types():
@@ -978,7 +989,7 @@ func _quote_has_overdeploy(quote: Dictionary) -> bool:
 
 
 func _unique_formation_count(composition: Dictionary) -> int:
-	var remaining := STANDARD_CELLS.size()
+	var remaining := _cells.size()
 	var total := 1
 	for ship_type in _ship_types():
 		var count := int(composition.get(ship_type, 0))
@@ -989,6 +1000,8 @@ func _unique_formation_count(composition: Dictionary) -> int:
 
 
 func _choose(n: int, k: int) -> int:
+	if k < 0 or n < 0 or k > n:
+		return 0
 	k = mini(k, n - k)
 	var result := 1
 	for index in range(1, k + 1):
@@ -998,13 +1011,21 @@ func _choose(n: int, k: int) -> int:
 
 func _representative_formations(seed: Array) -> Array:
 	var orders := [
-		STANDARD_CELLS,
+		_cells,
 		[[1, 0], [1, 1], [1, 2], [1, 3], [1, 4], [0, 0], [0, 1], [0, 2], [0, 3], [0, 4]],
 		[[0, 2], [0, 1], [0, 3], [0, 0], [0, 4], [1, 2], [1, 1], [1, 3], [1, 0], [1, 4]],
 		[[0, 0], [1, 4], [0, 4], [1, 0], [0, 2], [1, 2], [0, 1], [1, 3], [0, 3], [1, 1]],
 		[[0, 2], [1, 2], [0, 1], [1, 3], [0, 3], [1, 1], [0, 0], [1, 4], [0, 4], [1, 0]],
 		[[1, 4], [1, 3], [1, 2], [1, 1], [1, 0], [0, 4], [0, 3], [0, 2], [0, 1], [0, 0]],
 	]
+	if _grid_size != [2, 5]:
+		var reversed: Array = _cells.duplicate(true)
+		reversed.reverse()
+		var across: Array = []
+		for y in range(int(_grid_size[1])):
+			for x in range(int(_grid_size[0])):
+				across.append([x, y])
+		orders = [_cells, reversed, across]
 	var unique := {}
 	var result: Array = []
 	var limit := clampi(int(_settings.get("representative_formations_per_fleet", 6)), 3, 10)
@@ -1124,7 +1145,7 @@ func _formation_neighbors(formation: Array) -> Array:
 	for group in formation:
 		occupied[_position_name(group.grid_position)] = true
 	for index in range(formation.size()):
-		for cell in STANDARD_CELLS:
+		for cell in _cells:
 			if not occupied.has(_position_name(cell)):
 				var moved := formation.duplicate(true)
 				moved[index].grid_position = cell.duplicate()
@@ -1140,8 +1161,8 @@ func _formation_neighbors(formation: Array) -> Array:
 	var row_mirror := formation.duplicate(true)
 	var column_mirror := formation.duplicate(true)
 	for index in range(formation.size()):
-		row_mirror[index].grid_position[0] = 1 - int(row_mirror[index].grid_position[0])
-		column_mirror[index].grid_position[1] = 4 - int(column_mirror[index].grid_position[1])
+		row_mirror[index].grid_position[0] = int(_grid_size[0]) - 1 - int(row_mirror[index].grid_position[0])
+		column_mirror[index].grid_position[1] = int(_grid_size[1]) - 1 - int(column_mirror[index].grid_position[1])
 	_add_unique_formation(row_mirror, seen, results)
 	_add_unique_formation(column_mirror, seen, results)
 	return results
@@ -1863,7 +1884,7 @@ func _baseline_validation_failure_output() -> Dictionary:
 
 
 func _grid_from_position(position: String) -> Array:
-	return [0 if position.begins_with("A") else 1, int(position.substr(1)) - 1]
+	return [position.unicode_at(0) - 65, int(position.substr(1)) - 1]
 
 
 func _attach_full_result(candidate: Dictionary) -> String:
@@ -2137,7 +2158,7 @@ func _overdeploy_test_config(
 	for index in range(deployed):
 		config.formation.append({
 			"ship": str(loadout.get("ship_id", ship_type)),
-			"grid_position": STANDARD_CELLS[index].duplicate(),
+			"grid_position": _cells[index].duplicate(),
 			"primary_mod": loadout.get("primary_mod"),
 			"secondary_mod": loadout.get("secondary_mod"),
 			"tertiary_mods": [],

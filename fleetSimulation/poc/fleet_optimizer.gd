@@ -1,6 +1,7 @@
 extends Node
 
-const STANDARD_CELLS := [
+var _grid_size := [2, 5]
+var _cells := [
 	[0, 0], [0, 1], [0, 2], [0, 3], [0, 4],
 	[1, 0], [1, 1], [1, 2], [1, 3], [1, 4],
 ]
@@ -10,11 +11,38 @@ var boss_priority := "legacy"
 var boss_remaining_hp := 0.0
 
 
+func _configure_grid(grid: Array) -> void:
+	assert(grid.size() == 2 and int(grid[0]) > 0 and int(grid[0]) <= 26 and int(grid[1]) > 0, "Invalid deployment grid")
+	_grid_size = [int(grid[0]), int(grid[1])]
+	_cells = []
+	for x in range(_grid_size[0]):
+		for y in range(_grid_size[1]):
+			_cells.append([x, y])
+
+
+func _valid_grid_positions(formation: Array) -> bool:
+	var occupied := {}
+	for group in formation:
+		var position = group.get("grid_position", [])
+		if not position is Array or position.size() != 2:
+			return false
+		for axis in range(2):
+			if typeof(position[axis]) not in [TYPE_INT, TYPE_FLOAT] or float(position[axis]) != float(int(position[axis])) or int(position[axis]) < 0 or int(position[axis]) >= int(_grid_size[axis]):
+				return false
+		var key := _position_name(position)
+		if occupied.has(key):
+			return false
+		occupied[key] = true
+	return true
+
+
 func optimize(probe: Node, base_config: Dictionary, requested_objective: String = "normal", top_n: int = 10) -> Dictionary:
 	assert(requested_objective in ["normal", "boss"], "Objective must be normal or boss")
+	_configure_grid(base_config.get("grid_size", [2, 5]))
 	objective = requested_objective
 	var formations := generate_unique_formations(base_config.formation)
-	_self_check()
+	if _grid_size == [2, 5]:
+		_self_check()
 	assert(_unique_count(formations) == formations.size(), "Candidate generator produced duplicates")
 
 	var search_started := Time.get_ticks_msec()
@@ -65,7 +93,7 @@ func optimize(probe: Node, base_config: Dictionary, requested_objective: String 
 		"objective": objective,
 		"base_config": base_config,
 		"search_space": {
-			"cells": STANDARD_CELLS,
+			"cells": _cells,
 			"deployment_groups": base_config.formation.size(),
 			"equivalence_classes": _equivalence_class_summary(base_config.formation),
 		},
@@ -94,10 +122,10 @@ func optimize(probe: Node, base_config: Dictionary, requested_objective: String 
 
 
 func generate_unique_formations(formation: Array) -> Array:
-	assert(formation.size() <= STANDARD_CELLS.size(), "Too many deployment groups for the standard grid")
+	assert(formation.size() <= _cells.size(), "Too many deployment groups for the standard grid")
 	var classes := _equivalence_classes(formation)
 	var results: Array = []
-	_append_class_placements(formation, classes, 0, STANDARD_CELLS.duplicate(true), [], results)
+	_append_class_placements(formation, classes, 0, _cells.duplicate(true), [], results)
 	return results
 
 
@@ -192,7 +220,7 @@ func _formation_key(formation: Array) -> String:
 
 
 func _position_name(position: Array) -> String:
-	return "AB".substr(int(position[0]), 1) + str(int(position[1]) + 1)
+	return String.chr(65 + int(position[0])) + str(int(position[1]) + 1)
 
 
 func _summarize_result(candidate_index: int, result: Dictionary) -> Dictionary:

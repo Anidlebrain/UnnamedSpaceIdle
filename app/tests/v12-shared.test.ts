@@ -4,6 +4,7 @@ import { effectiveShipCounts } from '../src/shared/ship-counts'
 import { runErrorSummary } from '../src/shared/run-errors'
 import { restoreContexts } from '../src/renderer/state-model'
 import type { Catalog } from '../src/shared/contracts'
+import { resultFormationColumns } from '../src/shared/formation-grid'
 
 const catalog: Catalog = {
   galaxies: [
@@ -21,6 +22,32 @@ const catalog: Catalog = {
 }
 
 describe('V1.2 shared contracts', () => {
+  it('supports configured formation columns and rejects occupied positions outside the grid', () => {
+    const source = {
+      galaxy: 6,
+      node: 'B46',
+      formation_columns: 3,
+      player_state: { fleet_resources: 10, ships: { Fighter: 1 } },
+      baseline: { enabled: true, formation: { C5: 'Fighter' }, loadouts: {} },
+      search: {
+        profile: 'fast',
+        goal: 'best',
+        simulation_clock: 'offline_fixed_step',
+        max_wall_seconds: 1,
+        max_simulations: 1,
+        workers: 1,
+      },
+    }
+    expect(nodeConfigSchema.parse(source).baseline.formation.C5).toBe('Fighter')
+    expect(nodeConfigSchema.safeParse({ ...source, formation_columns: 2 }).success).toBe(false)
+    expect(
+      nodeConfigSchema.safeParse({ ...source, baseline: { ...source.baseline, formation: { C6: 'Fighter' } } }).success,
+    ).toBe(false)
+    expect(nodeConfigSchema.safeParse({ ...source, formation_columns: 27 }).success).toBe(false)
+    expect(resultFormationColumns({ grid_size: [3, 5] }, 2)).toBe(3)
+    expect(resultFormationColumns(undefined, 3)).toBe(3)
+    expect(resultFormationColumns(undefined)).toBe(2)
+  })
   it('normalizes ship aliases and rejects conflicting duplicate values', () => {
     const source = {
       galaxy: 6,

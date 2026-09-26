@@ -2,13 +2,40 @@
 
 ## 当前日常 Optimizer：v3
 
-日常入口已切换为 `poc/fleet_optimizer_search.gd`。普通战按 **WIN → 最低真实 Used FR** 排名；Boss 使用现有 `boss.priority: "efficiency" | "kill_cost"`。Efficiency 允许 LOSS；Kill Cost 只推荐完成原版连续战斗并逐场支付得起 committed FR 的方案。
+日常入口已切换为 `poc/fleet_optimizer_search.gd`。普通战按 **WIN → 最低真实 Used FR** 排名；Boss 有三种 `boss.priority`：`efficiency`（伤害效率，允许 LOSS）、`kill_cost`（最低击杀总成本，输入 FR 为每次部署上限，每场恢复同一上限）、`affordable_kill_cost`（当前资源内完整击杀，逐场使用原版账本结算，剩余 FR 必须足够下一次部署，且累计实际 Used FR 不超过输入 FR）。两个击杀策略都使用原版逐场模拟至 Boss HP 为零的成绩，最后一场保留原版退款；投影场数/成本只用于探索排序。
+
+两种击杀策略同时保留 `per_battle_best_result` 和 `affordable_best_result`，`best_result` 按所选策略选择；两者可以是同一阵型。`affordable_kill_status` 明确输出“已找到可负担的完整击杀”或“未找到可负担的完整击杀”。例如当前 690 FR、单次部署策略总成本 1690 FR，只保留后者作为补充资源后的候选，不能视为当前可负担击杀。未找到表示预算内没有完成验证，不是证明所有阵型均无解。TXT 将附加候选单独列出，`--copy` 仍只复制主推荐。
 
 必须提供 `baseline.enabled: true`、formation 和 loadouts。启动先验证 Baseline：普通战必须 WIN，Boss 必须 `boss_damage > 0`，否则输出 **BASELINE VALIDATION FAILED** 并停止；不会进入 Recovery。Baseline 是参考上界，并不限制全局 composition 的生成。
+
+若搜索限制内尚未验证出完整 Kill Cost 序列，输出 **BASELINE RETAINED**，保留并重放已验证的输入阵型。当前资源策略无解时为 **NO VERIFIED AFFORDABLE KILL**，同样保留单场基线并说明未找到可负担的完整击杀。`kill_cost_resource_policy` 区分 `per_battle_budget` 与 `current_resources`，后者记录逐场剩余 FR 及 `remaining_fr_after_kill`。单次部署候选中的旧字段 `killable_with_current_fr` 仅作为内部排名兼容别名；判断当前资源能否完成击杀，应读取独立的 `affordable_best_result` / `affordable_kill_status`，不能只读此旧字段。
 
 日常只需 `"search": {"profile": "fast"}`，默认单 worker、300 秒（含 Godot 初始化）。Balanced 增加全局探索比例；已有显式时间、worker 和 simulation 上限仍兼容。收尾预留真实重跑与 Boss 序列时间，当前战斗会完成，极慢战斗可能略超预算。`beat_baseline` 字段兼容，但仍尽量搜索到预算结束。Exhaustive 只用于受限空间验证；只有确实完成全部配置空间的普通战/效率搜索才显示 EXHAUSTIVE BEST。
 
 新流程交错生成全局 composition、档案候选和当前优胜方案的变体，移除了日常路径中的 Beam/Probe 截断与 Smart Prune。**BEST FOUND / TIME BUDGET REACHED 均不代表全局最优。** 详细算法、原版语义、性能拆解、回归与前后对照见 [optimizer_v3_report.md](docs/optimizer_v3_report.md)。下文的 v2 搜索描述和结果保留作历史记录。
+
+v3 部署报价优化：Baseline 和未知装配先建立原版场景，读取真实 Mod 后单组成本；同一战斗环境内，后续不同数量按原版 `calc_total_deployment()` 的逐组 Overdeploy 加价顺序累计，继续使用原版 `NumberUtils.fleet_less_or_equal` 判定预算，避免为已知成本反复创建整个战斗场景。战斗评分和最终验证仍运行原版场景。性能输出分别记录原生场景报价、推导报价及缓存命中，不把推导报价计作原生场景调用。
+
+## 阵型列数（A/B/C）
+
+Friendly Node 顶级字段 `formation_columns` 表示阵型列数，每列五格，允许 1–26，缺省为 2。G6 B46 必须设置 `"formation_columns": 3`，阵位为 A1–C5；原版恢复脚本 `Fleet.gd` 的 `galaxy6_battle46` 明确为 `Vector2(3, 5)`，后续也存在一列节点。Resolver 将配置列数与原版节点 `grid_size` 精确核对，不相符时停止并指出所需列数，绝不改写原版战斗尺寸。五格之外的原版高度目前会明确报不支持。
+
+搜索候选位置、组合计数、随机布局、邻域移动/交换/镜像、精确枚举和结果命名均使用实际网格。三列的镜像按 A↔C、B 保持计算；镜像只是额外候选，不能视为战斗等价并剪枝。日常 v3 继续关闭旧 Smart Prune；历史 v2 在非 2×5 网格也关闭这类启发式剪枝。重复、非整数或越界坐标会在原版部署前拒绝。
+
+提交的默认公共搜索空间已将总组数、单舰种上限及范围上限设为 15；实际总组数取公共上限与节点格子数的较小者，所以两列仍最多十组，一列最多五组。**已有 `map/optimizer_v2_daily.json` 保持不变并优先于默认文件**：若本机仍设置十组，三列会搜索全部十五个位置，但最多部署十组；要开放十一到十五组，需在 app 公共设置中同时调整总组数、各舰种范围及上限。正式 Overdeploy 与 FR 可负担性仍使用原版部署报价。
+
+组合生成在递归过程中提前跳过容量超限和禁用舰种分支，不删除任何合法组合；v3 至多保留 32 个父阵型的变异集合，淘汰后可重新生成。结果 TXT 增加 `Formation columns: N` 并输出所有列，`--copy` 严格核对元数据、目标列数、完整列和重复列，失败不写回。
+
+多列回归入口（只用于隔离验证，日常仍使用 BAT）：
+
+```powershell
+python tools/benchmark_optimizer.py --label grid-check --seconds 600 --extra --grid-regression --validation-galaxies=6 --battle-config=res://ui_ab_test_02_config.json
+python -m unittest tools/test_copy_result_columns.py -v
+```
+
+`--grid-regression` 使用合成玩家倍率与原版 G6 B45/B46 敌阵，验证三列 C(15,5)=3003、混合 15×14×13=2730、五舰种十五格的 15503 个非空数量组合、全局候选、十五组部署、两列/三列受限穷举及真实重放。加 `--grid-logic-only` 可跳过战斗，仅检查网格与候选逻辑。验证不代表用户实际进度的最优解；日常有预算的结果仍是 BEST FOUND。
+
+2026-09-26 验证：34 项 Godot 检查及三列文本断言通过；B45 的 20 个、B46 的 30 个受限候选全部完成，战斗错误为零，最终原版重放一致。另一个 B46 Fast 双 worker smoke 正常结束并通过 TXT → 15 格配置写回比对。五舰种十五格组合生成约 149ms，提前跳过容量超限分支后仍完整保留 15503 个非空组合。详细本机证据在 `results/optimizer_v3/grid_columns_native_20260926/` 和 `grid_b46_parallel_20260926/`（忽略目录，不提交）。
 
 ## Daily Usage（日常使用）
 

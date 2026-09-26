@@ -11,7 +11,8 @@
 - Galaxy 重跑的“已完成”包含“有变化”和“无有效变化”；两次 Used FR 各自向下取整后比较，整数相同视为无有效变化，结果缺少 Used FR 时回退比较阵型与装配。节点卡片和 Best Found 显示取整前后及差值，原始 Used FR / Saved FR 仍照实显示。运行中及结束后的已完成节点可点击查看对应结果，失败节点可点击查看错误；变化节点用绿色标示。重跑详情可在批次结束后手动使用 Best Found，目标绑定该节点的任务快照并保留 Version 哈希冲突保护。
 - 节点环境页的 Hazards / Supports 可按行或逗号输入，编辑时保留尚未完成的分隔符，并同步解析到 Node 草稿。
 - 节点阵型包含尚无 Loadout 的舰种时，读取配置会补出无 Primary/Secondary Mod 的装配；数字格式使用 `0`，英文格式使用 `null`。运行时的暂存配置因此可直接搜索，原 Manager Version 在用户保存或应用 Best Found 时写入补齐结果；应用 Best Found 时保留结果未使用舰种的原装配。
-- Best Found 按纵向 1–5、横向 B/A 显示 Formation，右侧按舰种显示 Loadout；运行状态缩成单条信息区，日志仍默认折叠。
+- Best Found 按纵向 1–5、横向从最末列到 A 显示 Formation，右侧按舰种显示 Loadout；运行状态缩成单条信息区，日志仍默认折叠。
+- Boss 优先级支持效率、每战 FR 限额下最低击杀总成本，以及当前资源内完整击杀最低总成本。后两种结果在 Best Found 显示当前 FR、可负担击杀状态和两套候选的完整击杀场数与总成本；可展开查看各自的阵型与装配。“使用最优配置”始终应用所选策略的主 Best Found。旧结果缺少新字段时仍按原样展示。
 - 搜索页只显示配置摘要。设置 Dialog 的常用项是搜索方式和共同约束的时间/模拟次数预算；并行进程、模拟时钟、优化目标进入高级设置。当前 v3 记录 `goal` 但不据此改变 Best Found 推荐，界面明确说明这一点。
 
 ## V1.2 搜索任务
@@ -41,11 +42,12 @@
 - Galaxy 重跑过程只做变化发现，不自动执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found；用户可从节点详情手动使用单个 Best Found。
 - 五个独立工作区：节点配置、公共配置、搜索、Galaxy 重跑、模板与复制。Galaxy / Optimizer 公共不再作为当前 Node Tab。
 - Node 结构化编辑按阵型、舰队状态、装配、环境排列，覆盖 Formation、Fleet Resources、各舰种数量、Loadout、Boss、Hazards 与 Supports；Raw JSON 收入高级区。完整字段审计见 [`docs/node-field-audit.md`](docs/node-field-audit.md)。
+- Node 顶级 `formation_columns` 控制阵型宽度（1–26 列，每列 5 格，A/B/C 分别对应 grid x=0/1/2）；旧 Node 缺省为 2 列。编辑器只显示有效列，缩小列数前必须清空将被隐藏的舰船。Best Found 优先按结果 `base_config.grid_size[0]` 显示列数，旧结果回退任务快照或 2 列；应用到浏览器工作区时会拒绝列数不匹配、重复位置和目标范围外的位置。实际部署组数上限为阵型格子数与 Optimizer 公共组数上限的较小值，旧本机公共配置仍可能限制为 10 组。
 - Galaxy Common 可保存 `ships` 公共舰船数量；启用后 Node `player_state.ships` 表示各舰种额外数量，搜索使用两者相加的有效数量。舰队状态页同时显示公共、节点和搜索数量。未设置 `common.ships` 的旧 Galaxy 仍按节点原有绝对数量运行。
 - Search 偏好独立保存在忽略的 `fleetSimulation/map/search_config.json`，缺失时回退提交的 `poc/search_config.json`；点击开始即自动保存、回读确认、写入任务快照并覆盖到 staged Node。
 - Optimizer 公共配置优先读取忽略的 `fleetSimulation/map/optimizer_v2_daily.json`，缺失时回退提交的 `poc` 默认文件；日常编辑不再污染 Git。
 - Loadout 选择由当前 `allowed_mod_slots` 有序数组驱动：`None + 1 Mod` 显示开关，多个 Mod 显示下拉，无合法 Mod 显示不可用；保存仍保持既有字符串 ID 或数字索引表示。
-- 搜索页以 Best Found 为核心；低频参数只显示紧凑摘要并在设置 Dialog 中编辑，结果直接给出 Outcome / Committed FR / Used FR、完整 A1–B5 地图式阵型和按舰种汇总的 Loadout。
+- 搜索页以 Best Found 为核心；低频参数只显示紧凑摘要并在设置 Dialog 中编辑，结果直接给出 Outcome / Committed FR / Used FR、按节点宽度展示的完整地图式阵型和按舰种汇总的 Loadout。
 - 节点、搜索、模板、公共配置分别持有独立选择上下文；重启后恢复上次活动页面和各页面选择。
 - Node、Search、Galaxy Common 与 Optimizer Public 草稿按数据域独立保留。搜索运行期间只锁定任务 Node+Version、任务 Common 和 Optimizer Public，其余应用操作保持可用。
 - Renderer 同时支持 Electron preload 和标准浏览器运行时。浏览器工作区使用 `localStorage` 持久化配置，可用于网页部署与 UI 工作流；真实本地 Optimizer 执行仍由桌面 Main 进程负责，后续网页部署需要受控的本地服务或服务端执行器。

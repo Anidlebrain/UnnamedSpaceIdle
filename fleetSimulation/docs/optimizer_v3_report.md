@@ -4,6 +4,10 @@
 
 本报告对应 2026-09-13–14 本地 Godot 4.7.2 / recovered game 0.85.1.0。日常入口为 `poc/fleet_optimizer_search.gd`；原版战斗代码位于隔离的 `work/full_recovered`，不涉及 Steam 安装和正式存档。
 
+2026-09-26 语义更新：日常 v3 的 `kill_cost` 将输入 FR 解释为每次部署上限，每场恢复相同上限，击杀总成本可超过输入 FR。另保留 `affordable_kill_cost` 作为第三种 Boss 策略：按当前钱包逐场支付，且累计实际 Used FR 不超过输入 FR。两种击杀模式均保存单次部署与当前资源两个独立候选，后者未验证成功时明确显示“未找到可负担的完整击杀”。预算不足时保留并重放单场有效 Baseline，不把基线当成已验证的完整击杀。下文旧版当前余额、原版账本及历史基准保留为当时实验记录；当前契约以 README 和代码为准。
+
+部署报价现可复用原版场景观测的装配单组成本，按原版逐组 Overdeploy 算法计算不同数量的 committed FR；未知成本仍建原版场景。此项只减少报价建场景，不改变战斗模拟或候选剪枝条件。
+
 ## A. 原算法分析
 
 旧版先枚举 composition/loadout 并调用原版部署报价，再 Probe 代表阵型、Fleet/Position Beam、局部和小空间精确搜索，最后重跑及 Boss refinement。日常 Fast 的前置 composition 预算很小：本次实测只有 21 次报价（含 Baseline），约 20 个舰队进入后续搜索。预算在 materialization 之前截断，后续局部搜索无法恢复遗漏舰队。

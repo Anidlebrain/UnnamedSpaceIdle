@@ -24,17 +24,52 @@ try {
         Fail 'result TXT has no valid Mods/Formation sections'
     }
 
-    $rows = @{}
-    for ($i = $formationAt + 1; $i -lt $lines.Length; $i++) {
-        if ($lines[$i] -match '^\s*([AB])\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s*$') {
-            $rows[$matches[1]] = @($matches[2], $matches[3], $matches[4], $matches[5], $matches[6])
+    $config = [IO.File]::ReadAllText($configPath) | ConvertFrom-Json
+    if ($null -eq $config.baseline) { Fail 'config JSON has no baseline object' }
+    $columnCount = 2
+    $columnProperty = $config.PSObject.Properties['formation_columns']
+    if ($null -ne $columnProperty) {
+        $value = $columnProperty.Value
+        $isNumber = ($value -is [int]) -or ($value -is [long]) -or ($value -is [double]) -or ($value -is [decimal])
+        if (-not $isNumber -or $value -lt 1 -or $value -gt 26 -or [Math]::Floor([double]$value) -ne [double]$value) {
+            Fail 'formation_columns must be an integer from 1 to 26'
         }
-    }
-    if (-not $rows.ContainsKey('A') -or -not $rows.ContainsKey('B')) {
-        Fail 'Formation must contain A and B rows with five cells each'
+        $columnCount = [int]$value
     }
 
-    $tokens = @($rows.A) + @($rows.B)
+    $metadata = @()
+    if ($modsAt -gt 0) {
+        $metadata = @($lines[0..($modsAt - 1)] | Where-Object { $_ -match '^\s*Formation columns\s*:' })
+    }
+    if ($metadata.Count -gt 1) { Fail 'result TXT has duplicate Formation columns metadata' }
+    if ($metadata.Count -eq 1) {
+        if ($metadata[0] -notmatch '^\s*Formation columns:\s*(\d+)\s*$') {
+            Fail 'result TXT has invalid Formation columns metadata'
+        }
+        if ([int]$matches[1] -ne $columnCount) {
+            Fail 'result TXT Formation columns does not match config formation_columns'
+        }
+    }
+
+    $rows = @{}
+    for ($i = $formationAt + 1; $i -lt $lines.Length; $i++) {
+        if ($lines[$i] -match '^\s*(FR|Boss|Kill|Search Notes):') { break }
+        if ($lines[$i] -match '^\s*([A-Z])(?:\s+|$)') {
+            $row = $matches[1]
+            $rowIndex = [int][char]$row - [int][char]'A'
+            if ($rowIndex -ge $columnCount) { Fail "Formation contains unexpected $row row" }
+            if ($rows.ContainsKey($row)) { Fail "Formation contains duplicate $row row" }
+            $cells = @($lines[$i].Trim() -split '\s+')
+            if ($cells.Count -ne 6) { Fail "Formation $row row must contain five cells" }
+            $rows[$row] = @($cells[1..5])
+        }
+    }
+    for ($rowIndex = 0; $rowIndex -lt $columnCount; $rowIndex++) {
+        $row = [string][char]([int][char]'A' + $rowIndex)
+        if (-not $rows.ContainsKey($row)) { Fail "Formation is missing $row row" }
+    }
+
+    $tokens = @($rows.Values | ForEach-Object { $_ })
     $numeric = @($tokens | Where-Object { $_ -notmatch '^[0-5]$' }).Count -eq 0
     $english = @($tokens | Where-Object { $_ -notin @('.', 'Fi', 'Co', 'Fr', 'Cr', 'HC', 'Fighter', 'Corvette', 'Frigate', 'Cruiser', 'HeavyCruiser') }).Count -eq 0
     if (-not $numeric -and -not $english) { Fail 'Formation contains unsupported or mixed ship tokens' }
@@ -47,7 +82,8 @@ try {
         '5'='HeavyCruiser'; 'HC'='HeavyCruiser'; 'HeavyCruiser'='HeavyCruiser'
     }
     $formation = [ordered]@{}
-    foreach ($row in @('A', 'B')) {
+    for ($rowIndex = 0; $rowIndex -lt $columnCount; $rowIndex++) {
+        $row = [string][char]([int][char]'A' + $rowIndex)
         for ($column = 1; $column -le 5; $column++) {
             $token = [string]$rows[$row][$column - 1]
             if ($numeric) { $formation["$row$column"] = [int]$token }
@@ -77,9 +113,6 @@ try {
         }
     }
     if ($foundLoadouts.Count -eq 0) { Fail 'result TXT Mods section is empty' }
-
-    $config = [IO.File]::ReadAllText($configPath) | ConvertFrom-Json
-    if ($null -eq $config.baseline) { Fail 'config JSON has no baseline object' }
 
     $loadouts = [ordered]@{}
     if ($null -ne $config.baseline.loadouts) {

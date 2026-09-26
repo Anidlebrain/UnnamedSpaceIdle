@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { canonicalShipRecord, shipSelectorToId } from './ship-selectors'
+import { formationColumns, MAX_FORMATION_COLUMNS, validFormationPosition } from './formation-grid'
 
 const normalizeNodeShips = (input: unknown): unknown => {
   if (!input || typeof input !== 'object') return input
@@ -51,26 +52,39 @@ export const searchConfigSchema = jsonObject.extend({
   max_simulations: z.number().int().positive(),
   workers: z.number().int().min(1).max(4),
 })
-const rawNodeConfigSchema = jsonObject.extend({
-  galaxy: z.number().int(),
-  node: z.string().min(1),
-  boss: jsonObject.optional(),
-  hazards: z.array(z.unknown()).default([]),
-  supports: z.array(z.unknown()).default([]),
-  player_state: jsonObject.extend({
-    fleet_resources: z.number(),
-    ships: z.record(z.number().int().nonnegative()),
-  }),
-  baseline: jsonObject.extend({
-    enabled: z.boolean(),
-    formation: z.record(z.union([z.string(), z.number()])),
-    loadouts: z.record(loadoutSchema),
-    observed: jsonObject.optional(),
-  }),
-  // Kept in Friendly Nodes for direct CLI and legacy-data compatibility.
-  // Fleet Manager replaces this object from its independent Search config only while staging a task.
-  search: searchConfigSchema,
-})
+const rawNodeConfigSchema = jsonObject
+  .extend({
+    galaxy: z.number().int(),
+    node: z.string().min(1),
+    formation_columns: z.number().int().min(1).max(MAX_FORMATION_COLUMNS).optional(),
+    boss: jsonObject.optional(),
+    hazards: z.array(z.unknown()).default([]),
+    supports: z.array(z.unknown()).default([]),
+    player_state: jsonObject.extend({
+      fleet_resources: z.number(),
+      ships: z.record(z.number().int().nonnegative()),
+    }),
+    baseline: jsonObject.extend({
+      enabled: z.boolean(),
+      formation: z.record(z.union([z.string(), z.number()])),
+      loadouts: z.record(loadoutSchema),
+      observed: jsonObject.optional(),
+    }),
+    // Kept in Friendly Nodes for direct CLI and legacy-data compatibility.
+    // Fleet Manager replaces this object from its independent Search config only while staging a task.
+    search: searchConfigSchema,
+  })
+  .superRefine((value, context) => {
+    const columns = formationColumns(value.formation_columns)
+    for (const [position, ship] of Object.entries(value.baseline.formation)) {
+      if (ship === '' || ship === 0 || ship === '0' || validFormationPosition(position, columns)) continue
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['baseline', 'formation', position],
+        message: `阵型位置 ${position} 超出 ${columns} 列 × 5 行范围`,
+      })
+    }
+  })
 export const nodeConfigSchema = z.preprocess(normalizeNodeShips, rawNodeConfigSchema)
 export const commonConfigSchema = z.preprocess(
   normalizeCommonShips,
@@ -143,6 +157,8 @@ const rawCandidateSchema = z
     fleet_resources_used: z.number().nullable().optional(),
     boss_damage: z.number().nullable().optional(),
     boss_damage_per_fr: z.number().nullable().optional(),
+    refined_battles_to_kill: z.number().nullable().optional(),
+    refined_total_kill_fr: z.number().nullable().optional(),
     outcome: z.string().optional(),
   })
   .passthrough()
@@ -159,6 +175,10 @@ export const candidateSchema = z.preprocess(input => {
 }, rawCandidateSchema)
 export const optimizerResultSchema = jsonObject.extend({
   best_result: candidateSchema.nullable().optional(),
+  per_battle_best_result: candidateSchema.nullable().optional(),
+  affordable_best_result: candidateSchema.nullable().optional(),
+  affordable_kill_status: z.string().optional(),
+  current_fleet_resources: z.number().optional(),
   verified_baseline: candidateSchema.nullable().optional(),
   improvement_vs_baseline: jsonObject.optional(),
   objective: z.string().optional(),

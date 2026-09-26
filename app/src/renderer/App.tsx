@@ -14,6 +14,14 @@ import type {
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../shared/bridge'
 import { diffFormation, hasRerunChange, usedFrIntegerChange } from '../shared/formation-diff'
+import {
+  formationColumnLabels,
+  formationColumns,
+  FORMATION_ROWS,
+  MAX_FORMATION_COLUMNS,
+  resultFormationColumns,
+  validFormationPosition,
+} from '../shared/formation-grid'
 import { effectiveShipCounts } from '../shared/ship-counts'
 import {
   preserveShipSelectorFormat,
@@ -1763,6 +1771,7 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
             options={[
               { value: 'efficiency', label: '效率（efficiency）' },
               { value: 'kill_cost', label: '击杀总成本（kill_cost）' },
+              { value: 'affordable_kill_cost', label: '当前资源内完整击杀（affordable_kill_cost）' },
             ]}
           />
         </Label>
@@ -2059,6 +2068,8 @@ function BestFound({
       ? baseline.fleet_resources_used - best.fleet_resources_used
       : null
   const byPosition = new Map(best.formation.map(entry => [entry.position, entry]))
+  const columns = formationColumnLabels(resultFormationColumns(result.base_config, target?.formation_columns)).reverse()
+  const resultGridStyle = { gridTemplateColumns: `2rem repeat(${columns.length}, minmax(6rem, 1fr))` }
   const loadouts = new Map<string, { primary?: unknown; secondary?: unknown; tertiary?: unknown }>()
   for (const [ship, value] of Object.entries(best.ship_loadouts ?? {})) {
     loadouts.set(shipSelectorToId(ship) || ship, {
@@ -2081,6 +2092,10 @@ function BestFound({
   )
   const modText = (value: unknown) =>
     value === null || value === undefined || value === '' ? '无' : modDisplayName(String(value))
+  const hasKillComparison =
+    Boolean(result.affordable_kill_status?.trim()) ||
+    Boolean(result.per_battle_best_result?.formation.length) ||
+    Boolean(result.affordable_best_result?.formation.length)
   return (
     <div className="best-found">
       <div className="best-found-heading">
@@ -2107,6 +2122,17 @@ function BestFound({
         <p className="apply-target">
           应用到：{target.galaxy.toUpperCase()} / {target.node} / {target.versionName}
         </p>
+      ) : null}
+      {hasKillComparison ? (
+        <section aria-label="Boss 完整击杀结果">
+          <p>
+            当前 FR：{result.current_fleet_resources ?? '—'} ·{' '}
+            {result.affordable_kill_status ||
+              (result.affordable_best_result?.formation.length ? '已找到可负担的完整击杀' : '未找到可负担的完整击杀')}
+          </p>
+          <KillCandidateDetails title="每战 FR 限额最低总成本" candidate={result.per_battle_best_result} />
+          <KillCandidateDetails title="当前 FR 可负担最低总成本" candidate={result.affordable_best_result} />
+        </section>
       ) : null}
       <dl className="result-metrics">
         <div>
@@ -2150,18 +2176,21 @@ function BestFound({
       <div className="best-grid">
         <section>
           <h3>最终编队</h3>
-          <div className="best-formation" role="table" aria-label="最终编队 B/A 横向、1 到 5 纵向">
-            <div className="formation-header" role="row">
+          <div className="best-formation" role="table" aria-label={`最终编队 ${columns.join('/')} 横向、1 到 5 纵向`}>
+            <div className="formation-header" role="row" style={resultGridStyle}>
               <span />
-              <strong role="columnheader">B</strong>
-              <strong role="columnheader">A</strong>
+              {columns.map(column => (
+                <strong role="columnheader" key={column}>
+                  {column}
+                </strong>
+              ))}
             </div>
-            {[1, 2, 3, 4, 5].map(row => (
-              <div className="formation-row" role="row" key={row}>
+            {FORMATION_ROWS.map(row => (
+              <div className="formation-row" role="row" key={row} style={resultGridStyle}>
                 <strong className="formation-row-label" role="rowheader">
                   {row}
                 </strong>
-                {(['B', 'A'] as const).map(column => {
+                {columns.map(column => {
                   const position = `${column}${row}`
                   const entry = byPosition.get(position)
                   const ship = entry ? shipSelectorToId(entry.ship) : null
@@ -2205,6 +2234,65 @@ function BestFound({
         </section>
       </div>
     </div>
+  )
+}
+
+type KillCandidate = NonNullable<NonNullable<RunResult['result']>['best_result']>
+
+function KillCandidateDetails({ title, candidate }: { title: string; candidate?: KillCandidate | null }) {
+  const formation = [...(candidate?.formation ?? [])].sort((a, b) => a.position.localeCompare(b.position))
+  const loadouts = new Map<string, { primary?: unknown; secondary?: unknown; tertiary?: unknown }>()
+  for (const [ship, value] of Object.entries(candidate?.ship_loadouts ?? {})) {
+    loadouts.set(shipSelectorToId(ship) || ship, {
+      primary: value.primary,
+      secondary: value.secondary,
+      tertiary: value.tertiary_mods ?? value.tertiary,
+    })
+  }
+  for (const entry of formation) {
+    const ship = shipSelectorToId(entry.ship) || entry.ship
+    if (!loadouts.has(ship))
+      loadouts.set(ship, { primary: entry.primary_mod, secondary: entry.secondary_mod, tertiary: entry.tertiary_mods })
+  }
+  const modText = (value: unknown) =>
+    value === null || value === undefined || value === '' ? '无' : modDisplayName(String(value))
+  return (
+    <details>
+      <summary>
+        {title}：完整击杀 {candidate?.refined_battles_to_kill ?? '—'} 场 · 总成本{' '}
+        {candidate?.refined_total_kill_fr ?? '—'} FR
+      </summary>
+      {formation.length ? (
+        <div className="best-grid">
+          <section>
+            <h3>阵型</h3>
+            <p>{formation.map(entry => `${entry.position} ${shipDisplayName(entry.ship, false)}`).join('、') || '—'}</p>
+          </section>
+          <section>
+            <h3>装配</h3>
+            {loadouts.size ? (
+              <div className="best-loadouts">
+                {[...loadouts.entries()].map(([ship, loadout]) => (
+                  <div key={ship}>
+                    <strong>{shipDisplayName(ship, false)}</strong>
+                    <p>
+                      Primary：{modText(loadout.primary)} · Secondary：{modText(loadout.secondary)}
+                    </p>
+                    {Array.isArray(loadout.tertiary) && loadout.tertiary.length ? (
+                      <p>Tertiary：{loadout.tertiary.map(modText).join('、')}</p>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>—</p>
+            )}
+          </section>
+        </div>
+      ) : (
+        <p>尚无完整击杀候选。</p>
+      )}
+    </details>
   )
 }
 
@@ -2314,7 +2402,8 @@ function FormationEditor({
   optimizer: OptimizerConfig | null
   onChange: (n: NodeConfig) => void
 }) {
-  const slots = ['A1', 'A2', 'A3', 'A4', 'A5', 'B1', 'B2', 'B3', 'B4', 'B5']
+  const columns = formationColumns(config.formation_columns)
+  const [columnError, setColumnError] = useState('')
   const counts = common ? effectiveShipCounts(config, common) : config.player_state.ships
   const available = new Set(
     Object.entries(counts)
@@ -2349,43 +2438,63 @@ function FormationEditor({
       },
     })
   }
+  const updateColumns = (next: number) => {
+    const occupied = Object.entries(config.baseline.formation)
+      .filter(([position, ship]) => shipSelectorToId(ship) && !validFormationPosition(position, next))
+      .map(([position]) => position)
+    if (occupied.length) {
+      setColumnError(`请先清空 ${occupied.join('、')}，再缩小到 ${next} 列。`)
+      return
+    }
+    setColumnError('')
+    onChange({ ...config, formation_columns: next })
+  }
   return (
     <section className="config-section">
       <div className="section-heading">
         <div>
           <h3>阵型</h3>
-          <p>两行五列；数字与英文格式会按原配置保留。</p>
+          <p>每列五格；数字与英文格式会按原配置保留。</p>
         </div>
-        <span className="format-hint">1–5 / English</span>
+        <label>
+          阵型列数
+          <select aria-label="阵型列数" value={columns} onChange={event => updateColumns(Number(event.target.value))}>
+            {Array.from({ length: MAX_FORMATION_COLUMNS }, (_, index) => index + 1).map(count => (
+              <option value={count} key={count}>
+                {count} 列
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
+      {columnError ? <p role="alert">{columnError}</p> : null}
       <div className="formation-board">
-        {['A', 'B'].map(row => (
-          <div className="formation-row" key={row}>
-            <strong>{row} 行</strong>
+        {formationColumnLabels(columns).map(column => (
+          <div className="formation-row" key={column}>
+            <strong>{column} 列</strong>
             <div className="formation-slots">
-              {slots
-                .filter(position => position.startsWith(row))
-                .map(position => {
-                  const raw = config.baseline.formation[position]
-                  return (
-                    <label className="formation-slot" key={position}>
-                      <span>{position}</span>
-                      <SmartSelect
-                        label={`${position} 舰种`}
-                        value={shipSelectorToId(raw)}
-                        onChange={value => update(position, value as ShipId | '')}
-                        options={[
-                          { value: '', label: '空位' },
-                          ...options.map(ship => ({
-                            value: ship.id,
-                            label: `${ship.name} · ${ship.id} · ${ship.numeric}`,
-                          })),
-                        ]}
-                      />
-                      <small>{shipDisplayName(raw)}</small>
-                    </label>
-                  )
-                })}
+              {FORMATION_ROWS.map(row => {
+                const position = `${column}${row}`
+                const raw = config.baseline.formation[position]
+                return (
+                  <label className="formation-slot" key={position}>
+                    <span>{position}</span>
+                    <SmartSelect
+                      label={`${position} 舰种`}
+                      value={shipSelectorToId(raw)}
+                      onChange={value => update(position, value as ShipId | '')}
+                      options={[
+                        { value: '', label: '空位' },
+                        ...options.map(ship => ({
+                          value: ship.id,
+                          label: `${ship.name} · ${ship.id} · ${ship.numeric}`,
+                        })),
+                      ]}
+                    />
+                    <small>{shipDisplayName(raw)}</small>
+                  </label>
+                )
+              })}
             </div>
           </div>
         ))}
@@ -2672,6 +2781,7 @@ function OptimizerConfigEditor({
               onChange={event => updateNumber('max_total_groups', event.target.value)}
             />
           </Label>
+          <p>实际可部署组数上限取节点阵型格子数（每列 5 格）与公共组数上限中的较小值。</p>
         </fieldset>
         <fieldset>
           <legend>结果与 Boss 精炼</legend>

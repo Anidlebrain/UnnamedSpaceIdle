@@ -69,6 +69,18 @@ func _run() -> void:
 			if worker_dir != "":
 				await _run_fleet_worker(probe, worker_dir)
 				return
+			if _has_argument("--grid-regression"):
+				var tests := preload("res://fleet_grid_regression.gd").new()
+				add_child(tests)
+				var regression: Dictionary = await tests.run(probe)
+				var fixture := _formation_text_fixture()
+				fixture.formation_columns = 3
+				fixture.best.formation["C5"] = "Cruiser"
+				var formatted := _build_text_summary(fixture)
+				regression["text_passed"] = "Formation columns: 3" in formatted and "C       0    0    0    0    4" in formatted
+				regression.passed = regression.passed and regression.text_passed
+				_finish(regression, 0 if regression.passed else 12, "user://fleet_grid_regression.json")
+				return
 			if _has_argument("--v3-regression"):
 				var tests := preload("res://fleet_optimizer_regression.gd").new()
 				add_child(tests)
@@ -663,15 +675,14 @@ func _print_daily_resolved(config: Dictionary) -> void:
 		var grid: Array = Array(enemy.get("grid_position", []))
 		var position := "?"
 		if grid.size() >= 2:
-			var rows := ["A", "B"]
-			var row_index := int(grid[0])
-			position = "%s%d" % [rows[row_index] if row_index >= 0 and row_index < rows.size() else "?", int(grid[1]) + 1]
+			position = _position_name(grid)
 		enemies.append("%s@%s" % [enemy.get("ship", "unknown"), position])
 	var boss: Dictionary = config.resolver.boss
 	print("")
 	print("Resolved Battle:")
 	print("  Fleet Event: %s" % config.fleet_event_id)
 	print("  Battle ID: %s" % config.battle_id)
+	print("  Formation: %d columns x %d slots" % [int(config.grid_size[0]), int(config.grid_size[1])])
 	print("  Enemy Fleet: %s" % ("none" if enemies.is_empty() else ", ".join(enemies)))
 	print("  Boss: %s" % ("none" if not bool(boss.alive) else "%s (%s), HP %s / %s" % [boss.command_ship_name, boss.command_ship_id, boss.remaining_hp, boss.max_hp]))
 	print("  Hazards: %s" % ("none" if config.hazards.is_empty() else ", ".join(config.hazards)))
@@ -765,8 +776,15 @@ func _build_compact_summary(summary: Dictionary, config: Dictionary) -> Dictiona
 		"status": summary.get("recommendation_status", summary.get("result_claim", "SEARCHED BEST")),
 		"galaxy": friendly.get("galaxy"),
 		"node": friendly.get("node"),
+		"formation_columns": int(config.get("grid_size", [2, 5])[0]),
 		"objective": summary.get("objective"),
 		"priority": summary.get("boss_priority"),
+		"recommendation_note": summary.get("recommendation_note", ""),
+		"kill_cost_resource_policy": summary.get("kill_cost_resource_policy", ""),
+		"affordable_kill_status": summary.get("affordable_kill_status", ""),
+		"current_fleet_resources": summary.get("current_fleet_resources"),
+		"per_battle_best": _compact_candidate(summary.get("per_battle_best_result", {})),
+		"affordable_best": _compact_candidate(summary.get("affordable_best_result", {})),
 		"search": {
 			"profile": summary.get("search_profile"),
 			"wall_seconds": summary.get("wall_time_seconds"),
@@ -793,7 +811,7 @@ func _build_compact_summary(summary: Dictionary, config: Dictionary) -> Dictiona
 		"best": _compact_candidate(best),
 		"improvement_vs_baseline": summary.get("improvement_vs_baseline", {}),
 		"notes": [
-			"SEARCHED BEST",
+			str(summary.get("recommendation_status", "SEARCHED BEST")),
 			"Interleaved exploration; unvisited candidates are not proven inferior",
 			str(summary.get("search_termination", "")),
 			"Not mathematically global exact" if summary.get("search_profile") != "exhaustive" else "Exact only where an exact subspace is explicitly reported",
@@ -820,6 +838,9 @@ func _compact_candidate(candidate: Dictionary) -> Dictionary:
 		"refined_total_kill_fr": candidate.get("refined_total_kill_fr"),
 		"killable_with_current_fr": candidate.get("killable_with_current_fr"),
 		"remaining_fr_after_kill": candidate.get("remaining_fr_after_kill"),
+		"killable_with_per_battle_fr": candidate.get("killable_with_per_battle_fr"),
+		"per_battle_fr_budget": candidate.get("per_battle_fr_budget"),
+		"kill_sequence_stop_reason": candidate.get("kill_sequence_stop_reason"),
 		"kill_sequence": candidate.get("kill_sequence", []),
 	}
 
@@ -829,6 +850,13 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 	lines.append("Galaxy %s / %s" % [compact.get("galaxy", "?"), compact.get("node", "?")])
 	lines.append("Status: %s" % compact.get("status", "SEARCHED BEST"))
 	lines.append("Objective: %s / %s" % [compact.get("objective", "?"), compact.get("priority", "n/a")])
+	if str(compact.get("recommendation_note", "")) != "":
+		lines.append("Recommendation: %s" % compact.recommendation_note)
+	if compact.get("priority") == "kill_cost" and compact.get("kill_cost_resource_policy") == "per_battle_budget":
+		lines.append("FR policy: input FR limits each deployment; total kill cost may exceed input FR.")
+	if str(compact.get("affordable_kill_status", "")) != "":
+		lines.append("当前资源 %s FR：%s" % [compact.get("current_fleet_resources"), compact.affordable_kill_status])
+		lines.append("可负担方案必须满足累计 Used FR 不超过当前资源，且逐场剩余资源足够支付部署。")
 	lines.append("Search Time: %.1fs" % float(compact.search.get("wall_seconds", 0.0)))
 	lines.append("Simulations: %s" % compact.search.get("simulations", 0))
 	var clock: Dictionary = compact.get("simulation_clock", {})
@@ -865,7 +893,7 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 	var best: Dictionary = compact.get("best", {})
 	if best.is_empty():
 		lines.append("")
-		lines.append("No valid candidate completed.")
+		lines.append("No verified recommendation available; see validation status.")
 		return "\n".join(lines) + "\n"
 	lines.append("")
 	lines.append("Recommended Fleet:")
@@ -875,6 +903,7 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 		if count > 0:
 			lines.append("  %s x%d" % [_ship_number_text(ship_type), count])
 	lines.append("")
+	lines.append("Formation columns: %d" % int(compact.get("formation_columns", 2)))
 	lines.append("Mods:")
 	for ship_type in ["Fighter", "Corvette", "Frigate", "Cruiser", "HeavyCruiser"]:
 		if ship_type not in best.get("loadouts", {}):
@@ -888,7 +917,8 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 	lines.append("")
 	lines.append("Formation:")
 	lines.append("        1    2    3    4    5")
-	for row in ["A", "B"]:
+	for x in range(int(compact.get("formation_columns", 2))):
+		var row := String.chr(65 + x)
 		var cells: Array[String] = []
 		for column in range(1, 6):
 			var ship_type := str(best.get("formation", {}).get("%s%d" % [row, column], ""))
@@ -899,14 +929,30 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 	lines.append("FR: Committed/Battle=%s; Used/Battle=%s" % [best.get("committed_fr", "n/a"), best.get("used_fr", "n/a")])
 	if compact.get("objective") == "boss":
 		lines.append("Boss: Damage/Battle=%s; Damage/FR=%s" % [best.get("boss_damage", "n/a"), best.get("damage_per_fr", "n/a")])
-		lines.append("Kill: Battles=%s; Total FR=%s; Remaining FR=%s" % [best.get("refined_battles_to_kill", "n/a"), best.get("refined_total_kill_fr", "n/a"), best.get("remaining_fr_after_kill", "n/a")])
+		lines.append("Kill: Battles=%s; Total FR=%s; Stop=%s" % [_verified_kill_value(best.get("refined_battles_to_kill")), _verified_kill_value(best.get("refined_total_kill_fr")), best.get("kill_sequence_stop_reason", "n/a")])
 		for battle in best.get("kill_sequence", []):
-			lines.append("  Battle %s: HP %s -> %s; Damage=%s; Committed=%s; Used=%s; FR left=%s" % [battle.battle, battle.boss_hp_before, battle.boss_hp_after, battle.boss_damage, battle.committed_fr, battle.used_fr, battle.fr_remaining])
+			lines.append("  Battle %s: HP %s -> %s; Damage=%s; Committed=%s; Used=%s; Cumulative Used=%s" % [battle.battle, battle.boss_hp_before, battle.boss_hp_after, battle.boss_damage, battle.committed_fr, battle.used_fr, battle.get("cumulative_used_fr", "n/a")])
 	lines.append("")
 	lines.append("Search Notes:")
 	for note in compact.get("notes", []):
 		lines.append("  %s" % note)
+	# Separate headings preserve --copy's existing primary Mods/Formation sections.
+	for entry in [["单次部署上限策略候选", "per_battle_best"], ["当前资源完整击杀候选", "affordable_best"]]:
+		var alternate: Dictionary = compact.get(entry[1], {})
+		if alternate.is_empty():
+			continue
+		lines.append("")
+		lines.append(str(entry[0]) + ":")
+		lines.append("  Battles=%s; Total FR=%s; Remaining FR=%s" % [alternate.refined_battles_to_kill, alternate.refined_total_kill_fr, alternate.get("remaining_fr_after_kill", "n/a")])
+		lines.append("  Candidate formation: %s" % JSON.stringify(alternate.formation))
+		lines.append("  Candidate loadouts: %s" % JSON.stringify(alternate.loadouts))
+		for battle in alternate.get("kill_sequence", []):
+			lines.append("  Battle %s: HP %s -> %s; Used=%s; Cumulative Used=%s; FR left=%s" % [battle.battle, battle.boss_hp_before, battle.boss_hp_after, battle.used_fr, battle.get("cumulative_used_fr"), battle.get("fr_remaining")])
 	return "\n".join(lines) + "\n"
+
+
+func _verified_kill_value(value) -> String:
+	return "unverified" if value == null else str(value)
 
 
 func _effect_detail_text(detail: Dictionary) -> String:
@@ -955,7 +1001,7 @@ func _formation_text_fixture() -> Dictionary:
 
 
 func _position_name(position: Array) -> String:
-	return "AB".substr(int(position[0]), 1) + str(int(position[1]) + 1)
+	return String.chr(65 + int(position[0])) + str(int(position[1]) + 1)
 
 
 func _sum_numeric(values: Dictionary) -> int:
@@ -1002,11 +1048,13 @@ func _print_daily_finished(summary: Dictionary, result_path: String) -> void:
 		if str(summary.get("objective", "normal")) == "boss":
 			print("Boss Damage: %s" % best.get("boss_damage_per_battle", best.get("boss_damage", "n/a")))
 			print("Damage / FR: %s" % best.get("boss_damage_per_fr", "n/a"))
-			print("Battles To Kill: %s" % best.get("refined_battles_to_kill", best.get("projected_battles_to_kill", "n/a")))
-			print("Total Kill FR: %s" % best.get("refined_total_kill_fr", best.get("projected_kill_fr", "n/a")))
-			print("Killable With Current FR: %s" % best.get("killable_with_current_fr", "n/a"))
-			print("Remaining FR After Kill: %s" % best.get("remaining_fr_after_kill", "n/a"))
+			print("Verified Battles To Kill: %s" % _verified_kill_value(best.get("refined_battles_to_kill")))
+			print("Verified Total Kill FR: %s" % _verified_kill_value(best.get("refined_total_kill_fr")))
+			print("Killable Within Per-Battle FR: %s" % best.get("killable_with_per_battle_fr", best.get("killable_with_current_fr", "n/a")))
+			print("Kill Sequence Stop: %s" % best.get("kill_sequence_stop_reason", "n/a"))
 	print("Simulations: %s" % summary.get("simulations_used", 0))
+	if str(summary.get("affordable_kill_status", "")) != "":
+		print("当前资源 %s FR：%s" % [summary.get("current_fleet_resources"), summary.affordable_kill_status])
 	print("Cache Hits: %s" % summary.get("cache_hits", 0))
 	print("Wall Time: %s seconds" % summary.get("wall_time_seconds", 0))
 	print("Full result: %s" % result_path)

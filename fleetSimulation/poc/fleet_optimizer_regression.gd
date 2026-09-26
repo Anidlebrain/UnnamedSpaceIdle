@@ -176,7 +176,7 @@ func run(probe: Node) -> Dictionary:
 		var failed: Dictionary = await failed_optimizer.optimize_v2(probe, resolved, config_settings)
 		check("baseline fail fast " + case_name, failed.result_claim == "BASELINE VALIDATION FAILED" and int(failed.simulations_used) == 1 and failed_optimizer._workers.is_empty(), failed.get("baseline_validation", {}))
 		failed_optimizer.queue_free()
-	# Continuous native boss fights and exact current-resource checks.
+	# Continuous native boss fights with the same per-battle deployment cap.
 	var boss: Dictionary = resolver.resolve(cases.boss_kill.friendly).config
 	var boss_settings := settings.duplicate(true)
 	boss_settings.merge(boss.optimizer, true)
@@ -208,7 +208,15 @@ func run(probe: Node) -> Dictionary:
 	poor.kill_refined = false
 	optimizer._base_config.fleet_resources = 600
 	await optimizer._refine_candidate(poor)
-	check("boss per-battle commitment gate", not bool(poor.killable_with_current_fr) and poor.kill_sequence_stop_reason == "insufficient_committed_fr" and int(poor.failed_before_battle) == 3, poor.kill_sequence)
+	check("kill total may exceed per-battle budget", bool(poor.killable_with_per_battle_fr) and poor.kill_sequence.size() == 3 and float(poor.refined_total_kill_fr) > 600, poor.kill_sequence)
+	check("resource cap resets for each battle", poor.kill_sequence.all(func(item): return item.per_battle_fr_budget == 600))
+	poor.kill_refined = false
+	optimizer._base_config.fleet_resources = float(poor.deployment_quote_committed_fr) - 1.0
+	await optimizer._refine_candidate(poor)
+	check("single deployment must fit cap", not bool(poor.killable_with_per_battle_fr) and poor.kill_sequence_stop_reason == "insufficient_committed_fr" and int(poor.failed_before_battle) == 1)
+	optimizer._verified_baseline = candidate
+	check("no completed sequence retains baseline", optimizer._select_recommendation([]) == candidate)
+	check("completed finalist takes precedence", optimizer._select_recommendation([sliced]) == sliced)
 	var passed := true
 	for item in checks:
 		passed = passed and bool(item.passed)

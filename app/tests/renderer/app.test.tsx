@@ -211,6 +211,22 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
     expect(screen.getByRole('button', { name: '加入搜索队列' })).toBeTruthy()
   })
+  it('shows a third formation column and blocks shrinking while it contains a ship', async () => {
+    api.load.mockResolvedValueOnce({
+      node: {
+        ...node,
+        formation_columns: 3,
+        baseline: { ...node.baseline, formation: { A1: 'Fighter', C5: 'Fighter' } },
+      },
+      common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
+    })
+    render(<App />)
+    await screen.findByLabelText('C5 舰种')
+    fireEvent.change(screen.getByLabelText('阵型列数'), { target: { value: '2' } })
+    expect(screen.getByRole('alert').textContent).toContain('C5')
+    expect((screen.getByLabelText('阵型列数') as HTMLSelectElement).value).toBe('3')
+    expect(screen.getByLabelText('C5 舰种')).toBeTruthy()
+  })
   it('renders a clear startup error when the preload API is missing', () => {
     delete window[FLEET_MANAGER_BRIDGE_NAME]
     render(<App />)
@@ -646,6 +662,30 @@ describe('Renderer preload contract', () => {
     })
     fireEvent.click(screen.getByRole('button', { name: '使用最优配置' }))
     await waitFor(() => expect(api.useBest).toHaveBeenCalledWith('task-b1'))
+  })
+  it('uses result grid width when showing a C-column Best Found', async () => {
+    api.run.mockResolvedValueOnce({
+      exitCode: 0,
+      startedAt: '2026-01-01T00:00:00.000Z',
+      finishedAt: '2026-01-01T00:00:04.000Z',
+      task: searchTask(),
+      result: {
+        base_config: { grid_size: [3, 5] },
+        verified_baseline: { formation: [{ position: 'A1', ship: 'Fighter' }] },
+        best_result: { formation: [{ position: 'C5', ship: 'Fighter' }] },
+      },
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
+    const table = await screen.findByRole('table', { name: /最终编队 C\/B\/A/ })
+    expect(
+      within(table)
+        .getAllByRole('columnheader')
+        .map(header => header.textContent),
+    ).toEqual(['C', 'B', 'A'])
+    expect(within(table).getByRole('cell', { name: /C5 战斗机/ })).toBeTruthy()
   })
 
   it('starts directly with the edited 200/200 Search draft without a separate save action', async () => {

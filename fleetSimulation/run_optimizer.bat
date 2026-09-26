@@ -139,7 +139,7 @@ copy /Y "%COMMON_FILE%" "%GODOT_PROJECT%\common.json" >nul
 if errorlevel 1 goto :stage_failed
 copy /Y "%DAILY_SETTINGS%" "%GODOT_PROJECT%\optimizer_v2_daily.json" >nul
 if errorlevel 1 goto :stage_failed
-for %%F in (fleet_test.gd fleet_test_runner.gd friendly_config_resolver.gd fleet_optimizer.gd fleet_optimizer_v2.gd fleet_optimizer_search.gd fleet_optimizer_regression.gd optimizer_benchmark_cases.json fleet_battle_analyzer.gd fleet_optimizer_bootstrap.gd fleet_optimizer_bootstrap.tscn fleet_optimizer_battle_area.gd) do (
+for %%F in (fleet_test.gd fleet_test_runner.gd friendly_config_resolver.gd fleet_optimizer.gd fleet_optimizer_v2.gd fleet_optimizer_search.gd fleet_optimizer_regression.gd fleet_grid_regression.gd fleet_quote_regression.gd optimizer_benchmark_cases.json fleet_battle_analyzer.gd fleet_optimizer_bootstrap.gd fleet_optimizer_bootstrap.tscn fleet_optimizer_battle_area.gd) do (
   copy /Y "%ROOT_DIR%\poc\%%F" "%GODOT_PROJECT%\%%F" >nul
   if errorlevel 1 goto :stage_failed
 )
