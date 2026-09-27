@@ -393,6 +393,40 @@ export function createBrowserApi(): FleetManagerApi {
       persistWorkspace()
       return { node: request.node, version }
     },
+    createGalaxy: async request => {
+      if (!/^g\d+$/i.test(request.galaxy)) throw new Error('Galaxy ID 应为 G 加数字，例如 G7。')
+      if (!/^[A-Za-z0-9_-]+$/.test(request.node)) throw new Error('初始 Node ID 含有不支持的字符。')
+      if (!request.versionName.trim()) throw new Error('初始 Version 名称不能为空。')
+      if (catalog.galaxies.some(item => item.id.toLowerCase() === request.galaxy.toLowerCase()))
+        throw new Error(`Galaxy ${request.galaxy} 已存在。`)
+      const source = nodes.get(key(request.source))
+      const sourceCommon = commons.get(commonKey(request.source))
+      if (!source || !sourceCommon) throw new Error('来源配置不存在。')
+      const version = 'default'
+      const common = 'default'
+      const next = nodeConfigSchema.parse({
+        ...clone(source),
+        galaxy: Number(request.galaxy.slice(1)),
+        node: request.node.replace(/_num$/i, ''),
+      })
+      catalog.galaxies.push({
+        id: request.galaxy,
+        nodes: [
+          {
+            id: request.node,
+            defaultVersion: version,
+            versions: [{ id: version, name: request.versionName.trim(), isDefault: true }],
+          },
+        ],
+        defaultCommon: common,
+        commons: [{ id: common, name: '默认', isDefault: true }],
+      })
+      catalog.galaxies.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
+      nodes.set(`${request.galaxy}/${request.node}/${version}`, next)
+      commons.set(`${request.galaxy}/${common}`, clone(sourceCommon))
+      persistWorkspace()
+      return { node: request.node, version, common }
+    },
     run: async request => {
       const selection: Selection = request
       const current = clone(nodes.get(key(selection))!)

@@ -161,6 +161,7 @@ const api = {
   renameTemplate: vi.fn(),
   deleteTemplate: vi.fn(),
   createNode: vi.fn(),
+  createGalaxy: vi.fn(),
   run: vi.fn(),
   enqueueSearch: vi.fn(),
   searchQueue: vi.fn(async () => []),
@@ -335,6 +336,55 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('button', { name: '使用最优配置' }))
     await waitFor(() => expect(api.useBest).toHaveBeenCalledWith('task-b3'))
     expect(((await screen.findByRole('button', { name: '已同步到配置' })) as HTMLButtonElement).disabled).toBe(true)
+  })
+  it('applies changed Galaxy results in one action and reports per-node failures', async () => {
+    api.useBest.mockResolvedValueOnce({
+      exitCode: -1,
+      startedAt: '2026-01-01T00:00:04.000Z',
+      finishedAt: '2026-01-01T00:00:05.000Z',
+      error: '目标 Version 已变化',
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: 'Galaxy 重跑' }))
+    fireEvent.click(screen.getByRole('button', { name: '开始重跑所选节点' }))
+    const apply = await screen.findByRole('button', { name: '一键使用最优配置（1）' })
+    fireEvent.click(apply)
+    await waitFor(() => expect(api.useBest).toHaveBeenCalledExactlyOnceWith('task-b3'))
+    expect(await screen.findByText('已应用 0 个节点的 Best Found；1 个未应用。')).toBeTruthy()
+    expect((apply as HTMLButtonElement).disabled).toBe(false)
+  })
+  it('marks successfully applied Galaxy results and prevents a second write', async () => {
+    api.useBest.mockResolvedValueOnce({
+      exitCode: 0,
+      startedAt: '2026-01-01T00:00:04.000Z',
+      finishedAt: '2026-01-01T00:00:05.000Z',
+      node,
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: 'Galaxy 重跑' }))
+    fireEvent.click(screen.getByRole('button', { name: '开始重跑所选节点' }))
+    fireEvent.click(await screen.findByRole('button', { name: '一键使用最优配置（1）' }))
+    expect(await screen.findByText('已应用 1 个节点的 Best Found；0 个未应用。')).toBeTruthy()
+    expect((screen.getByRole('button', { name: '一键使用最优配置（0）' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(api.useBest).toHaveBeenCalledExactlyOnceWith('task-b3')
+  })
+  it('creates a Galaxy from the current Common and Node source', async () => {
+    api.createGalaxy.mockResolvedValueOnce({ node: 'B1', version: 'default', common: 'default' })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '模板与复制' }))
+    fireEvent.change(screen.getByRole('textbox', { name: '新 Galaxy ID' }), { target: { value: 'G7' } })
+    fireEvent.click(screen.getByRole('button', { name: '创建 Galaxy' }))
+    await waitFor(() =>
+      expect(api.createGalaxy).toHaveBeenCalledWith({
+        galaxy: 'g7',
+        node: 'B1',
+        versionName: '默认',
+        source: { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' },
+      }),
+    )
   })
   it('keeps finished rerun nodes inspectable and distinguishes changed, unchanged, and failed results', async () => {
     render(<App />)

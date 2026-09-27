@@ -33,11 +33,17 @@ export function GalaxyRerunPanel({
   onOpen,
   onStopCurrent,
   onStopAll,
+  onApplyAll,
+  applicableCount,
+  applying,
 }: {
   progress: GalaxyRerunProgress
   onOpen: (node: GalaxyRerunNode) => void
   onStopCurrent: () => void
   onStopAll: () => void
+  onApplyAll: () => void
+  applicableCount: number
+  applying: boolean
 }) {
   const [now, setNow] = useState(Date.now())
   useEffect(() => {
@@ -63,6 +69,11 @@ export function GalaxyRerunPanel({
         </div>
         <div className="rerun-heading-actions">
           <span className={`run-state ${progress.status}`}>{progress.status === 'running' ? '运行中' : '已完成'}</span>
+          {progress.status !== 'running' ? (
+            <button className="success" onClick={onApplyAll} disabled={applying || applicableCount === 0}>
+              {applying ? '正在逐个应用…' : `一键使用最优配置（${applicableCount}）`}
+            </button>
+          ) : null}
           {progress.status === 'running' ? (
             <>
               <button onClick={onStopCurrent}>停止当前节点</button>

@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import {
   commonConfigSchema,
@@ -15,7 +15,7 @@ import {
   type OptimizerConfig,
   type SearchConfig,
 } from '../../shared/schemas'
-import type { Catalog, CreateNodeRequest, ImportPreview, Selection } from '../../shared/contracts'
+import type { Catalog, CreateGalaxyRequest, CreateNodeRequest, ImportPreview, Selection } from '../../shared/contracts'
 
 const readJson = async (path: string): Promise<unknown> => JSON.parse(await readFile(path, 'utf8'))
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT'
@@ -518,6 +518,50 @@ export class DataRepository {
       versions: [{ id: version, name: versionName }],
     })
     return { node: request.node, version }
+  }
+
+  async createGalaxy(request: CreateGalaxyRequest): Promise<{ node: string; version: string; common: string }> {
+    const target = this.galaxyPath(request.galaxy)
+    assertItem(request.node, 'Initial Node')
+    const versionName = assertName(request.versionName)
+    this.validateSelection(request.source)
+    try {
+      await stat(target)
+      throw new Error(`Galaxy ${request.galaxy} already exists.`)
+    } catch (error) {
+      if (!missing(error)) throw error
+    }
+    const existing = await this.catalog()
+    if (existing.galaxies.some(galaxy => galaxy.id.toLowerCase() === request.galaxy.toLowerCase()))
+      throw new Error(`Galaxy ${request.galaxy} already exists.`)
+    const source = await this.load(request.source)
+    const config = nodeConfigSchema.parse({
+      ...source.node,
+      galaxy: Number(request.galaxy.slice(1)),
+      node: request.node.replace(/_num$/i, ''),
+    })
+    const common = commonConfigSchema.parse(source.common)
+    const parent = join(this.dataRoot, 'galaxies')
+    const temporary = join(parent, `.${request.galaxy}-${randomUUID()}.tmp`)
+    await mkdir(temporary, { recursive: true })
+    try {
+      await atomicJson(join(temporary, 'common', 'versions', 'default.json'), common)
+      await atomicJson(join(temporary, 'common', 'meta.json'), {
+        default_profile: 'default',
+        profiles: [{ id: 'default', name: '默认' }],
+      })
+      await atomicJson(join(temporary, 'nodes', request.node, 'versions', 'default.json'), config)
+      await atomicJson(join(temporary, 'nodes', request.node, 'meta.json'), {
+        default_version: 'default',
+        versions: [{ id: 'default', name: versionName }],
+      })
+      await rename(temporary, target)
+    } catch (error) {
+      if (dirname(resolve(temporary)) !== resolve(parent)) throw error
+      await rm(temporary, { recursive: true, force: true })
+      throw error
+    }
+    return { node: request.node, version: 'default', common: 'default' }
   }
 
   async stage(selection: Selection): Promise<{ node: NodeConfig; common: CommonConfig }> {

@@ -185,6 +185,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const [rerunSelections, setRerunSelections] = useState<RerunSelections>(storedRerunSelections)
   const [galaxyRerun, setGalaxyRerun] = useState<GalaxyRerunProgress | null>(null)
   const [rerunStarting, setRerunStarting] = useState(false)
+  const [bulkApplying, setBulkApplying] = useState(false)
   const [galaxyDetail, setGalaxyDetail] = useState<GalaxyRerunNode | null>(null)
   const [preview, setPreview] = useState<ImportPreview | null>(null)
   const [message, setMessage] = useState('')
@@ -193,6 +194,8 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const [template, setTemplate] = useState('')
   const [createMode, setCreateMode] = useState<'selection' | 'template'>('selection')
   const [newNode, setNewNode] = useState('')
+  const [newGalaxy, setNewGalaxy] = useState('')
+  const [newGalaxyNode, setNewGalaxyNode] = useState('B1')
   const [newNodeGalaxy, setNewNodeGalaxy] = useState('')
   const [newVersionName, setNewVersionName] = useState('默认')
   const [workspace, setWorkspace] = useState<Workspace>('node')
@@ -705,6 +708,53 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       }
     })
   }
+  const applyGalaxyBest = async () => {
+    if (!galaxyRerun || galaxyRerun.status === 'running' || bulkApplying || busy || taskRunning) return
+    cacheCurrentDraft()
+    const candidates = galaxyRerun.nodes.filter(
+      item =>
+        item.status === 'succeeded' &&
+        item.changed &&
+        item.run?.task &&
+        item.run.result?.best_result &&
+        !appliedTaskIds.has(item.run.task.taskId),
+    )
+    if (!candidates.length) return
+    setBulkApplying(true)
+    const applied: string[] = []
+    const failed: string[] = []
+    try {
+      for (const item of candidates) {
+        const task = item.run!.task!
+        const targetKey = nodeDomainKey(task)
+        if (isDirty(nodeDrafts.current.get(targetKey)) || isDirty(searchDrafts.current.get(targetKey))) {
+          failed.push(`${item.node}：目标有未保存草稿`)
+          continue
+        }
+        try {
+          const result = await api.useBest(task.taskId)
+          if (result.error || !result.node) throw new Error(result.error ?? 'Copy 未返回有效 Node。')
+          const source = format(result.node)
+          const draft = { value: result.node, source, savedSource: source }
+          nodeDrafts.current.set(targetKey, draft)
+          searchDrafts.current.set(targetKey, draft)
+          if (nodeDomainKey(selection) === targetKey) {
+            setNode(result.node)
+            setNodeSource(source)
+            setSavedNodeSource(source)
+          }
+          applied.push(task.taskId)
+        } catch (error) {
+          failed.push(`${item.node}：${runErrorSummary(error)}`)
+        }
+      }
+      if (applied.length) setAppliedTaskIds(current => new Set([...current, ...applied]))
+      setMessage(`已应用 ${applied.length} 个节点的 Best Found；${failed.length} 个未应用。`)
+      setErrorDetail(failed.join('\n').slice(0, 4000))
+    } finally {
+      setBulkApplying(false)
+    }
+  }
   const rerunCurrentGalaxy = async () => {
     if (!searchConfig || !rerunNodes.length || rerunStarting || rerunActive) return
     const searchSnapshot = searchConfig
@@ -820,6 +870,20 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       setNewNode('')
     })
   }
+  const createGalaxy = () => {
+    if (!requireNodeSaved(selection, false)) return
+    void act('Galaxy 已创建并切换。', async () => {
+      const galaxy = newGalaxy.trim().toLowerCase()
+      const node = newGalaxyNode.trim()
+      if (!/^g\d+$/.test(galaxy)) throw new Error('Galaxy ID 应为 G 加数字，例如 G7。')
+      if (!node) throw new Error('请输入初始 Node ID。')
+      const created = await api.createGalaxy({ galaxy, node, versionName: '默认', source: selection })
+      await refresh()
+      setCurrentSelection({ galaxy, node: created.node, version: created.version, common: created.common })
+      setNewNodeGalaxy(galaxy)
+      setNewGalaxy('')
+    })
+  }
 
   if (!catalog.galaxies.length)
     return (
@@ -845,7 +909,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     common: { title: '公共配置', description: '管理 Galaxy 公共和全局 Optimizer 配置' },
     search: { title: '搜索', description: '选择目标，运行 Optimizer，并按 Best Found 配置舰队' },
     rerun: { title: 'Galaxy 重跑', description: '串行检查当前 Galaxy 的默认配置' },
-    templates: { title: '模板与复制', description: '从稳定配置快速创建 Node' },
+    templates: { title: '模板与复制', description: '创建 Galaxy、Node 和可复用模板' },
   }
   const optimizerGlobalContext = workspace === 'common' && commonTab === 'optimizer'
   const showNodeContext = workspace === 'node' || workspace === 'search' || workspace === 'templates'
@@ -1224,7 +1288,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 <button
                   className="primary"
                   onClick={() => void rerunCurrentGalaxy()}
-                  disabled={rerunStarting || rerunActive || taskRunning || !rerunNodes.length}
+                  disabled={rerunStarting || rerunActive || bulkApplying || taskRunning || !rerunNodes.length}
                 >
                   开始重跑所选节点
                 </button>
@@ -1237,12 +1301,48 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
               onOpen={openGalaxyResult}
               onStopCurrent={stopCurrent}
               onStopAll={stopAll}
+              onApplyAll={() => void applyGalaxyBest()}
+              applicableCount={
+                galaxyRerun.nodes.filter(
+                  item =>
+                    item.status === 'succeeded' &&
+                    item.changed &&
+                    item.run?.task &&
+                    item.run.result?.best_result &&
+                    !appliedTaskIds.has(item.run.task.taskId),
+                ).length
+              }
+              applying={bulkApplying || busy || taskRunning}
             />
           ) : null}
         </div>
       ) : null}
       {workspace === 'templates' ? (
         <section className="management panel workspace-view">
+          <div>
+            <h2>创建 Galaxy</h2>
+            <p>复制当前 Galaxy 的 Common 和当前 Node / Version，作为新 Galaxy 的初始配置。</p>
+            <div className="inline">
+              <input
+                aria-label="新 Galaxy ID"
+                placeholder="例如 G7"
+                value={newGalaxy}
+                onChange={event => setNewGalaxy(event.target.value)}
+              />
+              <input
+                aria-label="初始 Node ID"
+                placeholder="例如 B1"
+                value={newGalaxyNode}
+                onChange={event => setNewGalaxyNode(event.target.value)}
+              />
+              <button
+                onClick={createGalaxy}
+                disabled={busy || !selection.node || !newGalaxy.trim() || !newGalaxyNode.trim()}
+              >
+                创建 Galaxy
+              </button>
+            </div>
+          </div>
           <div>
             <h2>Node 创建与模板</h2>
             <div className="inline">

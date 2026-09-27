@@ -4,6 +4,8 @@
 
 ## V1.2.1 可用性调整
 
+- Galaxy 重跑完成后可一键将所有“有变化”节点的 Best Found 逐个写入对应默认 Version；继续使用单节点 Copy 校验，目标有未保存草稿、版本变化或结果失效时跳过该节点并报告失败，成功节点不会重试。
+- “模板与复制”可创建 Galaxy：输入 Galaxy ID 和初始 Node ID，复制当前 Common 与当前 Node / Version 作为新 Galaxy 的初始配置；已有 Galaxy 不会被覆盖。
 - Galaxy / Node / Version / Common 与搜索设置的主要下拉使用统一的限高列表；打开时把当前项尽量放在可视区域中部，Node / Version / Common 可输入筛选。
 - 同一 Galaxy / Node / Version 在等待或运行时不能重复加入。再次搜索已结束的目标会替换其当前任务条目；完成、失败和已停止任务保留提醒，点击查看后从左侧导航移除。本次会话的结果仍可在当前搜索页查看，没有增加历史功能。
 - Galaxy 重跑在开始前用全宽多列网格选择节点，提供全选/全取消单按钮、勾选和顺序调整；运行后收起选择区，让等待、当前、完成、变化和失败结果占满宽度，停止按钮位于结果区。
@@ -39,7 +41,7 @@
 - 复用现有 `run_optimizer.bat <galaxy> <node> --c` 应用 Best Found；只有 BAT 成功且修改后的 Node JSON 通过结构与身份校验后，才原子覆盖当前 Manager Version。
 - 串行重跑当前 Galaxy 中所选 Node 的默认 Version，按列表顺序执行并使用该 Galaxy 的默认 Common；整批任务持有全局 Optimizer 锁。
 - 批量结果按 `formation_key`（缺失时回退到结构化 Formation/Loadout diff）过滤，仅重点列出需要重新配置的节点；失败节点独立显示且不会复用旧 Result。
-- Galaxy 重跑过程只做变化发现，不自动执行 `--c`、不更新 baseline、不创建 Version，也不批量采用 Best Found；用户可从节点详情手动使用单个 Best Found。
+- Galaxy 重跑过程只做变化发现，不自动执行 `--c`、不更新 baseline、不创建 Version；完成后可手动批量使用有变化节点的 Best Found，也可从节点详情单独使用。
 - 五个独立工作区：节点配置、公共配置、搜索、Galaxy 重跑、模板与复制。Galaxy / Optimizer 公共不再作为当前 Node Tab。
 - Node 结构化编辑按阵型、舰队状态、装配、环境排列，覆盖 Formation、Fleet Resources、各舰种数量、Loadout、Boss、Hazards 与 Supports；Raw JSON 收入高级区。完整字段审计见 [`docs/node-field-audit.md`](docs/node-field-audit.md)。
 - Node 顶级 `formation_columns` 控制阵型宽度（1–26 列，每列 5 格，A/B/C 分别对应 grid x=0/1/2）；旧 Node 缺省为 2 列。编辑器只显示有效列，缩小列数前必须清空将被隐藏的舰船。Best Found 优先按结果 `base_config.grid_size[0]` 显示列数，旧结果回退任务快照或 2 列；应用到浏览器工作区时会拒绝列数不匹配、重复位置和目标范围外的位置。实际部署组数上限为阵型格子数与 Optimizer 公共组数上限的较小值，旧本机公共配置仍可能限制为 10 组。

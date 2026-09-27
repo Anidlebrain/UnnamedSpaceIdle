@@ -6,7 +6,13 @@ import { is } from '@electron-toolkit/utils'
 import { DataRepository } from './services/data-repository'
 import { OptimizerRunner } from './services/optimizer-runner'
 import { GalaxyRerunService } from './services/galaxy-rerun'
-import type { CreateNodeRequest, GalaxyRerunRequest, SearchTaskRequest, Selection } from '../shared/contracts'
+import type {
+  CreateGalaxyRequest,
+  CreateNodeRequest,
+  GalaxyRerunRequest,
+  SearchTaskRequest,
+  Selection,
+} from '../shared/contracts'
 import { commonConfigSchema, nodeConfigSchema, optimizerConfigSchema, searchConfigSchema } from '../shared/schemas'
 
 if (process.env.FLEET_MANAGER_USER_DATA_DIR) {
@@ -95,6 +101,7 @@ app.whenReady().then(() => {
   ipcMain.handle('template:rename', (_, id: string, name: string) => repo.renameTemplate(id, name))
   ipcMain.handle('template:delete', (_, id: string) => repo.deleteTemplate(id))
   ipcMain.handle('node:create', (_, request: CreateNodeRequest) => repo.createNode(request))
+  ipcMain.handle('galaxy:create', (_, request: CreateGalaxyRequest) => repo.createGalaxy(request))
   ipcMain.handle('optimizer:run', (_, request: SearchTaskRequest) =>
     runner.run({ ...request, search: searchConfigSchema.parse(request.search) }),
   )

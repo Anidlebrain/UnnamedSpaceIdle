@@ -196,4 +196,23 @@ describe('DataRepository', () => {
     await repo.deleteTemplate(template)
     expect((await repo.catalog()).templates).toEqual([])
   })
+  it('creates a Galaxy with copied Common and an initial Node without overwriting existing data', async () => {
+    const { repo } = await fixture()
+    await repo.importMap()
+    const source = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
+    await repo.save(source, { ...node, hazards: ['kept'] })
+    const request = { galaxy: 'g7', node: 'B2', versionName: '起始版', source }
+    expect(await repo.createGalaxy(request)).toEqual({ node: 'B2', version: 'default', common: 'default' })
+    const target = { galaxy: 'g7', node: 'B2', version: 'default', common: 'default' }
+    const loaded = await repo.load(target)
+    expect({ galaxy: loaded.node.galaxy, node: loaded.node.node, hazards: loaded.node.hazards }).toEqual({
+      galaxy: 7,
+      node: 'B2',
+      hazards: ['kept'],
+    })
+    expect(loaded.common).toEqual(common)
+    expect((await repo.catalog()).galaxies.find(item => item.id === 'g7')?.nodes[0].versions[0].name).toBe('起始版')
+    await expect(repo.createGalaxy(request)).rejects.toThrow('already exists')
+    expect((await repo.load(target)).node.hazards).toEqual(['kept'])
+  })
 })

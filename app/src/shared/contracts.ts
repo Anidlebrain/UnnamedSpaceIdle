@@ -72,6 +72,7 @@ export type CreateNodeRequest = {
   versionName: string
   source: { type: 'selection'; selection: Selection } | { type: 'template'; template: string }
 }
+export type CreateGalaxyRequest = { galaxy: string; node: string; versionName: string; source: Selection }
 export type FleetManagerApi = {
   runtime?: 'desktop' | 'web'
   previewImport(): Promise<ImportPreview>
@@ -97,6 +98,7 @@ export type FleetManagerApi = {
   renameTemplate(id: string, name: string): Promise<void>
   deleteTemplate(id: string): Promise<void>
   createNode(request: CreateNodeRequest): Promise<{ node: string; version: string }>
+  createGalaxy(request: CreateGalaxyRequest): Promise<{ node: string; version: string; common: string }>
   run(request: SearchTaskRequest): Promise<RunResult>
   enqueueSearch(request: SearchTaskRequest): Promise<SearchQueueItem>
   searchQueue(): Promise<SearchQueueItem[]>

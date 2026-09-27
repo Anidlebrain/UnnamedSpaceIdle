@@ -29,6 +29,7 @@ const api: FleetManagerApi = {
   renameTemplate: (id, name) => ipcRenderer.invoke('template:rename', id, name),
   deleteTemplate: id => ipcRenderer.invoke('template:delete', id),
   createNode: request => ipcRenderer.invoke('node:create', request),
+  createGalaxy: request => ipcRenderer.invoke('galaxy:create', request),
   run: request => ipcRenderer.invoke('optimizer:run', request),
   enqueueSearch: request => ipcRenderer.invoke('optimizer:enqueue', request),
   searchQueue: () => ipcRenderer.invoke('optimizer:queue'),
