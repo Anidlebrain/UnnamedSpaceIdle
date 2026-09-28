@@ -8,7 +8,13 @@
 
 必须提供 `baseline.enabled: true`、formation 和 loadouts。启动先验证 Baseline：普通战必须 WIN，Boss 必须 `boss_damage > 0`，否则输出 **BASELINE VALIDATION FAILED** 并停止；不会进入 Recovery。Baseline 是参考上界，并不限制全局 composition 的生成。
 
-若搜索限制内尚未验证出完整 Kill Cost 序列，输出 **BASELINE RETAINED**，保留并重放已验证的输入阵型。当前资源策略无解时为 **NO VERIFIED AFFORDABLE KILL**，同样保留单场基线并说明未找到可负担的完整击杀。`kill_cost_resource_policy` 区分 `per_battle_budget` 与 `current_resources`，后者记录逐场剩余 FR 及 `remaining_fr_after_kill`。单次部署候选中的旧字段 `killable_with_current_fr` 仅作为内部排名兼容别名；判断当前资源能否完成击杀，应读取独立的 `affordable_best_result` / `affordable_kill_status`，不能只读此旧字段。
+`kill_cost` 搜索限制内尚未验证出完整击杀序列时，输出 **BASELINE RETAINED**，保留并重放已验证的输入阵型。`affordable_kill_cost` 优先推荐已验证完整击杀中累计实际 Used FR 最低的方案；未找到击杀时输出 **NO VERIFIED AFFORDABLE KILL**，推荐当前资源内已验证累计伤害最高的方案，伤害相同再比较总消耗和场数，不再直接退回基线。状态表示搜索预算内未找到，并非证明无解。
+
+当前资源策略分别保留单场最大伤害、预计可负担累计伤害，以及不同部署预算/可挑战次数的搜索父阵型。次数估计同时检查部署费、原版向下取整扣款和累计实际 Used FR，不能简单用 `floor(FR / Used FR)` 代替。估计仅控制搜索顺序；结果全部逐场运行原版场景，并按真实 BOSS HP 和钱包继续。搜索支持重复阵型及剩余资源换阵收尾，最终推荐的每一场都会重放。多场探索在线约占总时间的 10%，收尾预留约 20%；有界候选与缓存控制三列及更大阵型的成本。这是预算内启发式搜索，不保证穷举所有混合序列。
+
+`best_result` / `affordable_damage_result` 的 `campaign_boss_damage`、`campaign_battles`、`refined_fr_spent`、`campaign_remaining_fr` 和 `boss_final_hp` 描述整套当前资源方案；原 `boss_damage` / `fleet_resources_used` 仍描述首场。`kill_sequence` 每场保存阵型、装配、伤害和资源账本。TXT 与 App 都列出后续场次，`--copy` / “使用最优配置”只应用首场。`affordable_best_result` 仅表示完整击杀；未找到击杀时该字段为空，伤害方案仍可有效。附加的 `per_battle_best_result` 仅在预算内完成验证时提供，当前资源策略优先把模拟预算用于可执行方案。`kill_cost_resource_policy` 区分 `per_battle_budget` 与 `current_resources`；不能仅依据单次部署候选的旧兼容字段 `killable_with_current_fr` 判断当前资源能否击杀。
+
+算法方案、源码依据和验证见 [当前资源 BOSS 搜索](docs/boss_current_resources.md)。隔离测试可通过 `tools/benchmark_preserved.py` 包装原基准入口，自动备份并恢复暂存工程输入；日常使用仍是 `run_optimizer.bat`。
 
 日常只需 `"search": {"profile": "fast"}`，默认单 worker、300 秒（含 Godot 初始化）。Balanced 增加全局探索比例；已有显式时间、worker 和 simulation 上限仍兼容。收尾预留真实重跑与 Boss 序列时间，当前战斗会完成，极慢战斗可能略超预算。`beat_baseline` 字段兼容，但仍尽量搜索到预算结束。Exhaustive 只用于受限空间验证；只有确实完成全部配置空间的普通战/效率搜索才显示 EXHAUSTIVE BEST。
 

@@ -1871,7 +1871,10 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
             options={[
               { value: 'efficiency', label: '效率（efficiency）' },
               { value: 'kill_cost', label: '击杀总成本（kill_cost）' },
-              { value: 'affordable_kill_cost', label: '当前资源内完整击杀（affordable_kill_cost）' },
+              {
+                value: 'affordable_kill_cost',
+                label: '当前资源：优先最低成本击杀，否则最大伤害（affordable_kill_cost）',
+              },
             ]}
           />
         </Label>
@@ -2202,11 +2205,13 @@ function BestFound({
         <div>
           <h2>Best Found</h2>
           <p>
-            {usedFr
-              ? `Used FR 取整：${usedFr.baselineUsed} → ${usedFr.bestUsed}，${usedFr.saved > 0 ? `减少 ${usedFr.saved}` : usedFr.saved < 0 ? `增加 ${-usedFr.saved}` : '变化 0'}。${changes ? `阵型或装配有 ${changes} 项差异。` : ''}`
-              : changes
-                ? `相对当前配置有 ${changes} 项阵型或装配变化。`
-                : 'Best Found 与当前配置一致。'}
+            {typeof best.campaign_boss_damage === 'number'
+              ? `当前资源方案：${best.campaign_battles} 场，累计伤害 ${best.campaign_boss_damage}，剩余 BOSS 血量 ${best.boss_final_hp}。`
+              : usedFr
+                ? `Used FR 取整：${usedFr.baselineUsed} → ${usedFr.bestUsed}，${usedFr.saved > 0 ? `减少 ${usedFr.saved}` : usedFr.saved < 0 ? `增加 ${-usedFr.saved}` : '变化 0'}。${changes ? `阵型或装配有 ${changes} 项差异。` : ''}`
+                : changes
+                  ? `相对当前配置有 ${changes} 项阵型或装配变化。`
+                  : 'Best Found 与当前配置一致。'}
           </p>
         </div>
         <button
@@ -2234,33 +2239,63 @@ function BestFound({
           <KillCandidateDetails title="当前 FR 可负担最低总成本" candidate={result.affordable_best_result} />
         </section>
       ) : null}
+      {typeof best.campaign_boss_damage === 'number' ? (
+        <section aria-label="当前资源战斗方案">
+          <p>
+            累计消耗 {best.refined_fr_spent} FR · 剩余资源 {best.campaign_remaining_fr} FR
+          </p>
+          <p>下方编队和“使用最优配置”对应第 1 场。后续各场按方案调整阵型与装配。</p>
+          {best.kill_sequence?.map(battle => (
+            <details key={battle.battle}>
+              <summary>
+                第 {battle.battle} 场：BOSS {battle.boss_hp_before} → {battle.boss_hp_after} · 消耗 {battle.used_fr} FR
+              </summary>
+              <p>
+                部署 {battle.committed_fr} FR · 战后剩余 {battle.fr_remaining ?? '—'} FR
+              </p>
+              <p>
+                {battle.formation?.map(entry => `${entry.position} ${shipDisplayName(entry.ship, false)}`).join('、')}
+              </p>
+              {Object.entries(battle.loadouts ?? {}).map(([ship, loadout]) => (
+                <p key={ship}>
+                  {shipDisplayName(ship, false)}：Primary {modText(loadout.primary)} · Secondary{' '}
+                  {modText(loadout.secondary)}
+                </p>
+              ))}
+            </details>
+          ))}
+        </section>
+      ) : null}
       <dl className="result-metrics">
         <div>
-          <dt>Outcome</dt>
+          <dt>{best.campaign_battles ? '首场 Outcome' : 'Outcome'}</dt>
           <dd>{best.outcome ?? '—'}</dd>
         </div>
         <div>
-          <dt>Committed FR</dt>
+          <dt>{best.campaign_battles ? '首场 Committed FR' : 'Committed FR'}</dt>
           <dd>{best.fleet_resources_committed ?? '—'}</dd>
         </div>
         <div>
-          <dt>Used FR</dt>
+          <dt>{best.campaign_battles ? '首场 Used FR' : 'Used FR'}</dt>
           <dd>{best.fleet_resources_used ?? '—'}</dd>
         </div>
         {typeof best.boss_damage === 'number' && best.boss_damage > 0 ? (
           <div>
-            <dt>Boss Damage</dt>
+            <dt>{best.campaign_battles ? '首场 Boss Damage' : 'Boss Damage'}</dt>
             <dd>{best.boss_damage}</dd>
           </div>
         ) : null}
-        {saved !== null ? (
+        {saved !== null && !best.campaign_battles ? (
           <div>
             <dt>Saved FR</dt>
             <dd>{saved.toFixed(2)}</dd>
           </div>
         ) : null}
-        {typeof improvement.percent === 'number' ||
-        (saved !== null && typeof baseline?.fleet_resources_used === 'number' && baseline.fleet_resources_used > 0) ? (
+        {!best.campaign_battles &&
+        (typeof improvement.percent === 'number' ||
+          (saved !== null &&
+            typeof baseline?.fleet_resources_used === 'number' &&
+            baseline.fleet_resources_used > 0)) ? (
           <div>
             <dt>改善比例</dt>
             <dd>

@@ -40,6 +40,14 @@ var _max_battle_seconds := 1.0
 var _shutdown_ms := 0.0
 var _ipc_ms := 0.0
 var _requested_boss_priority := ""
+const BossBudget = preload("res://fleet_boss_budget.gd")
+var _damage_best := {}
+var _campaign_best := {}
+var _budget_parents := {}
+var _campaigns := {}
+var _boss_parent_cursor := 0
+var _campaign_search_ms := 0.0
+var _campaign_expansions := 0
 
 
 func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> Dictionary:
@@ -53,7 +61,7 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 	objective = str(_settings.get("objective", "normal"))
 	boss_priority = str(_settings.get("boss_priority", "efficiency")) if objective == "boss" else "legacy"
 	_requested_boss_priority = boss_priority
-	# Both cost strategies share exploration, but keep independent native sequences.
+	# Keep the shared battle machinery; scheduling uses the requested policy.
 	if boss_priority == "affordable_kill_cost":
 		boss_priority = "kill_cost"
 		_settings.boss_priority = "kill_cost"
@@ -125,9 +133,15 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 		if affordable.get("killable_with_current_fr", false) == true:
 			affordable_finalists.append(affordable)
 	affordable_finalists.sort_custom(_rank_before)
+	var damage_finalists: Array = _campaigns.values()
+	damage_finalists.sort_custom(BossBudget.before)
 	var per_battle_best: Dictionary = {} if finalists.is_empty() else finalists[0]
 	var affordable_best: Dictionary = {} if affordable_finalists.is_empty() else affordable_finalists[0]
 	var selected_finalists := affordable_finalists if _requested_boss_priority == "affordable_kill_cost" else finalists
+	if _requested_boss_priority == "affordable_kill_cost":
+		selected_finalists = damage_finalists
+		if not damage_finalists.is_empty() and damage_finalists[0].killable_with_current_fr == true:
+			affordable_best = damage_finalists[0]
 	var best := _select_recommendation(selected_finalists)
 	var baseline_fallback := selected_finalists.is_empty() and not best.is_empty()
 	_progress_stage_start("Final Native Replay", 4, 4, 1)
@@ -136,7 +150,7 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 	for alternate in [per_battle_best, affordable_best]:
 		if alternate.is_empty():
 			continue
-		if alternate.candidate_hash == best.candidate_hash:
+		if alternate.candidate_hash == best.candidate_hash and alternate.get("campaign_key", "") == best.get("campaign_key", ""):
 			alternate["finalization_status"] = validation
 		else:
 			alternate["finalization_status"] = await _attach_full_result(alternate)
@@ -157,7 +171,7 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 	var affordable_status := "已找到可负担的完整击杀" if not affordable_best.is_empty() else "未找到可负担的完整击杀"
 	if _requested_boss_priority == "affordable_kill_cost" and affordable_best.is_empty():
 		status = "NO VERIFIED AFFORDABLE KILL"
-		recommendation_note = affordable_status + "；保留已验证的单场基线。"
+		recommendation_note = affordable_status + "；推荐当前资源内已验证累计伤害最高的方案（搜索预算内）。"
 	if _exhaustive_complete and not (objective == "boss" and boss_priority == "kill_cost"):
 		status = "EXHAUSTIVE BEST"
 	if validation.begins_with("FAILED"):
@@ -172,6 +186,7 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 		"kill_cost_resource_policy": ("current_resources" if _requested_boss_priority == "affordable_kill_cost" else "per_battle_budget") if objective == "boss" and boss_priority == "kill_cost" else null,
 		"per_battle_best_result": per_battle_best if objective == "boss" and boss_priority == "kill_cost" else {},
 		"affordable_best_result": affordable_best,
+		"affordable_damage_result": best if _requested_boss_priority == "affordable_kill_cost" else {},
 		"affordable_kill_status": affordable_status if objective == "boss" and boss_priority == "kill_cost" else "",
 		"current_fleet_resources": float(_base_config.fleet_resources),
 		"search_termination": _stop_reason, "budget_exhausted": _budget_exhausted,
@@ -304,7 +319,7 @@ func _search_anytime() -> void:
 		if lane == "global":
 			formation = _next_global()
 		elif lane == "incumbent":
-			formation = _next_mutation(_progress_best)
+			formation = _next_mutation(_boss_search_parent() if _requested_boss_priority == "affordable_kill_cost" else _progress_best)
 		else:
 			if not _parents.is_empty():
 				formation = _next_mutation(_parents[_parent_cursor % _parents.size()])
@@ -331,12 +346,25 @@ func _search_anytime() -> void:
 
 
 func _consume_wave(wave: Array) -> void:
+	var promising: Dictionary = {}
 	for result in await _evaluate_batch(wave):
 		if result.is_empty() or str(result.get("error", "")) != "":
 			_exhaustive_incomplete = true
 		if not result.is_empty():
 			_seed_parent(result)
+			if _requested_boss_priority == "affordable_kill_cost" and str(result.get("error", "")) == "" and (promising.is_empty() or _schedule_before(result, promising)):
+				promising = result
 	_pending.clear()
+	# Bound online sequence work to 10% of the total budget. Most time remains
+	# available for formations, including expensive one-shot damage candidates.
+	if not promising.is_empty() and _campaign_search_ms < float(_settings.max_wall_seconds) * 100.0 and _can_expand():
+		var projection := _budget_estimate(promising)
+		if projection.battles > 1 and (float(projection.damage) >= float(_campaign_best.get("campaign_boss_damage", 0.0))):
+			var started := Time.get_ticks_msec()
+			_refinement_slice_deadline = minf(_elapsed_seconds() + maxf(1.0, _max_battle_seconds * 2), float(_settings.max_wall_seconds) * 0.75)
+			await _refine_affordable_candidate(promising)
+			_campaign_search_ms += Time.get_ticks_msec() - started
+			_refinement_slice_deadline = INF
 
 
 func _next_global() -> Array:
@@ -396,6 +424,10 @@ func _next_mutation(parent: Dictionary) -> Array:
 		_mutation_streams[key] = _build_mutation_stream(parent)
 	var stream: Dictionary = _mutation_streams[key]
 	var bucket_index := int(stream.cursor) % 6
+	if _requested_boss_priority == "affordable_kill_cost":
+		# Positions and affordable additions matter most near a one-shot kill.
+		# Keep removals/replacements for cheaper repeatable and finishing fleets.
+		bucket_index = [4, 5, 4, 3, 1, 4, 2, 0][int(stream.cursor) % 8]
 	stream.cursor += 1
 	var bucket: Array = stream.buckets[bucket_index]
 	if not bucket.is_empty():
@@ -664,6 +696,96 @@ func _shuffle(values: Array) -> void:
 		values[j] = temporary
 
 
+func _budget_estimate(candidate: Dictionary) -> Dictionary:
+	return BossBudget.estimate(candidate, float(_base_config.fleet_resources), boss_remaining_hp, int(_settings.kill_sequence_max_battles))
+
+
+func _boss_search_parent() -> Dictionary:
+	# One-shot damage, wallet-aware estimates, and different deployment budgets
+	# each retain search time. A good damage/FR ratio cannot monopolize mutations.
+	var index := _boss_parent_cursor
+	_boss_parent_cursor += 1
+	if not _campaign_may_continue() and index % 4 != 3 and not _damage_best.is_empty():
+		return _damage_best
+	if index % 3 == 0 and not _damage_best.is_empty():
+		return _damage_best
+	if index % 3 == 1 or _budget_parents.is_empty():
+		return _progress_best
+	var parents: Array = _budget_parents.values()
+	return parents[(index / 3) % parents.size()]
+
+
+func _campaign_may_continue() -> bool:
+	var cheapest := INF
+	var largest_remainder := 0.0
+	for candidate in _budget_parents.values():
+		if float(candidate.boss_damage) <= 0.0:
+			continue
+		cheapest = minf(cheapest, float(candidate.deployment_quote_committed_fr))
+		var prefix: Dictionary = candidate.get("current_fr_result", {})
+		var sequence: Array = prefix.get("kill_sequence", [])
+		if not sequence.is_empty() and float(sequence[0].boss_hp_after) > 0.0:
+			largest_remainder = maxf(largest_remainder, float(sequence[0].fr_remaining))
+	return cheapest <= largest_remainder
+
+
+func _clean_campaign_candidate(candidate: Dictionary) -> Dictionary:
+	var result := candidate.duplicate()
+	result.erase("current_fr_result")
+	result.erase("full_battle_result")
+	return result.duplicate(true)
+
+
+func _extend_campaign(prefix: Dictionary, candidate: Dictionary, result: Dictionary) -> Dictionary:
+	if str(result.get("error", "")) != "":
+		return {}
+	var wallet := float(_base_config.fleet_resources)
+	var available := float(prefix.get("campaign_remaining_fr", wallet))
+	var hp := float(prefix.get("boss_final_hp", boss_remaining_hp))
+	var committed := float(candidate.deployment_quote_committed_fr)
+	var used := float(result.fleet_resources_used)
+	var spent := float(prefix.get("refined_fr_spent", 0.0)) + used
+	if not NumberUtils.fleet_less_or_equal(committed, available) or not NumberUtils.fleet_less_or_equal(spent, wallet):
+		return {}
+	var damage := minf(hp, maxf(0.0, float(result.boss_damage)))
+	if damage <= 0.0:
+		return {}
+	var ledger: Dictionary = _probe.native_fr_settlement(str(_base_config.galaxy_id), available, used)
+	var sequence: Array = prefix.get("kill_sequence", []).duplicate(true)
+	sequence.append({"battle": sequence.size() + 1, "boss_hp_before": hp, "boss_hp_after": maxf(0.0, hp - damage),
+		"boss_damage": damage, "committed_fr": committed, "used_fr": used, "cumulative_used_fr": spent,
+		"fr_before": available, "fr_remaining": float(ledger.resources_after), "per_battle_fr_budget": wallet,
+		"outcome": result.outcome, "formation_key": candidate.formation_key,
+		"formation": candidate.formation.duplicate(true), "loadouts": candidate.ship_loadouts.duplicate(true)})
+	var campaign := _clean_campaign_candidate(candidate if prefix.is_empty() else prefix)
+	var remaining := float(ledger.resources_after)
+	var reason := "boss_killed" if hp <= damage else "verified_prefix"
+	if hp > damage and not NumberUtils.fleet_less_or_equal(committed, remaining):
+		reason = "insufficient_committed_fr"
+	BossBudget.finish(campaign, maxf(0.0, hp - damage), remaining, spent, sequence, reason, boss_remaining_hp)
+	return campaign
+
+
+func _note_campaign(campaign: Dictionary) -> void:
+	if campaign.is_empty():
+		return
+	_campaigns[campaign.campaign_key] = campaign
+	if BossBudget.before(campaign, _campaign_best):
+		_campaign_best = campaign
+		_time_to_best = _elapsed_seconds()
+		if not _verified_baseline.is_empty() and BossBudget.before(campaign, _verified_baseline.get("current_fr_result", {})) and _first_improvement == null:
+			_first_improvement = _time_to_best
+		_incumbent_history.append({"seconds": _time_to_best, "boss_damage": campaign.campaign_boss_damage,
+			"total_used_fr": campaign.refined_fr_spent, "battles": campaign.campaign_battles,
+			"killed": campaign.killable_with_current_fr, "candidate_hash": campaign.candidate_hash})
+		if _requested_boss_priority == "affordable_kill_cost":
+			print("Best current-resource campaign: Damage=%s HP left=%s Used FR=%s Battles=%s Killed=%s at %.2fs" % [campaign.campaign_boss_damage, campaign.boss_final_hp, campaign.refined_fr_spent, campaign.campaign_battles, campaign.killable_with_current_fr, _time_to_best])
+	if _campaigns.size() > 32:
+		var ordered: Array = _campaigns.values()
+		ordered.sort_custom(BossBudget.before)
+		_campaigns.erase(ordered.back().campaign_key)
+
+
 func _schedule_before(a: Dictionary, b: Dictionary) -> bool:
 	if objective != "boss" or boss_priority != "kill_cost":
 		return _rank_before(a, b)
@@ -671,6 +793,16 @@ func _schedule_before(a: Dictionary, b: Dictionary) -> bool:
 	var b_error := str(b.get("error", "")) != ""
 	if a_error != b_error:
 		return not a_error
+	if _requested_boss_priority == "affordable_kill_cost":
+		var ap := _budget_estimate(a)
+		var bp := _budget_estimate(b)
+		if ap.damage != bp.damage:
+			return ap.damage > bp.damage
+		if ap.spent != bp.spent:
+			return ap.spent < bp.spent
+		if float(a.boss_damage) != float(b.boss_damage):
+			return float(a.boss_damage) > float(b.boss_damage)
+		return str(a.formation_key) < str(b.formation_key)
 	var av := _nullable_number(a.get("projected_kill_fr"))
 	var bv := _nullable_number(b.get("projected_kill_fr"))
 	if av != bv:
@@ -680,13 +812,18 @@ func _schedule_before(a: Dictionary, b: Dictionary) -> bool:
 
 
 func _can_simulate() -> bool:
-	return _can_expand() if not _finalizing and not _refining_kill_sequences else _elapsed_seconds() < float(_settings.max_wall_seconds) - maxf(2.0, _max_battle_seconds * 1.5)
+	if _simulations >= int(_settings.max_simulations):
+		return false
+	var replay_battles := maxi(1, int(_campaign_best.get("campaign_battles", 1)))
+	return _can_expand() if not _finalizing and not _refining_kill_sequences else _elapsed_seconds() < float(_settings.max_wall_seconds) - maxf(2.0, _max_battle_seconds * (replay_battles + 1.5))
 
 
 func _can_expand() -> bool:
 	var reserve := maxf(5.0, _max_battle_seconds * 2.0)
 	if objective == "boss" and boss_priority == "kill_cost":
-		reserve = maxf(reserve, float(_settings.max_wall_seconds) * 0.20)
+		if _requested_boss_priority != "affordable_kill_cost" or _campaign_may_continue():
+			reserve = maxf(reserve, float(_settings.max_wall_seconds) * 0.20)
+		reserve = maxf(reserve, _max_battle_seconds * (int(_campaign_best.get("campaign_battles", 1)) + 1.5))
 	if _elapsed_seconds() >= float(_settings.max_wall_seconds) - reserve:
 		_budget_exhausted = true
 		_stop_reason = "TIME BUDGET REACHED"
@@ -706,6 +843,17 @@ func _record_performance(performance: Dictionary, cleanup: Dictionary) -> void:
 func _progress_consider_best(candidate: Dictionary) -> void:
 	if candidate.is_empty() or str(candidate.get("error", "")) != "":
 		return
+	if _requested_boss_priority == "affordable_kill_cost":
+		var campaign := _extend_campaign({}, candidate, candidate)
+		candidate.current_fr_result = campaign
+		_note_campaign(campaign)
+		if _damage_best.is_empty() or float(candidate.boss_damage) > float(_damage_best.boss_damage) or (float(candidate.boss_damage) == float(_damage_best.boss_damage) and float(candidate.fleet_resources_used) < float(_damage_best.fleet_resources_used)):
+			_damage_best = candidate
+		var estimate := _budget_estimate(candidate)
+		var band := int(8.0 * float(candidate.deployment_quote_committed_fr) / maxf(1.0, float(_base_config.fleet_resources)))
+		var key := "%d:%d" % [estimate.battles, band]
+		if not _budget_parents.has(key) or _schedule_before(candidate, _budget_parents[key]):
+			_budget_parents[key] = candidate
 	if not _progress_best.is_empty() and not _schedule_before(candidate, _progress_best):
 		return
 	var quality_improved := _progress_best.is_empty() or _objective_improved(candidate, _progress_best)
@@ -723,6 +871,8 @@ func _progress_consider_best(candidate: Dictionary) -> void:
 
 
 func _objective_improved(a: Dictionary, b: Dictionary) -> bool:
+	if _requested_boss_priority == "affordable_kill_cost" and a.has("campaign_boss_damage"):
+		return BossBudget.before(a, b.get("current_fr_result", b))
 	if objective == "normal":
 		return a.outcome == "victory" and (b.outcome != "victory" or float(a.fleet_resources_used) < float(b.fleet_resources_used))
 	if boss_priority == "efficiency":
@@ -733,6 +883,8 @@ func _objective_improved(a: Dictionary, b: Dictionary) -> bool:
 
 
 func _refine_top_candidates(broad_ranked: Array) -> Dictionary:
+	if _requested_boss_priority == "affordable_kill_cost":
+		return await _search_affordable_campaigns(broad_ranked)
 	var tested := 0
 	var requested := maxi(3, int(_settings.kill_refine_top_n))
 	var seen_compositions := {}
@@ -762,6 +914,7 @@ func _refine_top_candidates(broad_ranked: Array) -> Dictionary:
 func _refine_candidate(candidate: Dictionary) -> void:
 	if _requested_boss_priority == "affordable_kill_cost":
 		await _refine_affordable_candidate(candidate)
+		return
 	await _refine_sequence(candidate, false)
 	if _requested_boss_priority != "affordable_kill_cost":
 		await _refine_affordable_candidate(candidate)
@@ -854,14 +1007,149 @@ func _refine_sequence(candidate: Dictionary, current_resources: bool) -> void:
 
 
 func _refine_affordable_candidate(candidate: Dictionary) -> void:
-	var affordable: Dictionary = candidate.get("current_fr_result", {})
-	if affordable.is_empty():
-		affordable = candidate.duplicate(true)
-		affordable.erase("current_fr_result")
-		affordable.erase("full_battle_result")
-		affordable.kill_refined = false
-	await _refine_sequence(affordable, true)
-	candidate["current_fr_result"] = affordable
+	var campaign: Dictionary = candidate.get("current_fr_result", {})
+	if campaign.is_empty():
+		campaign = _extend_campaign({}, candidate, candidate)
+	if campaign.is_empty():
+		return
+	_refining_kill_sequences = true
+	while campaign.killable_with_current_fr != true and campaign.kill_sequence.size() < int(_settings.kill_sequence_max_battles):
+		if not NumberUtils.fleet_less_or_equal(float(candidate.deployment_quote_committed_fr), float(campaign.campaign_remaining_fr)):
+			break
+		if _elapsed_seconds() >= _refinement_slice_deadline or not _can_simulate():
+			break
+		var jobs := [{"prefix": campaign, "candidate": candidate}]
+		var next := await _run_campaign_wave(jobs)
+		if next.is_empty():
+			break
+		campaign = next[0]
+		_note_campaign(campaign)
+	candidate.current_fr_result = campaign
+	_note_campaign(campaign)
+	_refining_kill_sequences = false
+
+
+func _campaign_config(prefix: Dictionary, candidate: Dictionary) -> Dictionary:
+	var config := _config_for(candidate.formation)
+	config.boss_health = float(prefix.boss_final_hp)
+	config.fight_enemy_command_ship = false
+	config.fleet_resources = float(prefix.campaign_remaining_fr)
+	return config
+
+
+func _run_campaign_wave(jobs: Array) -> Array:
+	var pending: Array = []
+	var configs: Array = []
+	var completed: Array = []
+	for job in jobs:
+		var config := _campaign_config(job.prefix, job.candidate)
+		var key: String = _battle_environment_key(config) + "|" + str(job.candidate.formation_key)
+		job["cache_key"] = key
+		if _sequence_cache.has(key):
+			_cache_hits += 1
+			var campaign := _extend_campaign(job.prefix, job.candidate, _sequence_cache[key])
+			if not campaign.is_empty():
+				completed.append(campaign)
+		elif _simulations + configs.size() < int(_settings.max_simulations):
+			pending.append(job)
+			configs.append(config)
+	if not configs.is_empty():
+		var results := await _run_worker_wave(configs)
+		for index in range(results.size()):
+			var raw: Dictionary = results[index]
+			var job: Dictionary = pending[index]
+			_simulations += 1
+			_pruning_stats.simulated += 1
+			_campaign_expansions += 1
+			_sequence_cache[job.cache_key] = raw
+			var performance: Dictionary = raw.get("performance_breakdown", {})
+			_record_performance(performance, {"cleanup_ms": performance.get("cleanup_ms", 0.0)})
+			var campaign := _extend_campaign(job.prefix, job.candidate, raw)
+			if not campaign.is_empty():
+				completed.append(campaign)
+	return completed
+
+
+func _campaign_frontier(campaigns: Array) -> Array:
+	# These are beam scheduling choices, not dominance claims. Preserve resource
+	# diversity because identical damage with different remaining FR has value.
+	campaigns.sort_custom(BossBudget.before)
+	var selected: Array = []
+	var bands := {}
+	for campaign in campaigns:
+		if campaign.killable_with_current_fr == true:
+			continue
+		var band := int(8.0 * float(campaign.campaign_remaining_fr) / maxf(1.0, float(_base_config.fleet_resources)))
+		if selected.size() < 4 or not bands.has(band):
+			selected.append(campaign)
+			bands[band] = true
+	return selected
+
+
+func _search_affordable_campaigns(ranked: Array) -> Dictionary:
+	var pool: Array = []
+	var seen := {}
+	# Single-battle observations include every affordable damage result. Keep
+	# cheap finishers and N-battle parents as well as the overall leaders.
+	var sources: Array = [_damage_best] + _budget_parents.values() + ranked.slice(0, 12)
+	for candidate in sources:
+		if candidate.is_empty() or float(candidate.boss_damage) <= 0 or str(candidate.get("error", "")) != "" or seen.has(candidate.formation_key):
+			continue
+		seen[candidate.formation_key] = true
+		pool.append(candidate)
+	var frontier: Array = []
+	for candidate in pool:
+		var first := _extend_campaign({}, candidate, candidate)
+		if not first.is_empty():
+			frontier.append(first)
+			_note_campaign(first)
+	frontier = _campaign_frontier(frontier)
+	_refining_kill_sequences = true
+	var depth := 1
+	while not frontier.is_empty() and depth < int(_settings.kill_sequence_max_battles) and _can_simulate():
+		var choices: Array = []
+		for prefix in frontier:
+			var affordable: Array = []
+			for candidate in pool:
+				if NumberUtils.fleet_less_or_equal(float(candidate.deployment_quote_committed_fr), float(prefix.campaign_remaining_fr)):
+					affordable.append(candidate)
+			affordable.sort_custom(func(a, b):
+				var ad := minf(float(prefix.boss_final_hp), float(a.boss_damage))
+				var bd := minf(float(prefix.boss_final_hp), float(b.boss_damage))
+				if ad != bd: return ad > bd
+				if float(a.fleet_resources_used) != float(b.fleet_resources_used): return float(a.fleet_resources_used) < float(b.fleet_resources_used)
+				return str(a.formation_key) < str(b.formation_key))
+			var actions := affordable.slice(0, 2)
+			affordable.sort_custom(func(a, b): return float(a.deployment_quote_committed_fr) < float(b.deployment_quote_committed_fr))
+			if not affordable.is_empty() and affordable[0] not in actions:
+				actions.append(affordable[0])
+			affordable.sort_custom(_schedule_before)
+			if not affordable.is_empty() and affordable[0] not in actions:
+				actions.append(affordable[0])
+			choices.append({"prefix": prefix, "actions": actions})
+		var next_frontier: Array = []
+		var wave: Array = []
+		# Interleave prefixes so one branch cannot consume the entire reserve.
+		for action_index in range(4):
+			for choice in choices:
+				if action_index >= choice.actions.size() or not _can_simulate():
+					continue
+				wave.append({"prefix": choice.prefix, "candidate": choice.actions[action_index]})
+				if wave.size() >= maxi(1, _workers.size()):
+					for campaign in await _run_campaign_wave(wave):
+						_note_campaign(campaign)
+						next_frontier.append(campaign)
+					wave = []
+		if not wave.is_empty() and _can_simulate():
+			for campaign in await _run_campaign_wave(wave):
+				_note_campaign(campaign)
+				next_frontier.append(campaign)
+		frontier = _campaign_frontier(next_frontier)
+		depth += 1
+	_refining_kill_sequences = false
+	return {"enabled": true, "comparison": "native current-resource campaigns: kill cost, then maximum damage",
+		"pool_size": pool.size(), "native_campaign_battles": _campaign_expansions,
+		"depth_searched": depth, "partial": true, "online_sequence_wall_ms": _campaign_search_ms}
 
 
 func _consider_kill_best(candidate: Dictionary) -> void:
@@ -909,6 +1197,38 @@ func _attach_full_result(candidate: Dictionary) -> String:
 	candidate.full_battle_result = raw
 	if not mismatch.is_empty() or raw.has("error"):
 		return "FAILED: native replay differences=%s; error=%s" % [JSON.stringify(mismatch), raw.get("error", "")]
+	if candidate.has("campaign_boss_damage"):
+		var hp := boss_remaining_hp
+		var available := float(_base_config.fleet_resources)
+		var spent := 0.0
+		var sequence: Array = candidate.kill_sequence
+		for index in range(sequence.size()):
+			var battle: Dictionary = sequence[index]
+			if not _has_unique_positions(battle.formation) or not NumberUtils.fleet_less_or_equal(float(battle.committed_fr), available):
+				return "FAILED: campaign battle %d cannot deploy" % (index + 1)
+			if index > 0:
+				config = _config_for(battle.formation)
+				config.boss_health = hp
+				config.fight_enemy_command_ship = false
+				config.fleet_resources = available
+				raw = await _probe.run_battle(config)
+				_simulations += 1
+				cleanup = await _probe.cleanup_battle()
+				_record_performance(raw.get("performance_breakdown", {}), cleanup)
+			if str(raw.get("error", "")) != "" or str(raw.get("outcome")) != str(battle.outcome):
+				return "FAILED: campaign battle %d outcome" % (index + 1)
+			for field in [["boss_damage", "boss_damage"], ["fleet_resources_used", "used_fr"], ["fleet_resources_committed", "committed_fr"]]:
+				if not _replay_field_matches(field[0], battle[field[1]], raw.get(field[0])):
+					return "FAILED: campaign battle %d %s" % [index + 1, field[0]]
+			spent += float(raw.fleet_resources_used)
+			var ledger: Dictionary = _probe.native_fr_settlement(str(_base_config.galaxy_id), available, float(raw.fleet_resources_used))
+			available = float(ledger.resources_after)
+			hp = maxf(0.0, hp - float(raw.boss_damage))
+			if not NumberUtils.fleet_less_or_equal(spent, float(_base_config.fleet_resources)) or not is_equal_approx(available, float(battle.fr_remaining)) or not is_equal_approx(hp, float(battle.boss_hp_after)):
+				return "FAILED: campaign battle %d ledger/HP" % (index + 1)
+		if not is_equal_approx(hp, float(candidate.boss_final_hp)) or not is_equal_approx(spent, float(candidate.refined_fr_spent)):
+			return "FAILED: campaign totals"
+		return "COMPLETE: all %d native campaign battles replayed" % sequence.size()
 	return "COMPLETE: native replay matches search result"
 
 
@@ -1141,6 +1461,14 @@ func _battle_environment_key(config: Dictionary) -> String:
 
 
 func _improvement(candidate: Dictionary, baseline: Dictionary) -> Dictionary:
+	if candidate.has("campaign_boss_damage"):
+		var reference: Dictionary = baseline.get("current_fr_result", {})
+		if reference.is_empty():
+			return {"available": false}
+		return {"available": true, "strictly_better": BossBudget.before(candidate, reference),
+			"same_as_baseline": candidate.campaign_key == reference.campaign_key,
+			"campaign_damage_gain": float(candidate.campaign_boss_damage) - float(reference.campaign_boss_damage),
+			"campaign_used_fr_saved": float(reference.refined_fr_spent) - float(candidate.refined_fr_spent)}
 	if candidate.get("kill_cost_resource_policy") == "current_resources":
 		baseline = baseline.get("current_fr_result", baseline)
 	if candidate.is_empty() or baseline.is_empty():

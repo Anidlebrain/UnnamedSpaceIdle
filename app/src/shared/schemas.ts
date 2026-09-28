@@ -159,6 +159,28 @@ const rawCandidateSchema = z
     boss_damage_per_fr: z.number().nullable().optional(),
     refined_battles_to_kill: z.number().nullable().optional(),
     refined_total_kill_fr: z.number().nullable().optional(),
+    campaign_boss_damage: z.number().optional(),
+    campaign_battles: z.number().optional(),
+    campaign_remaining_fr: z.number().optional(),
+    boss_final_hp: z.number().nullable().optional(),
+    refined_fr_spent: z.number().nullable().optional(),
+    kill_sequence: z
+      .array(
+        z
+          .object({
+            battle: z.number(),
+            boss_hp_before: z.number(),
+            boss_hp_after: z.number(),
+            boss_damage: z.number(),
+            committed_fr: z.number(),
+            used_fr: z.number(),
+            fr_remaining: z.number().nullable().optional(),
+            formation: z.array(formationEntrySchema).optional(),
+            loadouts: z.record(loadoutSchema).optional(),
+          })
+          .passthrough(),
+      )
+      .optional(),
     outcome: z.string().optional(),
   })
   .passthrough()

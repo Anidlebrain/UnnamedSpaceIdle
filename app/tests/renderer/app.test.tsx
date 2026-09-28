@@ -713,6 +713,68 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('button', { name: '使用最优配置' }))
     await waitFor(() => expect(api.useBest).toHaveBeenCalledWith('task-b1'))
   })
+  it('shows verified campaign damage and separate later formations when no affordable kill was found', async () => {
+    api.run.mockResolvedValueOnce({
+      exitCode: 0,
+      startedAt: '2026-01-01T00:00:00.000Z',
+      finishedAt: '2026-01-01T00:00:04.000Z',
+      task: searchTask(),
+      result: {
+        current_fleet_resources: 100,
+        affordable_kill_status: '未找到可负担的完整击杀',
+        best_result: {
+          formation: [{ position: 'A1', ship: 'Cruiser' }],
+          fleet_resources_committed: 70,
+          fleet_resources_used: 70,
+          boss_damage: 65,
+          outcome: 'lose',
+          campaign_boss_damage: 95,
+          campaign_battles: 2,
+          campaign_remaining_fr: 0,
+          refined_fr_spent: 100,
+          boss_final_hp: 5,
+          kill_sequence: [
+            {
+              battle: 1,
+              boss_hp_before: 100,
+              boss_hp_after: 35,
+              boss_damage: 65,
+              committed_fr: 70,
+              used_fr: 70,
+              fr_remaining: 30,
+              formation: [{ position: 'A1', ship: 'Cruiser' }],
+              loadouts: {},
+            },
+            {
+              battle: 2,
+              boss_hp_before: 35,
+              boss_hp_after: 5,
+              boss_damage: 30,
+              committed_fr: 30,
+              used_fr: 30,
+              fr_remaining: 0,
+              formation: [{ position: 'B5', ship: 'Fighter' }],
+              loadouts: { Fighter: { primary: 'FighterMiniRailgunMod', secondary: null } },
+            },
+          ],
+        },
+      },
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
+    await screen.findByText('当前资源方案：2 场，累计伤害 95，剩余 BOSS 血量 5。')
+    expect(screen.getByText('累计消耗 100 FR · 剩余资源 0 FR')).toBeTruthy()
+    expect(screen.getByText('首场 Boss Damage')).toBeTruthy()
+    expect(screen.queryByText('Saved FR')).toBeNull()
+    const second = screen.getByText('第 2 场：BOSS 35 → 5 · 消耗 30 FR')
+    fireEvent.click(second)
+    expect(second.closest('details')?.open).toBe(true)
+    expect(within(second.closest('details')!).getByText(/B5/)).toBeTruthy()
+    expect(within(second.closest('details')!).getByText(/Primary/)).toBeTruthy()
+    expect(screen.getByText(/对应第 1 场/)).toBeTruthy()
+  })
   it('uses result grid width when showing a C-column Best Found', async () => {
     api.run.mockResolvedValueOnce({
       exitCode: 0,

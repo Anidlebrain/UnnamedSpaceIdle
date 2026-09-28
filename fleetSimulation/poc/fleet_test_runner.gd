@@ -81,6 +81,12 @@ func _run() -> void:
 				regression.passed = regression.passed and regression.text_passed
 				_finish(regression, 0 if regression.passed else 12, "user://fleet_grid_regression.json")
 				return
+			if _has_argument("--boss-budget-regression"):
+				var tests := preload("res://fleet_boss_budget_regression.gd").new()
+				add_child(tests)
+				var regression: Dictionary = await tests.run(probe)
+				_finish(regression, 0 if regression.passed else 13, "user://fleet_boss_budget_regression.json")
+				return
 			if _has_argument("--v3-regression"):
 				var tests := preload("res://fleet_optimizer_regression.gd").new()
 				add_child(tests)
@@ -833,6 +839,11 @@ func _compact_candidate(candidate: Dictionary) -> Dictionary:
 		"committed_fr": candidate.get("fleet_resources_committed"),
 		"used_fr": candidate.get("fleet_resources_used"),
 		"boss_damage": candidate.get("boss_damage"),
+		"campaign_boss_damage": candidate.get("campaign_boss_damage"),
+		"campaign_battles": candidate.get("campaign_battles"),
+		"campaign_remaining_fr": candidate.get("campaign_remaining_fr"),
+		"boss_final_hp": candidate.get("boss_final_hp"),
+		"refined_fr_spent": candidate.get("refined_fr_spent"),
 		"damage_per_fr": candidate.get("boss_damage_per_fr"),
 		"refined_battles_to_kill": candidate.get("refined_battles_to_kill"),
 		"refined_total_kill_fr": candidate.get("refined_total_kill_fr"),
@@ -929,9 +940,18 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 	lines.append("FR: Committed/Battle=%s; Used/Battle=%s" % [best.get("committed_fr", "n/a"), best.get("used_fr", "n/a")])
 	if compact.get("objective") == "boss":
 		lines.append("Boss: Damage/Battle=%s; Damage/FR=%s" % [best.get("boss_damage", "n/a"), best.get("damage_per_fr", "n/a")])
+		if best.get("campaign_boss_damage") != null:
+			lines.append("Current resources campaign: Battles=%s; Damage=%s; Boss HP left=%s; Used FR=%s; FR left=%s" % [best.campaign_battles, best.campaign_boss_damage, best.boss_final_hp, best.refined_fr_spent, best.campaign_remaining_fr])
+			lines.append("Primary Formation/Mods describe battle 1; follow each battle's formation below. --copy copies battle 1 only.")
 		lines.append("Kill: Battles=%s; Total FR=%s; Stop=%s" % [_verified_kill_value(best.get("refined_battles_to_kill")), _verified_kill_value(best.get("refined_total_kill_fr")), best.get("kill_sequence_stop_reason", "n/a")])
 		for battle in best.get("kill_sequence", []):
 			lines.append("  Battle %s: HP %s -> %s; Damage=%s; Committed=%s; Used=%s; Cumulative Used=%s" % [battle.battle, battle.boss_hp_before, battle.boss_hp_after, battle.boss_damage, battle.committed_fr, battle.used_fr, battle.get("cumulative_used_fr", "n/a")])
+			if battle.has("formation"):
+				var positions := {}
+				for group in battle.formation:
+					positions[_position_name(group.grid_position)] = group.ship
+				lines.append("    Battle formation: %s" % JSON.stringify(positions))
+				lines.append("    Battle loadouts: %s; FR left=%s" % [JSON.stringify(battle.get("loadouts", {})), battle.get("fr_remaining")])
 	lines.append("")
 	lines.append("Search Notes:")
 	for note in compact.get("notes", []):
