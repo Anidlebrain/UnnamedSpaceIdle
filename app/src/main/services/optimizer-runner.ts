@@ -4,6 +4,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { join } from 'node:path'
 import { optimizerResultSchema, type OptimizerResult } from '../../shared/schemas'
 import { effectiveShipCounts } from '../../shared/ship-counts'
+import { searchForNode } from '../../shared/search-target'
 import type { SearchConfig } from '../../shared/schemas'
 import type {
   CopyResult,
@@ -66,13 +67,13 @@ export class OptimizerRunner {
         )
       )
         throw new Error('该 Node / Version 已在等待或搜索中。')
-      const node = { ...values.node, search: structuredClone(search) }
+      const node = { ...values.node, search: structuredClone(searchForNode(search, values.node)) }
       const snapshot: SearchTaskSnapshot = {
         ...selection,
         formation_columns: node.formation_columns,
         versionName: request.versionName,
         commonName: request.commonName,
-        search: structuredClone(search),
+        search: structuredClone(node.search),
         taskId: randomUUID(),
         nodeConfigHash: values.nodeConfigHash,
         stagedNodeConfigHash: this.hash(node),
@@ -215,13 +216,13 @@ export class OptimizerRunner {
       const savedSearch =
         'search' in request ? await this.repo.saveSearchConfig(request.search) : await this.repo.loadSearchConfig()
       const prepared = await this.repo.configHashes(selection)
-      const stagedNode = { ...prepared.node, search: structuredClone(savedSearch) }
+      const stagedNode = { ...prepared.node, search: structuredClone(searchForNode(savedSearch, prepared.node)) }
       const task: SearchTaskSnapshot = {
         ...selection,
         formation_columns: stagedNode.formation_columns,
         versionName: 'versionName' in request ? request.versionName : request.version,
         commonName: 'commonName' in request ? request.commonName : request.common,
-        search: structuredClone(savedSearch),
+        search: structuredClone(stagedNode.search),
         taskId: randomUUID(),
         nodeConfigHash: prepared.nodeConfigHash,
         stagedNodeConfigHash: this.hash(stagedNode),
@@ -279,13 +280,13 @@ export class OptimizerRunner {
           const prepared = await this.repo.configHashes(selection)
           if (prepared.optimizerConfigHash !== optimizerHash)
             throw new Error('Optimizer 公共配置在批次运行期间已变化，未继续使用旧快照。')
-          const stagedNode = { ...prepared.node, search: structuredClone(search) }
+          const stagedNode = { ...prepared.node, search: structuredClone(searchForNode(search, prepared.node)) }
           const task: SearchTaskSnapshot = {
             ...selection,
             formation_columns: stagedNode.formation_columns,
             versionName: selection.version,
             commonName: selection.common,
-            search: structuredClone(search),
+            search: structuredClone(stagedNode.search),
             taskId: randomUUID(),
             nodeConfigHash: prepared.nodeConfigHash,
             stagedNodeConfigHash: this.hash(stagedNode),
@@ -377,6 +378,8 @@ export class OptimizerRunner {
           error: `Copied Node JSON is invalid; Manager data was not changed: ${(error as Error).message}`,
         }
       }
+      const original = (await this.repo.load(selection)).node
+      node.player_state.ships = original.player_state.ships
       await this.repo.save(selection, node)
       return { exitCode, startedAt, finishedAt: new Date().toISOString(), node }
     } finally {

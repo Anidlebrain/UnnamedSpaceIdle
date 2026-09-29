@@ -14,7 +14,21 @@ var _support_ship_types: Array = []
 var _parents: Array = []
 var _parent_keys := {}
 var _parent_cursor := 0
-var _lanes := {"global": 0, "incumbent": 0, "archive": 0}
+var _lanes := {"global": 0, "incumbent": 0, "archive": 0, "layouts": 0, "joint": 0, "advisor": 0}
+var _layout_streams: Array = []
+var _advisor_streams: Array = []
+var _layout_cursor := 0
+var _advisor_cursor := 0
+var _layout_anchor_key := ""
+var _last_layout_stream := {}
+var _layout_completed := 0
+var _advisor_elites: Array = []
+var _advisor_neighbors := {}
+var _advisor_local_cursor := 0
+var _candidate_sources := {}
+var _candidate_trace: FileAccess
+var _candidate_trace_path := ""
+var _last_detail_progress_ms := 0
 var _attempts := 0
 var _quote_hits := 0
 var _derived_quotes := 0
@@ -74,6 +88,7 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 				if ship in _settings.allowed_loadouts and ship not in _support_ship_types:
 					_support_ship_types.append(ship)
 	_environment_key = _battle_environment_key(_base_config)
+	_open_candidate_trace()
 	# Include engine/bootstrap time in the daily budget, not just the search loop.
 	_started_msec = 0
 	_rng.seed = 20260913
@@ -91,17 +106,20 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 	_progress_stage_start("Baseline Validation", 1, 4, 1)
 	_verified_baseline = await _run_verified_baseline()
 	if _baseline_validation_failed:
+		_candidate_trace = null
 		return _baseline_validation_failure_output()
 	if _diagnostic.has("micro_test"):
 		return await _run_micro_test(_diagnostic.micro_test)
-	_start_workers()
+	if not _target_reached():
+		_start_workers()
 	_seed_parent(_verified_baseline)
 	if objective == "boss" and boss_priority == "kill_cost":
 		_refinement_slice_deadline = minf(_elapsed_seconds() + float(_settings.max_wall_seconds) * 0.10, float(_settings.max_wall_seconds) * 0.35)
 		await _refine_candidate(_verified_baseline)
 		_refinement_slice_deadline = INF
 		_consider_kill_best(_verified_baseline)
-	_progress_stage_start("Interleaved Global / Archive / Incumbent Search", 2, 4)
+	var advisor_search: bool = _settings.get("search", {}).get("strategy", "portfolio") == "advisor_seeded"
+	_progress_stage_start("Advisor Fleet Position Search" if advisor_search else "Interleaved Fleet / Layout Search", 2, 4)
 	_prepare_space()
 	if _profile == "exhaustive":
 		await _search_exhaustive()
@@ -120,6 +138,8 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 		if str(candidate.get("error", "")) != "":
 			continue
 		if objective == "normal" and candidate.outcome != "victory":
+			continue
+		if objective == "boss" and float(candidate.get("boss_damage", 0.0)) <= 0.0:
 			continue
 		if objective == "boss" and boss_priority == "kill_cost" and not (candidate.get("killable_with_current_fr", false) == true):
 			continue
@@ -169,6 +189,12 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 	var status := "BASELINE RETAINED" if baseline_fallback else "BEST FOUND"
 	var recommendation_note := "No complete kill sequence verified within the search limits; retained the verified single-battle baseline." if baseline_fallback else ""
 	var affordable_status := "已找到可负担的完整击杀" if not affordable_best.is_empty() else "未找到可负担的完整击杀"
+	if objective == "normal" and best.is_empty():
+		status = "NO VICTORY FOUND"
+		recommendation_note = "未找到获胜站位；输入推荐阵容未通过胜利验证。"
+	elif best.is_empty():
+		status = "NO VERIFIED CANDIDATE"
+		recommendation_note = "未找到能对 BOSS 造成伤害的站位。"
 	if _requested_boss_priority == "affordable_kill_cost" and affordable_best.is_empty():
 		status = "NO VERIFIED AFFORDABLE KILL"
 		recommendation_note = affordable_status + "；推荐当前资源内已验证累计伤害最高的方案（搜索预算内）。"
@@ -190,7 +216,11 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 		"affordable_kill_status": affordable_status if objective == "boss" and boss_priority == "kill_cost" else "",
 		"current_fleet_resources": float(_base_config.fleet_resources),
 		"search_termination": _stop_reason, "budget_exhausted": _budget_exhausted,
-		"search_profile": _profile, "search_goal": _goal, "search_mode": "lazy_exhaustive" if _profile == "exhaustive" else "anytime_portfolio",
+		"search_profile": _profile, "search_goal": _goal,
+		"search_mode": "advisor_positions" if advisor_search else ("lazy_exhaustive" if _profile == "exhaustive" else "anytime_portfolio"),
+		"search_strategy": _settings.get("search", {}).get("strategy", "portfolio"),
+		"target_used_fr": _settings.get("search", {}).get("target_used_fr"),
+		"candidate_trace_path": _candidate_trace_path,
 		"objective": objective, "boss_priority": _requested_boss_priority, "boss_remaining_hp": boss_remaining_hp,
 		"simulation_clock": best.get("simulation_clock", _probe.simulation_clock_metadata(_base_config)),
 		"base_config": _base_config, "settings": reported_settings, "battle_analysis": _analysis,
@@ -213,6 +243,8 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 			"compositions_simulated": _evaluated_compositions.size(),
 			"native_quote_classes": _quotes.size() - _derived_quotes, "derived_quote_classes": _derived_quotes,
 			"global_pass": _global_pass, "global_cursor": _composition_cursor, "scheduled_by_lane": _lanes,
+			"layout_families_retained": _layout_streams.size(), "advisor_families": _advisor_streams.size(),
+			"layout_sweeps_generated": _layout_completed,
 			"candidate_attempts": _attempts, "materialized": _generated, "affordability_rejections": _rejected,
 			"full_search_completed": _exhaustive_complete,
 			"unvisited_status": "NOT SEARCHED; no mathematical rejection is claimed",
@@ -221,12 +253,18 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 		"finalization_status": validation, "kill_sequence_refinement": refinement,
 		"boss_ranking_unit_test": run_boss_ranking_unit_test(), "v1_regression": {"enabled": false},
 	}
+	_progress_update(true)
+	_candidate_trace = null
 	return output
 
 
 func _select_recommendation(finalists: Array) -> Dictionary:
 	# Baseline passed native validation before search. A limited sequence budget
 	# must not erase that usable formation or turn a projection into a proven kill.
+	if finalists.is_empty() and objective == "normal" and _verified_baseline.get("outcome") != "victory":
+		return {}
+	if finalists.is_empty() and objective == "boss" and float(_verified_baseline.get("boss_damage", 0.0)) <= 0.0:
+		return {}
 	return _verified_baseline if finalists.is_empty() else finalists[0]
 
 
@@ -237,6 +275,11 @@ func _run_verified_baseline() -> Dictionary:
 		_baseline_warning = "BASELINE VALIDATION FAILED: a player-verified baseline is required"
 		return {}
 	var formation := _formation_from_candidate(baseline)
+	var advisor := str(_settings.get("search", {}).get("strategy", "portfolio")) == "advisor_seeded"
+	if advisor and not _within_ranges(formation):
+		_baseline_validation_failed = true
+		_baseline_warning = "ADVISOR SEED INVALID: suggested fleet exceeds configured group ranges"
+		return {}
 	var fleet := await _materialize(formation, true)
 	if fleet.is_empty():
 		_baseline_validation_failed = true
@@ -250,12 +293,15 @@ func _run_verified_baseline() -> Dictionary:
 	var result := _store_worker_result(fleet, formation, _environment_key + "|" + _formation_key(formation), raw)
 	result["is_verified_baseline"] = true
 	result["observed"] = baseline.get("observed", {}).duplicate(true)
-	_baseline_validation_failed = str(result.error) != "" or (
-		result.outcome != "victory" if objective == "normal" else float(result.boss_damage) <= 0.0)
+	_baseline_validation_failed = str(result.error) != "" or (not advisor and (
+		result.outcome != "victory" if objective == "normal" else float(result.boss_damage) <= 0.0))
 	if _baseline_validation_failed:
 		_baseline_warning = "BASELINE VALIDATION FAILED"
 		print(_baseline_warning)
 	else:
+		if advisor and result.outcome != "victory":
+			_baseline_warning = "ADVISOR SEED: initial layout lost; continuing position search"
+			print(_baseline_warning)
 		for field in ["fleet_resources_used", "boss_damage"]:
 			if result.observed.has(field) and float(result.observed[field]) >= 0 and not is_equal_approx(float(result.observed[field]), float(result[field])):
 				_baseline_warning = "BASELINE OBSERVED RESULT DIFFERS FROM SIMULATION"
@@ -264,6 +310,16 @@ func _run_verified_baseline() -> Dictionary:
 
 func _prepare_space() -> void:
 	var started := Time.get_ticks_usec()
+	if _settings.get("search", {}).get("strategy", "portfolio") == "advisor_seeded":
+		# The recommendation fixes composition and loadouts. Do not enumerate
+		# unrelated fleets or dilute position search with global mutations.
+		_compositions = [_verified_baseline.composition_counts.duplicate(true)]
+		_estimated_formation_count = _unique_formation_count(_compositions[0])
+		_search_audit.candidates_enumerated = 1
+		_search_audit["enumeration_unit"] = "advisor fleet; positions only"
+		_search_audit["theoretical_candidate_count"] = _estimated_formation_count
+		_enumeration_ms = (Time.get_ticks_usec() - started) / 1000.0
+		return
 	var ship_types := _ship_types()
 	_append_compositions(ship_types, 0, {}, _compositions)
 	# Enumerate all composition descriptors before native evaluation. Round robin
@@ -308,16 +364,32 @@ func _prepare_space() -> void:
 
 func _search_anytime() -> void:
 	var wave: Array = []
+	for candidate in _settings.get("search", {}).get("advisor_seeds", []):
+		_add_layout_stream(_formation_from_candidate(candidate), _advisor_streams)
 	while _can_expand():
 		var started := Time.get_ticks_usec()
 		# Global restart never depends on baseline proximity or a prior loss.
-		var lane := "global" if _attempts % 4 == 0 else ("incumbent" if _attempts % 4 in [1, 2] else "archive")
+		var lanes := ["layouts", "incumbent", "global", "joint", "layouts", "archive", "incumbent", "global", "layouts", "incumbent"]
 		if _profile == "balanced":
-			lane = "global" if _attempts % 10 in [0, 3, 6, 9] else ("incumbent" if _attempts % 10 in [1, 4, 7] else "archive")
+			lanes[6] = "global"
+		var lane: String = lanes[_attempts % lanes.size()]
+		if not _advisor_streams.is_empty():
+			lane = "advisor"
 		_attempts += 1
 		var formation: Array = []
+		_last_layout_stream = {}
 		if lane == "global":
 			formation = _next_global()
+		elif lane == "advisor":
+			formation = _next_advisor_position()
+		elif lane == "layouts":
+			_prepare_layout_neighborhood(_boss_search_parent() if _requested_boss_priority == "affordable_kill_cost" else _progress_best)
+			formation = _next_layout(false)
+		elif lane == "joint":
+			var parent: Dictionary = _progress_best
+			if not _parents.is_empty() and _rng.randf() < 0.5:
+				parent = _parents[_rng.randi_range(0, _parents.size() - 1)]
+			formation = _joint_mutation(parent)
 		elif lane == "incumbent":
 			formation = _next_mutation(_boss_search_parent() if _requested_boss_priority == "affordable_kill_cost" else _progress_best)
 		else:
@@ -326,6 +398,9 @@ func _search_anytime() -> void:
 				_parent_cursor += 1
 		_scheduling_ms += (Time.get_ticks_usec() - started) / 1000.0
 		if formation.is_empty():
+			if lane == "advisor":
+				_stop_reason = "ADVISOR POSITIONS EXHAUSTED"
+				break
 			continue
 		var key := _environment_key + "|" + _formation_key(formation)
 		if _cache.has(key) or _pending.has(key):
@@ -334,8 +409,13 @@ func _search_anytime() -> void:
 			continue
 		var fleet := await _materialize(formation)
 		if fleet.is_empty():
+			# Positions do not affect deployment affordability. Do not repeatedly
+			# quote every position of an unaffordable fixed fleet.
+			if not _last_layout_stream.is_empty() and not _budget_exhausted:
+				_last_layout_stream.remaining = 0
 			continue
 		_pending[key] = true
+		_candidate_sources[key] = lane
 		_lanes[lane] += 1
 		wave.append({"fleet": fleet, "formation": formation})
 		if wave.size() >= maxi(1, _workers.size()):
@@ -343,6 +423,220 @@ func _search_anytime() -> void:
 			wave = []
 	if not wave.is_empty() and _can_expand():
 		await _consume_wave(wave)
+
+
+func _next_advisor_position() -> Array:
+	# Spend two slots on real-result-guided moves/swaps for each global rank.
+	# Keep several parents, including near-winning losses, rather than accepting
+	# only an improving chain or cutting off global coverage after a victory.
+	if _attempts % 3 != 0 and not _advisor_elites.is_empty():
+		var parent: Dictionary = _advisor_elites[_advisor_local_cursor % _advisor_elites.size()]
+		_advisor_local_cursor += 1
+		var key: String = parent.formation_key
+		if not _advisor_neighbors.has(key):
+			if _advisor_neighbors.size() >= 8:
+				_advisor_neighbors.erase(_advisor_neighbors.keys()[0])
+			var neighbors := _formation_neighbors(parent.formation)
+			_shuffle(neighbors)
+			_advisor_neighbors[key] = neighbors
+		var remaining: Array = _advisor_neighbors[key]
+		while not remaining.is_empty():
+			var formation: Array = remaining.pop_back()
+			var candidate_key := _environment_key + "|" + _formation_key(formation)
+			if not _cache.has(candidate_key) and not _pending.has(candidate_key):
+				return formation
+	return _next_layout(true)
+
+
+func _open_candidate_trace() -> void:
+	_candidate_trace_path = ProjectSettings.globalize_path(str(_settings.get("candidate_trace_path", "user://fleet_candidates.jsonl")))
+	_candidate_trace = FileAccess.open(_candidate_trace_path, FileAccess.WRITE)
+	if _candidate_trace == null:
+		print("WARNING: candidate trace could not be opened: %s" % _candidate_trace_path)
+		_candidate_trace_path = ""
+	else:
+		print("Candidate trace: %s" % _candidate_trace_path)
+
+
+func _store_worker_result(fleet: Dictionary, formation: Array, candidate_key: String, result: Dictionary) -> Dictionary:
+	var summary := super._store_worker_result(fleet, formation, candidate_key, result)
+	if _settings.get("search", {}).get("strategy", "portfolio") == "advisor_seeded" and str(summary.get("error", "")) == "":
+		_advisor_elites.append(summary)
+		_advisor_elites.sort_custom(_schedule_before)
+		_advisor_elites = _advisor_elites.slice(0, 4)
+	var positions := {}
+	for group in formation:
+		positions[_position_name(group.grid_position)] = group.ship
+	if _candidate_trace != null:
+		_candidate_trace.store_line(JSON.stringify({"simulation": _simulations, "elapsed_seconds": _elapsed_seconds(),
+			"lane": _candidate_sources.get(candidate_key, "baseline"), "candidate_hash": summary.candidate_hash,
+			"formation": positions, "loadouts": summary.ship_loadouts, "outcome": summary.outcome,
+			"used_fr": summary.fleet_resources_used, "committed_fr": summary.fleet_resources_committed,
+			"enemy_destroyed": summary.get("enemy_destroyed"), "boss_damage": summary.boss_damage,
+			"error": summary.get("error", "")}))
+		_candidate_trace.flush()
+	_candidate_sources.erase(candidate_key)
+	return summary
+
+
+func _progress_update(force: bool = false) -> void:
+	super._progress_update(force)
+	var now := Time.get_ticks_msec()
+	if not force and now - _last_detail_progress_ms < 5000:
+		return
+	_last_detail_progress_ms = now
+	var advisor: bool = _settings.get("search", {}).get("strategy", "portfolio") == "advisor_seeded"
+	var coverage := "%d/%d positions" % [_cache.size(), _estimated_formation_count] if advisor and _estimated_formation_count > 0 else "%d unique candidates" % _cache.size()
+	var best_text := "no victory" if objective == "normal" else "no result"
+	if not _progress_best.is_empty() and (objective != "normal" or _progress_best.outcome == "victory"):
+		best_text = "Used FR=%s" % _progress_best.fleet_resources_used
+	var target = _settings.get("search", {}).get("target_used_fr")
+	var target_text := "none" if target == null else str(target)
+	print("Search progress: %s | wins=%d losses=%d | best=%s | target=%s | remaining=%.1fs | pending=%d" % [
+		coverage, _search_audit.get("wins", 0), _search_audit.get("losses", 0), best_text, target_text,
+		maxf(0.0, float(_settings.max_wall_seconds) - _elapsed_seconds()), _pending.size()])
+	if target != null and _progress_best.get("outcome") == "victory":
+		print("Target gap: %.4f FR" % maxf(0.0, float(_progress_best.fleet_resources_used) - float(target)))
+
+
+func _target_reached() -> bool:
+	var target = _settings.get("search", {}).get("target_used_fr")
+	return objective == "normal" and target != null and _progress_best.get("outcome") == "victory" and float(_progress_best.fleet_resources_used) <= float(target) + 0.000001
+
+
+func _layout_family_key(formation: Array) -> String:
+	var canonical := formation.duplicate(true)
+	canonical.sort_custom(func(a, b): return _group_signature(a) < _group_signature(b))
+	for i in range(canonical.size()):
+		canonical[i].grid_position = _cells[i].duplicate()
+	return _formation_key(canonical)
+
+
+func _add_layout_stream(formation: Array, streams: Array) -> void:
+	if formation.is_empty() or not _within_ranges(formation):
+		return
+	var key := _layout_family_key(formation)
+	for stream in streams:
+		if stream.key == key:
+			return
+	var counts := {}
+	for group in formation:
+		counts[group.ship] = int(counts.get(group.ship, 0)) + 1
+	var count := _unique_formation_count(counts)
+	# Large spaces use random layouts; bounded spaces use a coprime walk of
+	# combinatorial ranks, so every position is visited once before completion.
+	var exact := count > 0 and count <= 1000000000
+	var stride := 1
+	var offset := 0
+	if exact:
+		offset = _rng.randi_range(0, count - 1)
+		stride = _rng.randi_range(1, maxi(1, count - 1))
+		while _integer_gcd(stride, count) != 1:
+			stride = stride % count + 1
+	if streams.size() >= 32:
+		streams.pop_front()
+	streams.append({"key": key, "seed": formation.duplicate(true), "count": count,
+		"remaining": count if exact else -1, "next": offset, "stride": stride, "exact": exact})
+
+
+func _integer_gcd(a: int, b: int) -> int:
+	while b != 0:
+		var remainder := a % b
+		a = b
+		b = remainder
+	return a
+
+
+func _prepare_layout_neighborhood(parent: Dictionary) -> void:
+	if parent.is_empty():
+		return
+	var formation: Array = parent.formation
+	var key := _layout_family_key(formation)
+	if key == _layout_anchor_key:
+		return
+	_layout_anchor_key = key
+	# Keep these fleets alive even when removing a group loses at its initial
+	# position. Improvement may require moving several remaining groups at once.
+	var seen := {}
+	for i in range(formation.size()):
+		var ship: String = formation[i].ship
+		if seen.has(ship):
+			continue
+		seen[ship] = true
+		var reduced := formation.duplicate(true)
+		reduced.remove_at(i)
+		_decorate_support(reduced, _support_choices_from(formation))
+		_add_layout_stream(reduced, _layout_streams)
+	_add_layout_stream(formation, _layout_streams)
+
+
+func _next_layout(advisor: bool) -> Array:
+	var streams: Array = _advisor_streams if advisor else _layout_streams
+	if streams.is_empty():
+		return [] if advisor else _next_global()
+	for unused in range(streams.size()):
+		var index := _advisor_cursor if advisor else _layout_cursor
+		if advisor:
+			_advisor_cursor += 1
+		else:
+			_layout_cursor += 1
+		var stream: Dictionary = streams[index % streams.size()]
+		if stream.remaining == 0:
+			continue
+		_last_layout_stream = stream
+		if not stream.exact:
+			return _random_layout(stream.seed)
+		var formation := _formation_at(stream.seed, int(stream.next))
+		stream.next = (int(stream.next) + int(stream.stride)) % int(stream.count)
+		stream.remaining -= 1
+		if stream.remaining == 0:
+			_layout_completed += 1
+		return formation
+	# Completed families stay recorded to avoid restarting the same sweep.
+	return [] if advisor else _next_global()
+
+
+func _random_layout(seed_formation: Array) -> Array:
+	var formation := seed_formation.duplicate(true)
+	var cells := _cells.duplicate(true)
+	_shuffle(cells)
+	for i in range(formation.size()):
+		formation[i].grid_position = cells[i].duplicate()
+	return formation
+
+
+func _joint_mutation(parent: Dictionary) -> Array:
+	if parent.is_empty():
+		return _next_global()
+	var formation: Array = parent.formation.duplicate(true)
+	var choices := _support_choices_from(formation)
+	# Apply several changes before evaluation instead of requiring each
+	# intermediate count/loadout/position change to win a parent ranking.
+	for unused in range(_rng.randi_range(1, 2)):
+		var index := _rng.randi_range(0, formation.size() - 1)
+		var action := _rng.randi_range(0, 2)
+		if action == 0 and formation.size() > 1:
+			formation.remove_at(index)
+		else:
+			var ships := _ship_types()
+			var ship: String = ships[_rng.randi_range(0, ships.size() - 1)]
+			if not _ship_enabled(ship):
+				continue
+			var group := _formation_group(ship, _loadout_for_parent(ship, parent), [0, 0])
+			if action == 1 and formation.size() < _cells.size():
+				formation.append(group)
+			else:
+				formation[index] = group
+	var ship: String = formation[_rng.randi_range(0, formation.size() - 1)].ship
+	var options: Array = _settings.allowed_loadouts[ship]
+	var loadout: Dictionary = options[_rng.randi_range(0, options.size() - 1)]
+	var selected := {ship: loadout}
+	for group in formation:
+		if not selected.has(group.ship):
+			selected[group.ship] = _loadout_for_parent(group.ship, parent)
+		group.merge(_formation_group(group.ship, selected[group.ship], group.grid_position), true)
+	_decorate_support(formation, choices)
+	return _random_layout(formation) if _within_ranges(formation) else []
 
 
 func _consume_wave(wave: Array) -> void:
@@ -429,16 +723,13 @@ func _next_mutation(parent: Dictionary) -> Array:
 		# Keep removals/replacements for cheaper repeatable and finishing fleets.
 		bucket_index = [4, 5, 4, 3, 1, 4, 2, 0][int(stream.cursor) % 8]
 	stream.cursor += 1
-	var bucket: Array = stream.buckets[bucket_index]
-	if not bucket.is_empty():
-		return bucket.pop_back()
-	# Keep global position jumps after the finite exact perturbations are spent.
-	var formation: Array = parent.formation.duplicate(true)
-	var cells := _cells.duplicate(true)
-	_shuffle(cells)
-	for i in range(formation.size()):
-		formation[i].grid_position = cells[i].duplicate()
-	return formation
+	for offset in range(stream.buckets.size()):
+		var bucket: Array = stream.buckets[(bucket_index + offset) % stream.buckets.size()]
+		if not bucket.is_empty():
+			return bucket.pop_back()
+	# Empty removal/mod buckets must not prematurely replace still-unvisited
+	# neighbors with random repeats of the incumbent. Layouts have their own lane.
+	return _joint_mutation(parent)
 
 
 func _build_mutation_stream(parent: Dictionary) -> Dictionary:
@@ -524,7 +815,8 @@ func _within_ranges(formation: Array) -> bool:
 		counts[group.ship] = int(counts.get(group.ship, 0)) + 1
 	for ship in _ship_types():
 		var limits: Dictionary = _settings.group_ranges.get(ship, {})
-		if int(counts.get(ship, 0)) < int(limits.get("min", 0)) or int(counts.get(ship, 0)) > int(limits.get("max", 0)):
+		var maximum := mini(int(limits.get("max", 0)), int(_settings.get("max_groups_per_ship", {}).get(ship, _cells.size())))
+		if int(counts.get(ship, 0)) < int(limits.get("min", 0)) or int(counts.get(ship, 0)) > maximum:
 			return false
 	return true
 
@@ -819,6 +1111,9 @@ func _can_simulate() -> bool:
 
 
 func _can_expand() -> bool:
+	if _target_reached():
+		_stop_reason = "TARGET USED FR REACHED"
+		return false
 	var reserve := maxf(5.0, _max_battle_seconds * 2.0)
 	if objective == "boss" and boss_priority == "kill_cost":
 		if _requested_boss_priority != "affordable_kill_cost" or _campaign_may_continue():

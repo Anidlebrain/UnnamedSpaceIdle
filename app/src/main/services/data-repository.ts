@@ -16,6 +16,8 @@ import {
   type SearchConfig,
 } from '../../shared/schemas'
 import type { Catalog, CreateGalaxyRequest, CreateNodeRequest, ImportPreview, Selection } from '../../shared/contracts'
+import { effectiveShipCounts } from '../../shared/ship-counts'
+import { withoutNodeTarget } from '../../shared/search-target'
 
 const readJson = async (path: string): Promise<unknown> => JSON.parse(await readFile(path, 'utf8'))
 const missing = (error: unknown) => (error as NodeJS.ErrnoException).code === 'ENOENT'
@@ -296,11 +298,11 @@ export class DataRepository {
 
   async loadSearchConfig(): Promise<SearchConfig> {
     const effective = await this.effectivePath(this.searchConfigPath, this.searchFallbackPath)
-    return searchConfigSchema.parse(await readJson(effective.path))
+    return withoutNodeTarget(searchConfigSchema.parse(await readJson(effective.path)))
   }
 
   async saveSearchConfig(config: SearchConfig): Promise<SearchConfig> {
-    const parsed = searchConfigSchema.parse(config)
+    const parsed = withoutNodeTarget(searchConfigSchema.parse(config))
     const effective = await this.effectivePath(this.searchConfigPath, this.searchFallbackPath)
     const current = searchConfigSchema.parse(await readJson(effective.path))
     if (effective.source !== 'local' || !isDeepStrictEqual(current, parsed))
@@ -576,8 +578,18 @@ export class DataRepository {
     const parsedCommon = commonConfigSchema.parse(common)
     this.assertIdentity(selection, parsedNode)
     const target = join(this.mapRoot, selection.galaxy)
-    await atomicJson(join(target, `${selection.node}.json`), parsedNode)
-    await atomicJson(join(target, 'common.json'), parsedCommon)
+    // Materialize negative ship deltas for the existing BAT/Resolver, which accepts only nonnegative counts.
+    const hasShipReduction = Object.values(parsedNode.player_state.ships).some(count => count < 0)
+    const stagedNode = hasShipReduction
+      ? {
+          ...parsedNode,
+          player_state: { ...parsedNode.player_state, ships: effectiveShipCounts(parsedNode, parsedCommon) },
+        }
+      : parsedNode
+    const stagedCommon = { ...parsedCommon }
+    if (hasShipReduction) delete stagedCommon.ships
+    await atomicJson(join(target, `${selection.node}.json`), stagedNode)
+    await atomicJson(join(target, 'common.json'), stagedCommon)
   }
 
   async readStagedNode(selection: Selection): Promise<NodeConfig> {

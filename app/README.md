@@ -4,6 +4,10 @@
 
 ## V1.2.1 可用性调整
 
+- 搜索设置支持 `portfolio` 与 `advisor_seeded`。后者使用节点 Baseline 中的游戏推荐舰种、数量和 Mods，仅搜索站位，允许初始战败；与 `exhaustive` 不组合。搜索队列和 Galaxy 重跑仍通过原 BAT 执行，未找到胜利时不提供可应用结果。
+- 普通战目标 `target_used_fr` 由节点配置的“环境”页编辑，随当前 Node Version 保存；切换节点各自保留，Galaxy 重跑逐节点使用。时间/模拟次数仍由共享 Search 配置提供。达到实际胜利的 Used FR 目标后仍执行最终原版重放；留空则使用完整预算，Boss 不使用此字段。
+- Node 舰队状态可输入负数来抵消 Galaxy 公共舰船数量；实际搜索数量按 `max(0, 公共 + 节点)` 计算。app 暂存运行输入时写入有效非负数量，Best Found 回写时保留 Node 中的增量。
+- 搜索页运行状态的指标标签与值按同一列左对齐，并在较窄窗口自动换行。
 - Galaxy 重跑完成后可一键将所有“有变化”节点的 Best Found 逐个写入对应默认 Version；继续使用单节点 Copy 校验，目标有未保存草稿、版本变化或结果失效时跳过该节点并报告失败，成功节点不会重试。
 - “模板与复制”可创建 Galaxy：输入 Galaxy ID 和初始 Node ID，复制当前 Common 与当前 Node / Version 作为新 Galaxy 的初始配置；已有 Galaxy 不会被覆盖。
 - Galaxy / Node / Version / Common 与搜索设置的主要下拉使用统一的限高列表；打开时把当前项尽量放在可视区域中部，Node / Version / Common 可输入筛选。

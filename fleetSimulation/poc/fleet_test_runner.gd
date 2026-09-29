@@ -40,6 +40,7 @@ func _on_node_added(node: Node) -> void:
 
 
 func _run() -> void:
+	print("OPTIMIZER_RUNNER_READY: resolving inputs and waiting for native galaxy initialization")
 	var worker_dir := _argument_value("--fleet-worker-dir=")
 	var daily_optimizer := _has_argument("--daily-optimizer")
 	var friendly_path := _requested_friendly_config_path()
@@ -68,6 +69,12 @@ func _run() -> void:
 			add_child(probe)
 			if worker_dir != "":
 				await _run_fleet_worker(probe, worker_dir)
+				return
+			if _has_argument("--search-regression"):
+				var tests := preload("res://fleet_search_regression.gd").new()
+				add_child(tests)
+				var regression: Dictionary = tests.run(friendly, common, optimizer_v2_settings)
+				_finish(regression, 0 if regression.passed else 14, "user://fleet_search_regression.json")
 				return
 			if _has_argument("--grid-regression"):
 				var tests := preload("res://fleet_grid_regression.gd").new()
@@ -154,6 +161,8 @@ func _run() -> void:
 				var optimizer_v2 := preload("res://fleet_optimizer_search.gd").new()
 				add_child(optimizer_v2)
 				var optimizer_settings := optimizer_v2_settings.duplicate(true)
+				if daily_optimizer and _requested_node_result_path() != "":
+					optimizer_settings["candidate_trace_path"] = _requested_node_result_path().trim_suffix(".json") + ".candidates.jsonl"
 				if config.has("optimizer"):
 					optimizer_settings.objective = config.optimizer.objective
 					optimizer_settings.boss_priority = config.optimizer.boss_priority
@@ -703,6 +712,8 @@ func _print_daily_search_budget(settings: Dictionary) -> void:
 	var max_wall_seconds = search.get("max_wall_seconds", settings.get("max_wall_seconds", "missing"))
 	print("")
 	print("Search Budget:")
+	print("  Strategy: %s" % search.get("strategy", "portfolio"))
+	print("  Target Used FR: %s (normal victory + final native replay required)" % str(search.get("target_used_fr", "not set")))
 	print("  Estimated Candidates: up to %s scored simulations; exact fleet candidate count follows after original deployment-cost pruning" % max_simulations)
 	print("  Max Simulations: %s" % max_simulations)
 	print("  Max Wall Time: %s seconds" % max_wall_seconds)
@@ -793,6 +804,9 @@ func _build_compact_summary(summary: Dictionary, config: Dictionary) -> Dictiona
 		"affordable_best": _compact_candidate(summary.get("affordable_best_result", {})),
 		"search": {
 			"profile": summary.get("search_profile"),
+			"strategy": summary.get("search_strategy", "portfolio"),
+			"target_used_fr": summary.get("target_used_fr"),
+			"candidate_trace_path": summary.get("candidate_trace_path", ""),
 			"wall_seconds": summary.get("wall_time_seconds"),
 			"simulations": summary.get("simulations_used"),
 			"hard_pruned": _sum_numeric(summary.get("pruning_stats", {}).get("hard_pruned", {})),
@@ -818,7 +832,7 @@ func _build_compact_summary(summary: Dictionary, config: Dictionary) -> Dictiona
 		"improvement_vs_baseline": summary.get("improvement_vs_baseline", {}),
 		"notes": [
 			str(summary.get("recommendation_status", "SEARCHED BEST")),
-			"Interleaved exploration; unvisited candidates are not proven inferior",
+			"Advisor fleet position search" if summary.get("search_strategy") == "advisor_seeded" else "Interleaved exploration; unvisited candidates are not proven inferior",
 			str(summary.get("search_termination", "")),
 			"Not mathematically global exact" if summary.get("search_profile") != "exhaustive" else "Exact only where an exact subspace is explicitly reported",
 		],
@@ -870,6 +884,12 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 		lines.append("可负担方案必须满足累计 Used FR 不超过当前资源，且逐场剩余资源足够支付部署。")
 	lines.append("Search Time: %.1fs" % float(compact.search.get("wall_seconds", 0.0)))
 	lines.append("Simulations: %s" % compact.search.get("simulations", 0))
+	lines.append("Search Strategy: %s" % compact.search.get("strategy", "portfolio"))
+	if compact.get("best", {}).is_empty():
+		lines.append("No verified recommendation. No formation is available to copy.")
+		for note in compact.get("notes", []):
+			lines.append("  %s" % note)
+		return "\n".join(lines) + "\n"
 	var clock: Dictionary = compact.get("simulation_clock", {})
 	lines.append("")
 	lines.append("Simulation:")

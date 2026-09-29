@@ -45,6 +45,8 @@ const loadoutSchema = jsonObject.extend({
   tertiary_mods: z.array(z.string()).optional(),
 })
 export const searchConfigSchema = jsonObject.extend({
+  strategy: z.enum(['portfolio', 'advisor_seeded']).optional(),
+  target_used_fr: z.number().finite().nonnegative().nullish(),
   profile: z.enum(['fast', 'balanced', 'exhaustive']),
   goal: z.enum(['best', 'beat_baseline']),
   simulation_clock: z.enum(['realtime', 'offline_fixed_step']),
@@ -62,7 +64,7 @@ const rawNodeConfigSchema = jsonObject
     supports: z.array(z.unknown()).default([]),
     player_state: jsonObject.extend({
       fleet_resources: z.number(),
-      ships: z.record(z.number().int().nonnegative()),
+      ships: z.record(z.number().int()),
     }),
     baseline: jsonObject.extend({
       enabled: z.boolean(),

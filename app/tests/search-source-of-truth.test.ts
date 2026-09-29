@@ -20,6 +20,7 @@ describe('daily search source of truth', () => {
     expect(resolver).toContain('"max_wall_seconds": float(search.get("max_wall_seconds", 300.0))')
     expect(resolver).toContain('"max_simulations": int(search.get("max_simulations", 1000000))')
     expect(resolver).toContain('"workers": clampi(int(search.get("workers", 1)), 1, 4)')
+    expect(resolver).toContain('var target_used_fr = search.get("target_used_fr")')
     expect(optimizer).toContain('_profile = str(search.get("profile"')
     expect(optimizer).toContain('_goal = str(search.get("goal"')
     expect(optimizer).toContain('_settings.max_simulations = int(search.max_simulations)')
@@ -31,14 +32,15 @@ describe('daily search source of truth', () => {
     expect(searchV3).toContain('"search_goal": _goal')
   })
 
-  it('persists Manager Search independently and selects local Optimizer config before fallback', async () => {
+  it('persists shared Search independently and merges the Node target before staging', async () => {
     const manager = await readFile(join('src', 'main', 'services', 'optimizer-runner.ts'), 'utf8')
     const repository = await readFile(join('src', 'main', 'services', 'data-repository.ts'), 'utf8')
     const bat = await readFile(join(fleetRoot, 'run_optimizer.bat'), 'utf8')
     const searchDefault = JSON.parse(await readFile(join(fleetRoot, 'poc', 'search_config.json'), 'utf8'))
 
     expect(manager).toContain('await this.repo.saveSearchConfig(request.search)')
-    expect(manager).toContain('search: structuredClone(savedSearch)')
+    expect(manager).toContain('searchForNode(savedSearch, prepared.node)')
+    expect(manager).toContain('search: structuredClone(stagedNode.search)')
     expect(manager).toContain('stagedNodeConfigHash')
     expect(repository).toContain("join(mapRoot, 'search_config.json')")
     expect(repository).toContain("join(fleetRoot, 'poc', 'search_config.json')")

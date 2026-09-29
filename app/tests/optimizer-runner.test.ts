@@ -77,6 +77,47 @@ async function setup() {
   }
 }
 describe('OptimizerRunner', () => {
+  it('uses each normal node target in a Galaxy queue and omits it for Boss', async () => {
+    const x = await setup()
+    await x.repo.save(x.s, { ...node, search: { ...node.search, target_used_fr: 27.3 } })
+    const bossSelection = { ...x.s, node: 'B3' }
+    await x.repo.save(bossSelection, {
+      ...node,
+      node: 'B3',
+      boss: { alive: true },
+      search: { ...node.search, target_used_fr: 12 },
+    })
+    const stagedTargets: Array<number | null | undefined> = []
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      async selection => {
+        const staged = JSON.parse(await readFile(join(x.map, `${selection.node}.json`), 'utf8'))
+        stagedTargets.push(staged.search.target_used_fr)
+        await writeFile(
+          join(x.map, `${selection.node}.result.json`),
+          JSON.stringify({
+            ...result,
+            base_config: { resolver: { friendly_input: { galaxy: 6, node: selection.node } } },
+          }),
+        )
+        return 0
+      },
+    )
+    const selections = [x.s, { ...x.s, node: 'B2' }, bossSelection]
+    const results = await runner.runQueue(
+      selections,
+      () => {},
+      () => {},
+      node.search,
+    )
+    expect(stagedTargets).toEqual([27.3, undefined, undefined])
+    expect(results.map(item => item.task?.search.target_used_fr)).toEqual([27.3, undefined, undefined])
+    expect((await x.repo.load(x.s)).node.search.target_used_fr).toBe(27.3)
+    expect((await x.repo.loadSearchConfig()).target_used_fr).toBeUndefined()
+    await rm(x.root, { recursive: true, force: true })
+  })
   it('stages Node extras and Galaxy ships for one additive search snapshot', async () => {
     const x = await setup()
     await x.repo.save(x.s, {
@@ -405,6 +446,31 @@ describe('Best Found copy transaction', () => {
     expect(applied.error).toBeUndefined()
     expect((await x.repo.load(x.s)).node.baseline.formation).toEqual({ A1: 'Fighter' })
     expect((await x.repo.load(otherSelection)).node.baseline.formation).toEqual({})
+    await rm(x.root, { recursive: true, force: true })
+  })
+  it('preserves negative ship deltas when applying Best Found', async () => {
+    const x = await setup()
+    await x.repo.save(x.s, { ...node, player_state: { fleet_resources: 10, ships: { Fighter: -1 } } })
+    await x.repo.saveCommon(x.s, { ...common, ships: { Fighter: 2 } })
+    const runner = new OptimizerRunner(
+      x.repo,
+      x.root,
+      () => {},
+      async (_selection, mode) => {
+        if (mode === 'search') await writeFile(join(x.map, 'B1.result.json'), JSON.stringify(result))
+        else {
+          const staged = JSON.parse(await readFile(join(x.map, 'B1.json'), 'utf8'))
+          staged.baseline.formation = { A1: 'Fighter' }
+          await writeFile(join(x.map, 'B1.json'), JSON.stringify(staged))
+        }
+        return 0
+      },
+    )
+    const searched = await runner.run({ ...x.s, versionName: '默认', commonName: '默认', search: node.search })
+    const applied = await runner.useBest(searched.task!.taskId)
+    expect(applied.error).toBeUndefined()
+    expect((await x.repo.load(x.s)).node.player_state.ships).toEqual({ Fighter: -1 })
+    expect((await x.repo.load(x.s)).node.baseline.formation).toEqual({ A1: 'Fighter' })
     await rm(x.root, { recursive: true, force: true })
   })
   it('does not modify Manager data when --c fails or writes invalid JSON', async () => {

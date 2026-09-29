@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { FLEET_MANAGER_BRIDGE_NAME } from '../../src/shared/bridge'
 import type { NodeConfig } from '../../src/shared/schemas'
 import { commonConfigSchema } from '../../src/shared/schemas'
@@ -522,7 +523,7 @@ describe('Renderer preload contract', () => {
     expect(raw).toContain('"HeavyCruiser": 7')
   })
 
-  it('shows Galaxy, Node and effective ship counts separately', async () => {
+  it('accepts a typed minus sign before the ship count and shows the effective count', async () => {
     api.load.mockResolvedValueOnce({
       node: { ...node, player_state: { fleet_resources: 190, ships: { Fighter: 0, HeavyCruiser: 1 } } },
       common: commonConfigSchema.parse({
@@ -536,8 +537,16 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('tab', { name: '舰队状态' }))
     expect(screen.getByText('公共 1 + 节点 0 = 搜索 1')).toBeTruthy()
     expect(screen.getByText('公共 0 + 节点 1 = 搜索 1')).toBeTruthy()
-    fireEvent.change(screen.getByLabelText('ships.HeavyCruiser'), { target: { value: '2' } })
-    expect(screen.getByText('公共 0 + 节点 2 = 搜索 2')).toBeTruthy()
+    const shipInput = screen.getByLabelText('ships.HeavyCruiser') as HTMLInputElement
+    const user = userEvent.setup()
+    await user.clear(shipInput)
+    await user.type(shipInput, '-')
+    expect(shipInput.value).toBe('-')
+    expect(screen.getByText('公共 0 + 节点 1 = 搜索 1')).toBeTruthy()
+    await user.type(shipInput, '2')
+    expect(shipInput.value).toBe('-2')
+    expect(screen.getByText('公共 0 + 节点 -2 = 搜索 0')).toBeTruthy()
+    expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain('"HeavyCruiser": -2')
   })
 
   it('edits Galaxy public ship counts through the structured Common editor', async () => {
@@ -565,6 +574,34 @@ describe('Renderer preload contract', () => {
     expect(raw).toContain('"priority": "kill_cost"')
     expect(raw).toContain('"B10"')
     expect(raw).toContain('"F3"')
+  })
+
+  it('saves a decimal Used FR target on the Node instead of shared Search settings', async () => {
+    const user = userEvent.setup()
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '环境' }))
+    const target = screen.getByRole('textbox', { name: '普通战目标 Used FR（可选）' }) as HTMLInputElement
+    await user.type(target, '27.3')
+    expect(target.value).toBe('27.3')
+    expect(
+      JSON.parse((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).search.target_used_fr,
+    ).toBe(27.3)
+    await user.click(screen.getByRole('button', { name: '保存节点' }))
+    await waitFor(() =>
+      expect(api.save).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          search: expect.objectContaining({ target_used_fr: 27.3 }),
+        }),
+      ),
+    )
+    expect(api.saveSearchConfig).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByText('Boss 存活'))
+    expect(target.disabled).toBe(true)
+    expect(
+      JSON.parse((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).search.target_used_fr,
+    ).toBeUndefined()
   })
 
   it('keeps commas and newlines editable while parsing environment nodes', async () => {
@@ -1078,6 +1115,27 @@ describe('Renderer preload contract', () => {
             max_simulations: 1,
           }),
         }),
+      ),
+    )
+  })
+  it('selects advisor position search and sends the strategy through the queue request', async () => {
+    api.enqueueSearch.mockImplementationOnce(async request => ({
+      snapshot: { ...searchTask(), search: request.search },
+      status: 'waiting',
+      logs: '',
+    }))
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    fireEvent.click(screen.getByRole('button', { name: '搜索设置' }))
+    fireEvent.click(screen.getByRole('combobox', { name: '搜索策略' }))
+    fireEvent.click(screen.getByRole('option', { name: '推荐舰队搜站位' }))
+    fireEvent.click(screen.getByRole('button', { name: '完成' }))
+    expect(screen.getByText(/起始站位允许战败/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
+    await waitFor(() =>
+      expect(api.enqueueSearch).toHaveBeenCalledWith(
+        expect.objectContaining({ search: expect.objectContaining({ strategy: 'advisor_seeded' }) }),
       ),
     )
   })

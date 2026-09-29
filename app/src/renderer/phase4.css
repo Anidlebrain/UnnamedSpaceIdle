@@ -1701,13 +1701,15 @@ th {
 
 .run-status { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-sm); align-items: center; }
 .run-status h2 { grid-column: 1; margin: 0; white-space: nowrap; }
-.run-status dl { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: 1.5fr repeat(4, minmax(0, 1fr)); gap: var(--space-sm); min-width: 0; }
+.run-status dl { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: minmax(12rem, 1.5fr) repeat(4, minmax(8rem, 1fr)); gap: var(--space-sm); min-width: 0; }
 .run-status dl > div { display: grid; gap: .15rem; min-width: 4.5rem; }
-.run-status dd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.run-status dd { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: start; }
 .run-status .status-phase { grid-column: 1 / -1; }
 .run-status .console { grid-column: 2; grid-row: 1; align-self: center; }
 .run-status .console[open] { grid-column: 1 / -1; grid-row: 3; }
 .run-status .console > summary { white-space: nowrap; }
+.advisor-guidance { grid-column: 1 / -1; margin: 0; padding: .65rem .8rem; border-left: 3px solid var(--color-focus); background: rgba(88, 142, 190, .09); color: var(--color-ink-2); font-size: var(--text-sm); }
+@media (min-width: 40rem) and (max-width: 70rem) { .run-status dl { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 .settings-group { display: grid; gap: var(--space-sm); }
 .settings-group h3 { margin: 0; }
 .setting-help, .budget-group p { margin: 0; color: var(--color-muted); font-size: var(--text-xs); line-height: 1.5; }

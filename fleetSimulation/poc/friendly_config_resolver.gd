@@ -135,8 +135,19 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 	var simulation_clock := str(search.get("simulation_clock", "offline_fixed_step" if profile in ["fast", "balanced"] else "realtime"))
 	if simulation_clock not in ["realtime", "offline_fixed_step"]:
 		return _error("search.simulation_clock must be realtime or offline_fixed_step: %s" % simulation_clock)
+	var strategy := str(search.get("strategy", "portfolio"))
+	if strategy not in ["portfolio", "advisor_seeded"]:
+		return _error("search.strategy must be portfolio or advisor_seeded")
+	if strategy == "advisor_seeded" and profile == "exhaustive":
+		return _error("advisor_seeded requires fast or balanced; exhaustive searches the full configured space")
+	var target_used_fr = search.get("target_used_fr")
+	if target_used_fr != null:
+		if boss_alive or typeof(target_used_fr) not in [TYPE_INT, TYPE_FLOAT] or not is_finite(float(target_used_fr)) or float(target_used_fr) < 0:
+			return _error("search.target_used_fr must be a finite nonnegative number and is supported only for normal battles")
 	search = {
 		"profile": profile,
+		"strategy": strategy,
+		"target_used_fr": target_used_fr,
 		"goal": goal,
 		"simulation_clock": simulation_clock,
 		"max_wall_seconds": float(search.get("max_wall_seconds", 300.0)),
@@ -157,6 +168,10 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 		var baseline_error := _validate_baseline(baseline, ships, grid)
 		if baseline_error != "":
 			return _error(baseline_error)
+	if strategy == "advisor_seeded":
+		if not bool(baseline.get("enabled", false)) or baseline.get("formation", {}).is_empty():
+			return _error("advisor_seeded requires the suggested fleet in baseline with enabled=true")
+		search["advisor_seeds"] = [baseline.duplicate(true)]
 	var diagnostic: Dictionary = friendly.get("diagnostic", {}) if friendly.get("diagnostic", {}) is Dictionary else {}
 	for candidate_name in ["known_candidate", "micro_test"]:
 		if diagnostic.has(candidate_name):

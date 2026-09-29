@@ -6,7 +6,7 @@
 
 两种击杀策略同时保留 `per_battle_best_result` 和 `affordable_best_result`，`best_result` 按所选策略选择；两者可以是同一阵型。`affordable_kill_status` 明确输出“已找到可负担的完整击杀”或“未找到可负担的完整击杀”。例如当前 690 FR、单次部署策略总成本 1690 FR，只保留后者作为补充资源后的候选，不能视为当前可负担击杀。未找到表示预算内没有完成验证，不是证明所有阵型均无解。TXT 将附加候选单独列出，`--copy` 仍只复制主推荐。
 
-必须提供 `baseline.enabled: true`、formation 和 loadouts。启动先验证 Baseline：普通战必须 WIN，Boss 必须 `boss_damage > 0`，否则输出 **BASELINE VALIDATION FAILED** 并停止；不会进入 Recovery。Baseline 是参考上界，并不限制全局 composition 的生成。
+默认 `search.strategy: "portfolio"` 必须提供 `baseline.enabled: true`、formation 和 loadouts。启动先验证 Baseline：普通战必须 WIN，Boss 必须 `boss_damage > 0`，否则输出 **BASELINE VALIDATION FAILED** 并停止。Baseline 是参考上界，并不限制全局 composition 的生成。新增的 `advisor_seeded` 策略允许输入阵型战败，见下文。
 
 `kill_cost` 搜索限制内尚未验证出完整击杀序列时，输出 **BASELINE RETAINED**，保留并重放已验证的输入阵型。`affordable_kill_cost` 优先推荐已验证完整击杀中累计实际 Used FR 最低的方案；未找到击杀时输出 **NO VERIFIED AFFORDABLE KILL**，推荐当前资源内已验证累计伤害最高的方案，伤害相同再比较总消耗和场数，不再直接退回基线。状态表示搜索预算内未找到，并非证明无解。
 
@@ -19,6 +19,26 @@
 日常只需 `"search": {"profile": "fast"}`，默认单 worker、300 秒（含 Godot 初始化）。Balanced 增加全局探索比例；已有显式时间、worker 和 simulation 上限仍兼容。收尾预留真实重跑与 Boss 序列时间，当前战斗会完成，极慢战斗可能略超预算。`beat_baseline` 字段兼容，但仍尽量搜索到预算结束。Exhaustive 只用于受限空间验证；只有确实完成全部配置空间的普通战/效率搜索才显示 EXHAUSTIVE BEST。
 
 新流程交错生成全局 composition、档案候选和当前优胜方案的变体，移除了日常路径中的 Beam/Probe 截断与 Smart Prune。**BEST FOUND / TIME BUDGET REACHED 均不代表全局最优。** 详细算法、原版语义、性能拆解、回归与前后对照见 [optimizer_v3_report.md](docs/optimizer_v3_report.md)。下文的 v2 搜索描述和结果保留作历史记录。
+
+2026-09-28 搜索改进：增加固定舰队的持续站位搜索（包括优胜阵型删去一组后的舰队），不再要求删船后的原位置先获胜；增加数量、Mods、站位一起变化的候选。邻域某类操作用尽后继续处理其他未访问邻域，全部用尽后才做组合变异。站位子空间较小时按打乱顺序无重复遍历，大空间使用随机布局，保留最多 32 个自动站位搜索流。全局搜索、档案和原版战斗评分继续保留。G8 B4 的原因分析见 [搜索改进与推荐阵容策略](docs/search_advisor_strategy.md)。
+
+### 推荐阵容搜站位：advisor_seeded
+
+将游戏“部署推荐”里的舰种、数量和 Mods 填入现有 `baseline`，位置可以任意填写合法、不重复的格子，保留 `baseline.enabled: true`。然后在节点 JSON 的 `search` 中加入：
+
+```json
+"strategy": "advisor_seeded"
+```
+
+仍通过 `run_optimizer.bat g8 B4` 运行。该策略固定输入舰种、数量和 Mods，只搜索站位；**起始站位可以战败**。搜索优先尝试真实成绩较好的最多四个阵型周围的移动、交换与镜像，每三个调度机会至少保留一个给全局站位遍历，局部邻域用尽后也继续全局探索。普通战只有实际获胜并通过原版重放的方案才会作为结果推荐。未找到时返回 `NO VICTORY FOUND`，不输出可复制阵型。完成这支舰队的全部站位后提前停止并报告 `ADVISOR POSITIONS EXHAUSTED`，不表示全部舰队空间全局最优。
+
+普通战可选设置 `search.target_used_fr`，例如 `27.3`。只有获胜且真实 Used FR 不高于目标（仅容许浮点尾差）才停止探索，随后仍做最终原版重放；失败不发布推荐。目标是用户希望达到的成本，不是已证明最优值。省略或设为 `null` 则持续搜索到预算/站位空间耗尽；Boss 不接受该字段，继续使用独立的 Boss 评分目标。推荐截图中的 Mods 必须与输入一致，部署费不能充当战后 Used FR。
+
+日常日志现在实时显示标准错误，启动器每五秒输出阶段心跳；脚本错误立即终止本次进程树，Runner 60 秒未就绪会退出，整体运行超过节点时间预算加 30 秒收尾宽限也会退出。退出码分别为 70（脚本错误）、71（启动超时）、72（整体超时）。搜索周期性输出唯一候选/站位数、胜负数、最佳 FR、目标差距与剩余时间。每场已完成的探索战斗实时写入 `<node>.result.candidates.jsonl`，包含站位、Mods、胜负、实际 FR 和错误；其内容是搜索记录，最终推荐仍以完成重放的 result JSON/TXT 为准。手动停止会保留已刷新的日志，但不会把未完成重放的候选发布为最终推荐。
+
+这是独立的搜索策略，与 `boss.priority` 的 `efficiency`、`kill_cost`、`affordable_kill_cost` 分开；Boss 目标仍按原有规则评分和验证。`search.profile` 使用 `fast` 或 `balanced`；`exhaustive` 保留为全部配置空间验证，不与此策略组合。切回普通优化使用 `"strategy": "portfolio"` 或省略此字段。建议保留较大的 `max_simulations`，按 `max_wall_seconds` 控制运行时间；两个限制任一先到都会停止，最终重放可能使模拟总数略高于搜索上限。
+
+推荐信息由用户录入；Optimizer 保持离线，不查询 Advisor 服务。本次未修改 app；新增加的 `target_used_fr` 需直接编辑节点 JSON 并通过 BAT 使用，界面暂存不保证保留此字段。原始日志和候选记录路径会打印到控制台。
 
 v3 部署报价优化：Baseline 和未知装配先建立原版场景，读取真实 Mod 后单组成本；同一战斗环境内，后续不同数量按原版 `calc_total_deployment()` 的逐组 Overdeploy 加价顺序累计，继续使用原版 `NumberUtils.fleet_less_or_equal` 判定预算，避免为已知成本反复创建整个战斗场景。战斗评分和最终验证仍运行原版场景。性能输出分别记录原生场景报价、推导报价及缓存命中，不把推导报价计作原生场景调用。
 

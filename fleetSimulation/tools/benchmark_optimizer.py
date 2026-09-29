@@ -32,6 +32,7 @@ def main():
     p.add_argument('--workers', type=int, default=1)
     p.add_argument('--simulations', type=int, default=1000000)
     p.add_argument('--profile', default='fast')
+    p.add_argument('--launcher', action='store_true', help='Exercise the daily PowerShell launcher in the isolated benchmark')
     p.add_argument('--source', default=str(ROOT / 'poc'))
     p.add_argument('--extra', nargs=argparse.REMAINDER, default=[])
     args = p.parse_args()
@@ -53,7 +54,7 @@ def main():
     if args.config or args.case:
         fixture = read(ROOT / 'poc/optimizer_benchmark_cases.json')[args.case] if args.case else None
         config = fixture['friendly'] if fixture else read(args.config)
-        config['search'] = dict(profile=args.profile, goal='best', simulation_clock=clock,
+        config['search'] = dict(config.get('search', {}), profile=args.profile, goal='best', simulation_clock=clock,
                                 max_wall_seconds=args.seconds, max_simulations=args.simulations,
                                 workers=args.workers)
         config.pop('diagnostic', None)
@@ -71,6 +72,16 @@ def main():
         cmd += ['--daily-optimizer', '--daily-output-dir=' + str(out),
                 '--node-result=' + str(out / 'node.result.json')]
     cmd += [x for x in args.extra if x != '--realtime']
+    if args.launcher:
+        if not (args.config or args.case) or args.extra:
+            p.error('--launcher requires --config/--case and cannot be combined with --extra')
+        cmd = ['powershell.exe', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File',
+               str(ROOT / 'tools/run_godot_optimizer.ps1'), '-GodotExe', str(GODOT),
+               '-ProjectPath', str(PROJECT), '-GalaxyId', galaxy, '-SimulationClock', clock,
+               '-FixedFpsActive', '60' if clock == 'offline_fixed_step' else '0',
+               '-OutputDir', str(out), '-NodeResult', str(out / 'node.result.json'),
+               '-LogPath', str(out / 'native.godot.log'), '-MaxWallSeconds', str(args.seconds),
+               '-WorkerId', 'bench_' + args.label]
     start = time.perf_counter()
     with (out / 'stdout.log').open('w', encoding='utf-8') as stdout, (out / 'stderr.log').open('w', encoding='utf-8') as stderr:
         proc = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, creationflags=subprocess.CREATE_NO_WINDOW)

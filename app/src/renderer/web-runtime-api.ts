@@ -12,6 +12,7 @@ import type {
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
 import { nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
 import { effectiveShipCounts } from '../shared/ship-counts'
+import { searchForNode, withoutNodeTarget } from '../shared/search-target'
 import { hasRerunChange } from '../shared/formation-diff'
 import { formationColumns, formationResultError } from '../shared/formation-grid'
 import { preserveShipSelectorFormat, shipSelectorToId } from '../shared/ship-selectors'
@@ -169,7 +170,7 @@ function restoreWorkspace() {
     for (const [entryKey, node] of snapshot.nodes) nodes.set(entryKey, node)
     for (const [entryKey, common] of snapshot.commons) commons.set(entryKey, common)
     if (snapshot.optimizerConfig) optimizerConfig = snapshot.optimizerConfig
-    if (snapshot.searchConfig) searchConfig = snapshot.searchConfig
+    if (snapshot.searchConfig) searchConfig = withoutNodeTarget(snapshot.searchConfig)
   } catch {
     localStorage.removeItem(STORAGE_KEY)
   }
@@ -266,7 +267,10 @@ export function createBrowserApi(): FleetManagerApi {
       item.runningAt = new Date().toISOString()
       webStopCurrent = false
       publishQueue()
+      const savedSearchPreference = clone(searchConfig)
       const run = await api.run(item.snapshot)
+      searchConfig = savedSearchPreference
+      persistWorkspace()
       run.task!.taskId = item.snapshot.taskId
       if (lastSearch?.task) lastSearch.task.taskId = item.snapshot.taskId
       item.snapshot = run.task!
@@ -291,14 +295,14 @@ export function createBrowserApi(): FleetManagerApi {
       common: clone(commons.get(commonKey(selection)) ?? defaultCommon),
     }),
     loadOptimizerConfig: async () => optimizerConfigSchema.parse(clone(optimizerConfig)),
-    loadSearchConfig: async () => clone(searchConfig),
+    loadSearchConfig: async () => clone(withoutNodeTarget(searchConfig)),
     configSources: async () => ({ search: 'local', optimizer: 'local' }),
     save: async (selection, node) => {
       nodes.set(key(selection), nodeConfigSchema.parse(clone(node)))
       persistWorkspace()
     },
     saveSearchConfig: async search => {
-      searchConfig = clone(search)
+      searchConfig = clone(withoutNodeTarget(search))
       persistWorkspace()
       return clone(searchConfig)
     },
@@ -430,14 +434,14 @@ export function createBrowserApi(): FleetManagerApi {
     run: async request => {
       const selection: Selection = request
       const current = clone(nodes.get(key(selection))!)
-      searchConfig = clone(request.search)
+      searchConfig = clone(withoutNodeTarget(request.search))
       persistWorkspace()
-      const staged = { ...current, search: clone(searchConfig) }
+      const staged = { ...current, search: clone(searchForNode(searchConfig, current)) }
       const common = clone(commons.get(commonKey(selection))!)
       const task: SearchTaskSnapshot = {
         ...request,
         formation_columns: current.formation_columns,
-        search: clone(searchConfig),
+        search: clone(staged.search),
         taskId: 'taskId' in request && typeof request.taskId === 'string' ? request.taskId : uid('task'),
         nodeConfigHash: hash(current),
         stagedNodeConfigHash: hash(staged),
@@ -471,9 +475,13 @@ export function createBrowserApi(): FleetManagerApi {
       if (queue.some(item => sameTarget(item) && ['waiting', 'running'].includes(item.status)))
         throw new Error('该 Node / Version 已在等待或搜索中。')
       for (let index = queue.length - 1; index >= 0; index--) if (sameTarget(queue[index])) queue.splice(index, 1)
+      searchConfig = clone(withoutNodeTarget(request.search))
+      persistWorkspace()
+      const current = nodes.get(key(request))!
       const item: SearchQueueItem = {
         snapshot: {
           ...request,
+          search: clone(searchForNode(request.search, current)),
           taskId: uid('task'),
           nodeConfigHash: '',
           stagedNodeConfigHash: '',
@@ -481,6 +489,7 @@ export function createBrowserApi(): FleetManagerApi {
           optimizerConfigHash: '',
           optimizerConfigVersion: '',
           environment: {
+            boss: clone(current.boss),
             hazards: [],
             supports: [],
             player_state: {
@@ -535,7 +544,7 @@ export function createBrowserApi(): FleetManagerApi {
             const selection = { galaxy, node: node.id, version: node.defaultVersion, common: target.defaultCommon }
             const current = clone(nodes.get(key(selection))!)
             const common = clone(commons.get(commonKey(selection))!)
-            const search = clone(typeof request === 'string' ? searchConfig : request.search)
+            const search = clone(searchForNode(typeof request === 'string' ? searchConfig : request.search, current))
             const task: SearchTaskSnapshot = {
               ...selection,
               formation_columns: current.formation_columns,

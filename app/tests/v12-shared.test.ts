@@ -123,6 +123,12 @@ describe('V1.2 shared contracts', () => {
     expect(effectiveShipCounts(node, common)).toEqual({ Fighter: 1, Corvette: 2, HeavyCruiser: 1 })
     expect(effectiveShipCounts(node, { ...common, ships: undefined })).toEqual({ Fighter: 0, HeavyCruiser: 1 })
     expect(() => commonConfigSchema.parse({ ...common, ships: { Fighter: -1 } })).toThrow()
+    const reduced = nodeConfigSchema.parse({
+      ...node,
+      player_state: { ...node.player_state, ships: { Fighter: -2, Corvette: -1 } },
+    })
+    expect(effectiveShipCounts(reduced, common)).toEqual({ Fighter: 0, Corvette: 1, HeavyCruiser: 0 })
+    expect(effectiveShipCounts(reduced, { ...common, ships: undefined })).toEqual({ Fighter: 0, Corvette: 0 })
   })
   it('classifies raw failures into short Chinese summaries', () => {
     expect(runErrorSummary('BASELINE VALIDATION FAILED')).toBe('基线配置无效')

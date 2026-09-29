@@ -101,18 +101,40 @@ describe('DataRepository', () => {
     })
     expect(await readFile(savedPath, 'utf8')).toBe(before)
   })
+  it('keeps negative node ship deltas in Manager data and stages nonnegative effective counts', async () => {
+    const { repo, root } = await fixture()
+    await repo.importMap()
+    const selection = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
+    const source = {
+      ...node,
+      player_state: { ...node.player_state, ships: { Fighter: -2, Corvette: 1 } },
+      search: { ...node.search, strategy: 'advisor_seeded' as const },
+    }
+    const shared = { ...common, ships: { Fighter: 1, Corvette: 2 } }
+    await repo.save(selection, source)
+    await repo.saveCommon(selection, shared)
+    await repo.stage(selection)
+    const staged = JSON.parse(await readFile(join(root, 'map', 'g6', 'B1.json'), 'utf8'))
+    const stagedCommon = JSON.parse(await readFile(join(root, 'map', 'g6', 'common.json'), 'utf8'))
+    expect(staged.player_state.ships).toEqual({ Fighter: 0, Corvette: 3 })
+    expect(staged.search.strategy).toBe('advisor_seeded')
+    expect(stagedCommon.ships).toBeUndefined()
+    expect((await repo.load(selection)).node.player_state.ships).toEqual({ Fighter: -2, Corvette: 1 })
+  })
   it('loads the committed Search fallback and persists user changes only under map', async () => {
     const { repo, root } = await fixture()
     await repo.importMap()
     const selection = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
     await repo.save(selection, { ...node, hazards: ['new-node-edit'] })
-    const search = { ...node.search, max_wall_seconds: 99 }
+    const search = { ...node.search, max_wall_seconds: 99, target_used_fr: 27.3 }
     expect(await repo.configSources()).toMatchObject({ search: 'default' })
     expect((await repo.loadSearchConfig()).max_wall_seconds).toBe(1)
     const saved = await repo.saveSearchConfig(search)
     expect(saved.max_wall_seconds).toBe(99)
+    expect(saved.target_used_fr).toBeUndefined()
     expect(await repo.configSources()).toMatchObject({ search: 'local' })
     expect(JSON.parse(await readFile(join(root, 'map', 'search_config.json'), 'utf8')).max_wall_seconds).toBe(99)
+    expect(JSON.parse(await readFile(join(root, 'map', 'search_config.json'), 'utf8')).target_used_fr).toBeUndefined()
     expect((await repo.load(selection)).node.hazards).toEqual(['new-node-edit'])
   })
   it('uses the Optimizer fallback until a local override is saved and preserves unknown fields', async () => {

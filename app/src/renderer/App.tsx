@@ -107,6 +107,8 @@ const formatDuration = (seconds: number) =>
     .padStart(2, '0')}`
 const profileName = (profile: SearchConfig['profile']) =>
   profile === 'fast' ? '日常搜索' : profile === 'balanced' ? '扩大探索' : '遍历搜索'
+const strategyName = (strategy: SearchConfig['strategy']) =>
+  strategy === 'advisor_seeded' ? '推荐舰队搜站位' : '常规优化'
 const goalName = (goal: SearchConfig['goal']) => (goal === 'best' ? '寻找最佳方案' : '必须优于当前方案（v3 仅记录）')
 function storedSearchSelection(catalog: Catalog): Selection | null {
   try {
@@ -669,8 +671,8 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         search: searchConfig,
       })
       setSearchTask(taskFromQueue(item))
-      const confirmed = format(item.snapshot.search)
-      setSearchConfig(item.snapshot.search)
+      const confirmed = format(searchConfig)
+      setSearchConfig(searchConfig)
       setSearchConfigSource(confirmed)
       setSavedSearchConfigSource(confirmed)
       setConfigSources(current => ({ ...current, search: 'local' }))
@@ -1199,7 +1201,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 <p>选择节点并调整顺序。启动时自动保存并冻结搜索设置。</p>
                 <p>
                   {searchConfig
-                    ? `${profileName(searchConfig.profile)} · 最长 ${searchConfig.max_wall_seconds} 秒 / 最多 ${searchConfig.max_simulations} 次 · ${searchConfig.workers} 个并行进程${searchDirty ? ' · 待自动保存' : ''}`
+                    ? `${strategyName(searchConfig.strategy)} · ${profileName(searchConfig.profile)} · 最长 ${searchConfig.max_wall_seconds} 秒 / 最多 ${searchConfig.max_simulations} 次 · ${searchConfig.workers} 个并行进程 · 普通战目标按各节点配置${searchDirty ? ' · 待自动保存' : ''}`
                     : '搜索设置加载中'}
                 </p>
                 <div className="rerun-selection-tools">
@@ -1561,7 +1563,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 <FormationEditor config={node} common={common} optimizer={optimizerConfig} onChange={tableChange} />
               ) : null}
               {node && editorTab === 'fleet' ? (
-                <FleetStateEditor config={node} common={common} onChange={tableChange} />
+                <FleetStateEditor key={nodeDomainKey(selection)} config={node} common={common} onChange={tableChange} />
               ) : null}
               {node && optimizerConfig && editorTab === 'loadout' ? (
                 <LoadoutEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
@@ -1742,6 +1744,7 @@ function FleetStateEditor({
   common: CommonConfig | null
   onChange: (value: NodeConfig) => void
 }) {
+  const [shipDrafts, setShipDrafts] = useState<Record<string, string>>({})
   const knownOrder: string[] = SHIP_TYPES.map(ship => ship.id)
   const total = common ? effectiveShipCounts(config, common) : config.player_state.ships
   const hasCommonShips = Boolean(common?.ships)
@@ -1752,14 +1755,27 @@ function FleetStateEditor({
   })
   const updateResources = (value: string) =>
     onChange({ ...config, player_state: { ...config.player_state, fleet_resources: Number(value) } })
-  const updateShip = (ship: string, value: string) =>
+  const updateShip = (ship: string, value: string) => {
+    if (value !== '' && value !== '-' && !/^-?\d+$/.test(value)) return
+    if (value === '' || value === '-') {
+      setShipDrafts(current => ({ ...current, [ship]: value }))
+      return
+    }
+    const count = Number(value)
+    if (!Number.isSafeInteger(count)) return
+    setShipDrafts(current => {
+      const next = { ...current }
+      delete next[ship]
+      return next
+    })
     onChange({
       ...config,
       player_state: {
         ...config.player_state,
-        ships: { ...config.player_state.ships, [ship]: Math.max(0, Math.trunc(Number(value))) },
+        ships: { ...config.player_state.ships, [ship]: count },
       },
     })
+  }
   return (
     <section className="config-section fleet-state-editor">
       <div className="section-heading">
@@ -1767,7 +1783,7 @@ function FleetStateEditor({
           <h3>舰队状态</h3>
           <p>
             {hasCommonShips
-              ? '节点填写额外舰船数量；搜索时与 Galaxy 公共舰船数量相加。'
+              ? '节点填写舰船数量变化，可输入负数；搜索数量为公共与节点之和，最低按 0 计算。'
               : '当前可用 Fleet Resources 与已解锁舰种数量；阵型只能使用数量大于 0 的舰种。'}
           </p>
         </div>
@@ -1787,11 +1803,18 @@ function FleetStateEditor({
           <Label text={shipDisplayName(ship, false)} key={ship}>
             <input
               aria-label={`ships.${ship}`}
-              type="number"
-              min="0"
-              step="1"
-              value={config.player_state.ships[ship] ?? 0}
+              type="text"
+              inputMode="numeric"
+              pattern="-?[0-9]*"
+              value={shipDrafts[ship] ?? config.player_state.ships[ship] ?? 0}
               onChange={event => updateShip(ship, event.target.value)}
+              onBlur={() =>
+                setShipDrafts(current => {
+                  const next = { ...current }
+                  delete next[ship]
+                  return next
+                })
+              }
             />
             {hasCommonShips ? (
               <small>
@@ -1825,7 +1848,12 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
       return hazards === current.hazards && supports === current.supports ? current : { hazards, supports }
     })
   }, [config.hazards, config.supports])
-  const updateBoss = (field: string, value: unknown) => onChange({ ...config, boss: { ...boss, [field]: value } })
+  const updateBoss = (field: string, value: unknown) =>
+    onChange({
+      ...config,
+      boss: { ...boss, [field]: value },
+      search: field === 'alive' && value === true ? { ...config.search, target_used_fr: undefined } : config.search,
+    })
   const updateNodes = (field: 'hazards' | 'supports', value: string) => {
     const nodes = value
       .split(/[\n,，]+/)
@@ -1879,6 +1907,18 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
           />
         </Label>
       </fieldset>
+      <div className="budget-group">
+        <div>
+          <strong>普通战目标</strong>
+          <p>保存当前节点后生效。达到目标 Used FR 后结束探索，并执行最终原版重放；留空则搜索到预算结束。</p>
+        </div>
+        <TargetUsedFrSetting
+          value={config.search.target_used_fr}
+          disabled={alive}
+          onChange={value => onChange({ ...config, search: { ...config.search, target_used_fr: value } })}
+        />
+        {alive ? <p className="setting-help">Boss 使用独立的评分目标，此项不可用。</p> : null}
+      </div>
       <div className="environment-config">
         <Label text="Hazards（每行或逗号分隔）">
           <textarea
@@ -1978,7 +2018,8 @@ function SearchWorkspace({
   }
   const boss = (environment.boss ?? {}) as Record<string, unknown>
   const bossAlive = Boolean(boss.alive)
-  const profile = search ? profileName(search.profile) : '—'
+  const targetUsedFr = snapshot ? snapshot.search.target_used_fr : node?.search.target_used_fr
+  const profile = search ? `${strategyName(search.strategy)} · ${profileName(search.profile)}` : '—'
   return (
     <section className="search-workspace workspace-view">
       <div className="search-context panel" aria-label="搜索目标与战斗环境">
@@ -2022,6 +2063,11 @@ function SearchWorkspace({
         </div>
       </div>
       <section className="panel search-command">
+        {search?.strategy === 'advisor_seeded' ? (
+          <p className="advisor-guidance">
+            在“节点配置”的阵型与装配中填入游戏推荐舰队。起始站位允许战败；本次只调整站位，不改变舰种、数量或 Mods。
+          </p>
+        ) : null}
         <button
           className="primary start-search"
           onClick={onStart}
@@ -2039,6 +2085,7 @@ function SearchWorkspace({
             预算：最长 {search?.max_wall_seconds ?? '—'} 秒 / 最多 {search?.max_simulations ?? '—'} 次模拟
           </span>
           <span>{search?.workers ?? '—'} 个并行进程</span>
+          {!bossAlive && targetUsedFr != null ? <span>目标 Used FR ≤ {targetUsedFr}</span> : null}
           {dirty ? <em>待自动保存</em> : <small>{searchSource === 'local' ? '本机配置' : 'poc 默认'}</small>}
         </p>
         <button className="search-settings-button" onClick={onOpenSettings} disabled={readOnly}>
@@ -2126,11 +2173,15 @@ function SearchWorkspace({
         ) : (
           <div className="result-empty">
             <span aria-hidden="true">◎</span>
-            <strong>还没有搜索结果</strong>
+            <strong>
+              {activeRun?.result?.recommendation_status === 'NO VICTORY FOUND' ? '未找到获胜站位' : '还没有搜索结果'}
+            </strong>
             <p>
               {activeRun?.error
                 ? runErrorSummary(activeRun.error, activeRun.canceled)
-                : '搜索完成后，Best Found 会直接显示在这里。'}
+                : activeRun?.result?.recommendation_status === 'NO VICTORY FOUND'
+                  ? '已搜索的站位中没有可复制的获胜阵型；可调整推荐舰队或增加搜索预算后重试。'
+                  : '搜索完成后，Best Found 会直接显示在这里。'}
             </p>
             {activeRun?.error ? (
               <details>
@@ -3035,6 +3086,39 @@ function OptimizerConfigEditor({
   )
 }
 
+function TargetUsedFrSetting({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: number | null | undefined
+  disabled: boolean
+  onChange: (value: number | undefined) => void
+}) {
+  const [draft, setDraft] = useState(String(value ?? ''))
+  useEffect(() => setDraft(String(value ?? '')), [value])
+  return (
+    <Label text="普通战目标 Used FR（可选）">
+      <input
+        aria-label="普通战目标 Used FR（可选）"
+        type="text"
+        inputMode="decimal"
+        value={draft}
+        disabled={disabled}
+        placeholder="留空则用完整预算"
+        onChange={event => {
+          const next = event.target.value
+          if (!/^\d*(?:\.\d*)?$/.test(next)) return
+          setDraft(next)
+          if (next === '') onChange(undefined)
+          else if (/^\d+(?:\.\d+)?$/.test(next)) onChange(Number(next))
+        }}
+        onBlur={() => setDraft(String(value ?? ''))}
+      />
+    </Label>
+  )
+}
+
 function SearchSettings({ config, onChange }: { config: SearchConfig; onChange: (value: SearchConfig) => void }) {
   const update = <K extends keyof SearchConfig>(field: K, value: SearchConfig[K]) =>
     onChange({ ...config, [field]: value })
@@ -3042,23 +3126,55 @@ function SearchSettings({ config, onChange }: { config: SearchConfig; onChange: 
     <div className="search-settings">
       <div className="settings-group">
         <h3>常用</h3>
+        <Label text="搜索策略">
+          <SmartSelect
+            label="搜索策略"
+            value={config.strategy ?? 'portfolio'}
+            onChange={value =>
+              onChange({
+                ...config,
+                strategy: value === 'portfolio' ? undefined : (value as SearchConfig['strategy']),
+                profile: value === 'advisor_seeded' && config.profile === 'exhaustive' ? 'fast' : config.profile,
+              })
+            }
+            options={[
+              { value: 'portfolio', label: '常规优化' },
+              { value: 'advisor_seeded', label: '推荐舰队搜站位' },
+            ]}
+          />
+        </Label>
+        <p className="setting-help">
+          {config.strategy === 'advisor_seeded'
+            ? '将游戏推荐的舰种、数量和 Mods 填入节点 Baseline；只搜索站位，起始站位可以战败。未找到胜利时不能覆盖配置。'
+            : '搜索舰队组合、Mods 和站位；Baseline 用作当前方案。'}
+        </p>
         <Label text="搜索方式">
           <SmartSelect
             label="搜索方式"
             value={config.profile}
-            onChange={value => update('profile', value as SearchConfig['profile'])}
+            onChange={value =>
+              onChange({
+                ...config,
+                profile: value as SearchConfig['profile'],
+                strategy: value === 'exhaustive' ? undefined : config.strategy,
+              })
+            }
             options={[
               { value: 'fast', label: '日常搜索' },
               { value: 'balanced', label: '扩大探索' },
-              { value: 'exhaustive', label: '遍历搜索' },
+              ...(config.strategy === 'advisor_seeded' ? [] : [{ value: 'exhaustive', label: '遍历搜索' }]),
             ]}
           />
         </Label>
         <p className="setting-help">
           {config.profile === 'fast'
-            ? '全局探索约占四分之一，其余尝试改进已有候选。'
+            ? config.strategy === 'advisor_seeded'
+              ? '在时间或模拟次数预算内搜索推荐舰队的站位。'
+              : '全局探索约占四分之一，其余尝试改进已有候选。'
             : config.profile === 'balanced'
-              ? '全局探索约占四成，会尝试更多不同舰队组合。'
+              ? config.strategy === 'advisor_seeded'
+                ? '为推荐舰队的站位搜索提供更宽的探索预算。'
+                : '全局探索约占四成，会尝试更多不同舰队组合。'
               : '按配置空间逐项搜索；只有全部完成时才可称为穷举结果。'}
         </p>
         <div className="budget-group">
