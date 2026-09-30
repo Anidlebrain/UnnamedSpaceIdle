@@ -315,7 +315,9 @@ export class DataRepository {
       node.galaxy !== Number(selection.galaxy.slice(1)) ||
       node.node.toLowerCase() !== selection.node.replace(/_num$/i, '').toLowerCase()
     )
-      throw new Error(`Node JSON does not match ${selection.galaxy}/${selection.node}.`)
+      throw new Error(
+        `Node JSON does not match ${selection.galaxy}/${selection.node}: got ${node.galaxy}/${node.node}.`,
+      )
   }
 
   async save(selection: Selection, node: NodeConfig): Promise<void> {

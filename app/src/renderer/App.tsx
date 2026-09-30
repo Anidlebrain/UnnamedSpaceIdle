@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   Catalog,
   ConfigSource,
@@ -210,12 +210,17 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const currentNode = currentGalaxy?.nodes.find(n => n.id === selection.node)
   const currentVersion = currentNode?.versions.find(v => v.id === selection.version)
   const currentCommon = currentGalaxy?.commons.find(c => c.id === selection.common)
+  const nodeMatchesSelection = Boolean(
+    node &&
+    node.galaxy === Number(selection.galaxy.slice(1)) &&
+    node.node.toLowerCase() === selection.node.replace(/_num$/i, '').toLowerCase(),
+  )
   const nodeDirty = Boolean(node && nodeSource !== savedNodeSource)
   const commonDirty = Boolean(common && commonSource !== savedCommonSource)
   const optimizerDirty = Boolean(optimizerConfig && optimizerSource !== savedOptimizerSource)
   const searchDirty = Boolean(searchConfig && searchConfigSource !== savedSearchConfigSource)
   const dirty =
-    workspace === 'node'
+    workspace === 'node' || workspace === 'templates'
       ? nodeDirty
       : workspace === 'search'
         ? searchDirty
@@ -383,7 +388,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
   }, [hasAnyDirtyDraft])
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selection.galaxy || !selection.node || !selection.version || !selection.common) {
       setNode(null)
       setCommon(null)
@@ -541,6 +546,15 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const saveNode = () =>
     act('Node Version 已原子保存。', async () => {
       const parsed = JSON.parse(nodeSource)
+      if (
+        !nodeMatchesSelection ||
+        parsed.galaxy !== Number(selection.galaxy.slice(1)) ||
+        typeof parsed.node !== 'string' ||
+        parsed.node.toLowerCase() !== selection.node.replace(/_num$/i, '').toLowerCase()
+      )
+        throw new Error(
+          `当前选择为 ${selection.galaxy.toUpperCase()}/${selection.node}，但编辑中的 Node JSON 标识为 ${String(parsed.galaxy)}/${String(parsed.node)}。请检查高级 JSON 中的 galaxy 和 node，或切换回对应节点后保存。`,
+        )
       await api.save(selection, parsed)
       const source = format(parsed)
       setNode(parsed)
@@ -900,6 +914,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       </main>
     )
   const tableChange = (next: NodeConfig) => {
+    if (!nodeMatchesSelection) return
     const source = format(next)
     setNode(next)
     setNodeSource(source)
@@ -1559,16 +1574,16 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
               />
             ) : null}
             <fieldset className="editor-lock" disabled={nodeReadOnly}>
-              {node && editorTab === 'formation' ? (
+              {nodeMatchesSelection && node && editorTab === 'formation' ? (
                 <FormationEditor config={node} common={common} optimizer={optimizerConfig} onChange={tableChange} />
               ) : null}
-              {node && editorTab === 'fleet' ? (
+              {nodeMatchesSelection && node && editorTab === 'fleet' ? (
                 <FleetStateEditor key={nodeDomainKey(selection)} config={node} common={common} onChange={tableChange} />
               ) : null}
-              {node && optimizerConfig && editorTab === 'loadout' ? (
+              {nodeMatchesSelection && node && optimizerConfig && editorTab === 'loadout' ? (
                 <LoadoutEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
               ) : null}
-              {node && editorTab === 'environment' ? (
+              {nodeMatchesSelection && node && editorTab === 'environment' ? (
                 <EnvironmentEditor
                   key={`${workspace}:${nodeDomainKey(selection)}`}
                   config={node}

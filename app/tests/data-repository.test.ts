@@ -68,6 +68,15 @@ describe('DataRepository', () => {
       ).hazards,
     ).toEqual(['test'])
   })
+  it('reports the actual Node identity and leaves the saved Version untouched on mismatch', async () => {
+    const { repo } = await fixture()
+    await repo.importMap()
+    const selection = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
+    await expect(repo.save(selection, { ...node, node: 'B2' })).rejects.toThrow(
+      'Node JSON does not match g6/B1: got 6/B2.',
+    )
+    expect((await repo.load(selection)).node.node).toBe('B1')
+  })
   it('does not overwrite existing Manager data on reimport', async () => {
     const { repo } = await fixture()
     await repo.importMap()

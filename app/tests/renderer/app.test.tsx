@@ -284,6 +284,29 @@ describe('Renderer preload contract', () => {
     const source = await import('node:fs/promises').then(x => x.readFile('src/renderer/App.tsx', 'utf8'))
     expect(source).not.toMatch(/from ['"]node:(fs|child_process)/)
   })
+  it('keeps an unsaved Node draft when template creation is blocked and reports a mismatched JSON identity', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    await waitFor(() =>
+      expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain('"node": "B1"'),
+    )
+    const draft = { ...node, node: 'B2', hazards: ['unsaved'] }
+    fireEvent.change(screen.getByLabelText('Node JSON 编辑器'), {
+      target: { value: JSON.stringify(draft, null, 2) },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '模板与复制' }))
+    expect(screen.getByRole('status').textContent).toContain('有未保存修改')
+    fireEvent.change(screen.getByRole('textbox', { name: '新 Node ID' }), { target: { value: 'B3' } })
+    fireEvent.click(screen.getByRole('button', { name: '创建 Node' }))
+    expect(screen.getByText('该来源有未保存草稿；请先保存或改用其他来源。')).toBeTruthy()
+    expect(api.createNode).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: /节点配置/ }))
+    expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain('"node": "B2"')
+    fireEvent.click(screen.getByRole('button', { name: '保存节点' }))
+    await screen.findByText(/当前选择为 G6\/B1，但编辑中的 Node JSON 标识为 6\/B2/)
+    expect(api.save).not.toHaveBeenCalled()
+  })
   it('keeps a running task bound to its snapshot while unrelated Node editing remains available', async () => {
     render(<App />)
     await screen.findByText('当前节点')
