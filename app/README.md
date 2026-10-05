@@ -44,12 +44,12 @@
 - 将当前 Node Version 保存为人工模板，并从模板或任意当前 Node Version 创建新 Node；创建时仅重写 Galaxy/Node 身份。
 - 复用现有 `run_optimizer.bat <galaxy> <node> --c` 应用 Best Found；只有 BAT 成功且修改后的 Node JSON 通过结构与身份校验后，才原子覆盖当前 Manager Version。
 - 串行重跑当前 Galaxy 中所选 Node 的默认 Version，按列表顺序执行并使用该 Galaxy 的默认 Common；整批任务持有全局 Optimizer 锁。
-- 批量结果按 `formation_key`（缺失时回退到结构化 Formation/Loadout diff）过滤，仅重点列出需要重新配置的节点；失败节点独立显示且不会复用旧 Result。
+- 批量结果优先比较 Baseline 与 Best Found 的实际 Used FR 各自向下取整后的整数值；整数值不同视为有变化。Used FR 无法比较时，才按 `formation_key`（缺失时回退到结构化 Formation/Loadout diff）判定；失败节点独立显示且不会复用旧 Result。
 - Galaxy 重跑过程只做变化发现，不自动执行 `--c`、不更新 baseline、不创建 Version；完成后可手动批量使用有变化节点的 Best Found，也可从节点详情单独使用。
 - 五个独立工作区：节点配置、公共配置、搜索、Galaxy 重跑、模板与复制。Galaxy / Optimizer 公共不再作为当前 Node Tab。
 - Node 结构化编辑按阵型、舰队状态、装配、环境排列，覆盖 Formation、Fleet Resources、各舰种数量、Loadout、Boss、Hazards 与 Supports；Raw JSON 收入高级区。完整字段审计见 [`docs/node-field-audit.md`](docs/node-field-audit.md)。
 - Node 顶级 `formation_columns` 控制阵型宽度（1–26 列，每列 5 格，A/B/C 分别对应 grid x=0/1/2）；旧 Node 缺省为 2 列。编辑器只显示有效列，缩小列数前必须清空将被隐藏的舰船。Best Found 优先按结果 `base_config.grid_size[0]` 显示列数，旧结果回退任务快照或 2 列；应用到浏览器工作区时会拒绝列数不匹配、重复位置和目标范围外的位置。实际部署组数上限为阵型格子数与 Optimizer 公共组数上限的较小值，旧本机公共配置仍可能限制为 10 组。
-- Galaxy Common 可保存 `ships` 公共舰船数量；启用后 Node `player_state.ships` 表示各舰种额外数量，搜索使用两者相加的有效数量。舰队状态页同时显示公共、节点和搜索数量。未设置 `common.ships` 的旧 Galaxy 仍按节点原有绝对数量运行。
+- Galaxy Common 可保存 `ships` 公共舰船数量；启用后 Node `player_state.ships` 表示各舰种可为负的增量，搜索使用 `max(0, 公共数量 + 节点增量)`。舰队状态页同时显示公共、节点和搜索数量。未设置 `common.ships` 的旧 Galaxy 仍按节点原有绝对数量运行。
 - Search 偏好独立保存在忽略的 `fleetSimulation/map/search_config.json`，缺失时回退提交的 `poc/search_config.json`；点击开始即自动保存、回读确认、写入任务快照并覆盖到 staged Node。
 - Optimizer 公共配置优先读取忽略的 `fleetSimulation/map/optimizer_v2_daily.json`，缺失时回退提交的 `poc` 默认文件；日常编辑不再污染 Git。
 - Loadout 选择由当前 `allowed_mod_slots` 有序数组驱动：`None + 1 Mod` 显示开关，多个 Mod 显示下拉，无合法 Mod 显示不可用；保存仍保持既有字符串 ID 或数字索引表示。

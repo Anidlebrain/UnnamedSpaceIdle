@@ -307,6 +307,56 @@ describe('Renderer preload contract', () => {
     await screen.findByText(/当前选择为 G6\/B1，但编辑中的 Node JSON 标识为 6\/B2/)
     expect(api.save).not.toHaveBeenCalled()
   })
+  it('shows the structured editors after copying a Node and selecting the new Node', async () => {
+    let created = false
+    const originalCatalog = api.catalog.getMockImplementation()!
+    const originalLoad = api.load.getMockImplementation()!
+    const originalCreateNode = api.createNode.getMockImplementation()
+    api.catalog.mockImplementation(async () => ({
+      galaxies: [
+        {
+          id: 'g6',
+          nodes: [
+            { id: 'B1', defaultVersion: 'default', versions: [{ id: 'default', name: '默认', isDefault: true }] },
+            ...(created
+              ? [{ id: 'B16', defaultVersion: 'default', versions: [{ id: 'default', name: '默认', isDefault: true }] }]
+              : []),
+          ],
+          defaultCommon: 'default',
+          commons: [{ id: 'default', name: '默认', isDefault: true }],
+        },
+      ],
+      templates: [],
+    }))
+    api.load.mockImplementation(async (...args: unknown[]) => ({
+      node: { ...node, node: (args[0] as { node: string }).node },
+      common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
+    }))
+    api.createNode.mockImplementation(async () => {
+      created = true
+      return { node: 'B16', version: 'default' }
+    })
+
+    try {
+      render(<App />)
+      await screen.findByLabelText('A1 舰种')
+      fireEvent.click(screen.getByRole('button', { name: '模板与复制' }))
+      fireEvent.change(screen.getByRole('textbox', { name: '新 Node ID' }), { target: { value: 'B16' } })
+      fireEvent.click(screen.getByRole('button', { name: '创建 Node' }))
+      await waitFor(() => expect(screen.getByRole('combobox', { name: '节点' }).getAttribute('value')).toBe('B16'))
+      fireEvent.click(screen.getByRole('button', { name: /节点配置/ }))
+      fireEvent.click(screen.getByRole('combobox', { name: '节点' }))
+      fireEvent.click(await screen.findByRole('option', { name: 'B16' }))
+      await screen.findByLabelText('A1 舰种')
+      expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain('"node": "B16"')
+      fireEvent.click(screen.getByRole('tab', { name: '环境' }))
+      expect(screen.getByText('战斗与环境')).toBeTruthy()
+    } finally {
+      api.catalog.mockImplementation(originalCatalog)
+      api.load.mockImplementation(originalLoad)
+      api.createNode.mockImplementation(originalCreateNode ?? (async () => undefined))
+    }
+  })
   it('keeps a running task bound to its snapshot while unrelated Node editing remains available', async () => {
     render(<App />)
     await screen.findByText('当前节点')

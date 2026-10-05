@@ -6,7 +6,7 @@
 | --- | --- | --- | --- | --- |
 | `baseline.formation` | 有，阵型页 | 搜索基线和最终部署阵型 | 最高频 | 结构化，默认首屏 |
 | `player_state.fleet_resources` | 本轮新增 | 本次可用 FR | 高频 | 结构化，舰队状态页 |
-| `player_state.ships.*` | 本轮新增 | 各舰种可用数量；Resolver 要求非负整数 | 高频 | 结构化，始终列出五种标准舰种，并保留数据中其他合法舰种键 |
+| `player_state.ships.*` | 舰队状态页 | 未设置 `common.ships` 时为 Node 绝对数量；设置后 Manager 可保存负的 Node 增量，按 `max(0, 公共数量 + 节点增量)` 算出有效数量；运行前暂存为 Resolver 接受的非负数量 | 高频 | 结构化，始终列出五种标准舰种，并保留数据中其他合法舰种键 |
 | `baseline.loadouts.*` | 有，装配页 | 基线各舰种 Primary / Secondary / Tertiary Mod | 中频 | 结构化；选项继续由 Optimizer 公共配置驱动 |
 | `baseline.enabled` | 本轮补到搜索页 | 是否启用基线；`beat_baseline` 必须为 true | 中低频 | 结构化，随搜索目标编辑 |
 | `search.profile` | 有 | 搜索档位 | 中低频 | 结构化，搜索页 |
@@ -19,7 +19,7 @@
 | `supports[]` | 有，移至环境页 | 原版 Support Node 引用 | 低频 | 结构化文本列表 |
 | `boss.alive` | 有，移至环境页 | 是否按 Boss 目标搜索 | 条件低频 | 结构化 |
 | `boss.remaining_hp` | 有，移至环境页 | Boss 剩余生命 | 条件低频 | 结构化 |
-| `boss.priority` | 有，移至环境页 | `efficiency` / `kill_cost` 排序 | 条件低频 | 结构化 |
+| `boss.priority` | 有，移至环境页 | `efficiency` / `kill_cost` / `affordable_kill_cost` 排序 | 条件低频 | 结构化 |
 | `galaxy` / `node` | 上下文栏展示 | 配置身份；保存和 Result 归属校验 | 系统字段 | 不提供自由编辑，创建/复制时由系统重写 |
 | `baseline.observed` | 仅一份真实 B35 配置存在 | 已观察基线证据/诊断元数据；Resolver 不用于候选配置 | 诊断 | 只保留 Raw JSON |
 | `player_state.fleet_resources_retention` | 真实 Manager Node 中未出现；Resolver 有兼容默认值 0.5 | 战斗后 FR 保留比例兼容输入 | 极少使用 | 只保留 Raw JSON，不为缺省兼容字段增加常规 UI |

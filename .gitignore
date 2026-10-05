@@ -1,7 +1,12 @@
 config/config.local.json
 
-# Codex/local design-tool resources; never part of the project submission.
-.agents/
+# Codex/local design-tool resources; keep only the shared diagnostic skill.
+.agents/*
+!.agents/skills/
+.agents/skills/*
+!.agents/skills/fleet-result-diff/
+.agents/skills/fleet-result-diff/*
+!.agents/skills/fleet-result-diff/SKILL.md
 app/.hallmark/
 
 work/*

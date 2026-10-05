@@ -63,6 +63,9 @@ import {
 const emptySelection: Selection = { galaxy: '', node: '', version: '', common: '' }
 const emptyCatalog: Catalog = { galaxies: [], templates: [] }
 const format = formatJson
+const matchesNodeSelection = (node: NodeConfig, selection: Selection) =>
+  node.galaxy === Number(selection.galaxy.slice(1)) &&
+  node.node.toLowerCase() === selection.node.replace(/_num$/i, '').toLowerCase()
 type EditorTab = 'formation' | 'fleet' | 'loadout' | 'environment'
 type CommonTab = 'galaxy' | 'optimizer'
 const LAST_SEARCH_KEY = 'fleet-manager-last-search-v1'
@@ -210,10 +213,11 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const currentNode = currentGalaxy?.nodes.find(n => n.id === selection.node)
   const currentVersion = currentNode?.versions.find(v => v.id === selection.version)
   const currentCommon = currentGalaxy?.commons.find(c => c.id === selection.common)
+  const currentNodeDraft = (workspace === 'search' ? searchDrafts.current : nodeDrafts.current).get(
+    nodeDomainKey(selection),
+  )
   const nodeMatchesSelection = Boolean(
-    node &&
-    node.galaxy === Number(selection.galaxy.slice(1)) &&
-    node.node.toLowerCase() === selection.node.replace(/_num$/i, '').toLowerCase(),
+    node && currentNodeDraft?.value === node && matchesNodeSelection(node, selection),
   )
   const nodeDirty = Boolean(node && nodeSource !== savedNodeSource)
   const commonDirty = Boolean(common && commonSource !== savedCommonSource)
@@ -398,18 +402,19 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     const commonKey = commonDomainKey(selection)
     const nodeCache = workspace === 'search' ? searchDrafts.current : nodeDrafts.current
     const cachedNode = nodeCache.get(nodeKey)
+    const usableNode = cachedNode && matchesNodeSelection(cachedNode.value, selection) ? cachedNode : undefined
     const cachedCommon = commonDrafts.current.get(commonKey)
-    if (cachedNode) {
-      setNode(cachedNode.value)
-      setNodeSource(cachedNode.source)
-      setSavedNodeSource(cachedNode.savedSource)
+    if (usableNode) {
+      setNode(usableNode.value)
+      setNodeSource(usableNode.source)
+      setSavedNodeSource(usableNode.savedSource)
     } else setNode(null)
     if (cachedCommon) {
       setCommon(cachedCommon.value)
       setCommonSource(cachedCommon.source)
       setSavedCommonSource(cachedCommon.savedSource)
     } else setCommon(null)
-    if (cachedNode && (workspace !== 'common' || cachedCommon)) return
+    if (usableNode && (workspace !== 'common' || cachedCommon)) return
     let active = true
     void api
       .load(selection)
@@ -417,7 +422,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         if (!active) return
         const nextNode = format(data.node),
           nextCommon = format(data.common)
-        if (!cachedNode) {
+        if (!usableNode) {
           const draft = { value: data.node, source: nextNode, savedSource: nextNode }
           nodeCache.set(nodeKey, draft)
           setNode(data.node)
@@ -473,7 +478,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
   const requestConfirm = (title: string, body: string, confirmLabel: string, onConfirm: () => void, danger = false) =>
     setDialog({ kind: 'confirm', title, body, confirmLabel, onConfirm, danger })
   const cacheCurrentDraft = () => {
-    if (node) {
+    if (nodeMatchesSelection && node) {
       const cache = workspace === 'search' ? searchDrafts.current : nodeDrafts.current
       cache.set(nodeDomainKey(selection), { value: node, source: nodeSource, savedSource: savedNodeSource })
     }

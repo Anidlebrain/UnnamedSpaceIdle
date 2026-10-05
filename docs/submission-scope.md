@@ -1,6 +1,6 @@
 # 提交范围说明
 
-本项目当前提交的是两块可维护功能的源代码、输入数据和验证依据：
+本项目当前提交的是三块可维护功能的源代码、输入数据和验证依据：
 
 1. 翻译模块：translation/、scripts/、config/config.example.json、status/pck_analysis.json、.codex/agents/translator.toml 和 translation/docs/。
    - translation/translations/inventory.csv 是翻译清单基线。
@@ -16,7 +16,7 @@
    - APP V1 暂时封板：提供 Electron 主进程、context-isolated preload bridge、React 配置界面、正式配置导入与版本化保存、Zod 校验、Optimizer 进程管理、实时输出、结果差异展示和 Galaxy 全局默认配置重跑。
    - Phase 2 增加 Node Version/Common 的生命周期管理、默认项切换、模板管理、从模板或版本创建 Node，以及经 `--c` 校验后将 Best Found 安全写回当前 Manager Version 的事务流程。
    - 当前 V1 还包含标准浏览器运行时、舰种选择器、中文工作台样式和对应概念图；网页运行时不执行真实本地 Optimizer。
-   - Optimizer 公共配置继续以 `fleetSimulation/poc/optimizer_v2_daily.json` 为唯一运行来源；Manager 只对该文件做结构校验、保留未知字段的原子编辑，不复制为第二份配置。
+   - Optimizer 公共配置优先使用已忽略的 `fleetSimulation/map/optimizer_v2_daily.json`，不存在时回退已提交的 `fleetSimulation/poc/optimizer_v2_daily.json`；Manager 校验配置、保留未知字段，并将日常编辑原子写入 `map` 覆盖文件，不在 `app/data/` 另建运行配置。
    - `app/docs/search-config-source-of-truth.md` 记录 Node `search`、daily JSON、Galaxy Common 与 Runner/Optimizer 的读取、覆盖和最终生效位置。
    - 当前搜索任务通过不可变 `SearchTaskSnapshot` 绑定实际选择与配置哈希，并由任务锁保护运行期间的编辑与结果写回；Node JSON 字段到 UI 的映射见 `app/docs/node-field-audit.md`。
    - 应用只负责管理和调用已有 fleetSimulation Optimizer；不会重新实现战斗/搜索算法，也不会自动安装 PCK 或修改 Steam 游戏目录。

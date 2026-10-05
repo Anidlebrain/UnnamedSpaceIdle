@@ -28,10 +28,10 @@
 | 部署模式 mode | daily JSON 当前 `realistic` | Node 没有对应覆盖字段；`practice_unlimited` 仅兼容归一化为 `practice` | 候选部署语义（真实 Overdeploy / practice），与 simulation_clock 无关 |
 | 舰种、组数、Mod 搜索空间 | daily JSON | Node 不覆盖 | `ship_types`、`group_ranges`、`max_total_groups`、`max_groups_per_ship`、展开后的 `allowed_loadouts` |
 | Galaxy 倍率 | `common.json` 必填；历史路径才回退 player_state 旧字段 | `effective = permanent + temporary` | Resolver 写入 `player_damage_scale` / `player_health_scale` |
-| Boss priority / remaining HP | Node Boss | Boss 存活时必须为 `efficiency` / `kill_cost` 且 `0 < remaining_hp <= 原版最大生命` | Boss 排序与连续击杀精炼 |
+| Boss priority / remaining HP | Node Boss | Boss 存活时 priority 必须为 `efficiency` / `kill_cost` / `affordable_kill_cost`，且 `0 < remaining_hp <= 原版最大生命` | Boss 排序与连续击杀精炼；`affordable_kill_cost` 按当前资源验证完整击杀 |
 | Hazards / Supports | Node 数组，默认空 | 不与 Common / daily 合并；Resolver 按原版 Fleet 数据校验并转内部 ID | Battle Config 的 `hazards` / `supports` |
 
-当前仓库 daily 文件的显式默认搜索空间是：`Fighter / Corvette / Frigate / Cruiser / HeavyCruiser`，每种 `group_ranges=0..10`，`max_total_groups=10`，每种 `max_groups_per_ship=10`。`allowed_mod_slots` 的数组顺序同时定义可选真实 Mod ID 与旧数字 Loadout 的索引映射；`null` 表示 None。Primary 与 Secondary 做笛卡尔积，Standard Galaxy 的 Tertiary 由原版 Fleet 按 Galaxy scope 自动附加。
+当前仓库 daily 文件的显式默认搜索空间是：`Fighter / Corvette / Frigate / Cruiser / HeavyCruiser`，每种 `group_ranges=0..15`，`max_total_groups=15`，每种 `max_groups_per_ship=15`。`allowed_mod_slots` 的数组顺序同时定义可选真实 Mod ID 与旧数字 Loadout 的索引映射；`null` 表示 None。Primary 与 Secondary 做笛卡尔积，Standard Galaxy 的 Tertiary 由原版 Fleet 按 Galaxy scope 自动附加。
 
 ## daily JSON 其他预算字段
 
