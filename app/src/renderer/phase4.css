@@ -722,6 +722,7 @@ th {
 .common-form fieldset {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
   gap: var(--space-md);
   margin: 0;
   padding: var(--space-md);
@@ -1038,9 +1039,66 @@ th {
 
 .search-command {
   display: grid;
-  grid-template-columns: minmax(10rem, auto) minmax(0, 1fr) auto;
+  grid-template-columns: minmax(10rem, auto) minmax(0, 1fr);
   gap: var(--space-md);
   align-items: center;
+}
+
+.inline-search-settings {
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+
+.search-settings.is-inline {
+  margin: 0;
+}
+
+.search-settings.is-inline > .settings-group {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1.4fr) minmax(8rem, 1fr) minmax(16rem, 2fr) minmax(6rem, .7fr);
+  gap: var(--space-sm);
+  align-items: start;
+}
+
+.search-settings.is-inline > .settings-group > h3,
+.search-settings.is-inline > .settings-group > .setting-help,
+.search-settings.is-inline > .settings-group > .budget-group > div:first-child {
+  display: none;
+}
+
+.search-settings.is-inline > .settings-group > .budget-group {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.hazards-field {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.environment-config > label {
+  align-self: end;
+}
+
+.common-form .permanent-increment {
+  grid-column: 1 / -1;
+  order: 1;
+  justify-self: start;
+  min-height: 2rem;
+  padding: .3rem .7rem;
+}
+
+@media (max-width: 75rem) {
+  .search-settings.is-inline > .settings-group {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 39.99rem) {
+  .search-settings.is-inline > .settings-group {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .search-command .start-search,

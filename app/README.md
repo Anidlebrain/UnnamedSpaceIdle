@@ -4,6 +4,9 @@
 
 ## V1.2.1 可用性调整
 
+- 节点环境页可勾选“使用当前节点 Hazards”，自动加入当前节点名；取消时只移除当前节点，其他 Hazards 保留，手动输入也会同步勾选状态。
+- Galaxy 公共的永久加成提供“伤害与生命 +0.25”按钮，每次同时增加两个倍率，保存公共配置后生效。
+- 模板复制创建 Node / Galaxy 后，节点配置页自动选择新增节点；保存节点后，搜索页自动选择保存的 Galaxy / Node / Version / Common，并使用刚保存的节点内容。其他节点的未保存草稿继续保留。
 - 搜索设置支持 `portfolio` 与 `advisor_seeded`。后者使用节点 Baseline 中的游戏推荐舰种、数量和 Mods，仅搜索站位，允许初始战败；与 `exhaustive` 不组合。搜索队列和 Galaxy 重跑仍通过原 BAT 执行，未找到胜利时不提供可应用结果。
 - 普通战目标 `target_used_fr` 由节点配置的“环境”页编辑，随当前 Node Version 保存；切换节点各自保留，Galaxy 重跑逐节点使用。时间/模拟次数仍由共享 Search 配置提供。达到实际胜利的 Used FR 目标后仍执行最终原版重放；留空则使用完整预算，Boss 不使用此字段。
 - Node 舰队状态可输入负数来抵消 Galaxy 公共舰船数量；实际搜索数量按 `max(0, 公共 + 节点)` 计算。app 暂存运行输入时写入有效非负数量，Best Found 回写时保留 Node 中的增量。
@@ -19,7 +22,7 @@
 - 节点阵型包含尚无 Loadout 的舰种时，读取配置会补出无 Primary/Secondary Mod 的装配；数字格式使用 `0`，英文格式使用 `null`。运行时的暂存配置因此可直接搜索，原 Manager Version 在用户保存或应用 Best Found 时写入补齐结果；应用 Best Found 时保留结果未使用舰种的原装配。
 - Best Found 按纵向 1–5、横向从最末列到 A 显示 Formation，右侧按舰种显示 Loadout；运行状态缩成单条信息区，日志仍默认折叠。
 - Boss 优先级支持效率、每战 FR 限额下最低击杀总成本，以及当前资源内优先最低成本击杀、否则最大累计伤害。Best Found 显示当前 FR、可负担击杀状态、累计伤害/消耗、剩余 HP/FR，并可展开每场阵型与装配。单场指标明确标为“首场”；“使用最优配置”应用第 1 场，后续按方案换阵。附加完整击杀候选在预算内完成验证时显示，旧结果缺少新字段时仍按原样展示。
-- 搜索页只显示配置摘要。设置 Dialog 的常用项是搜索方式和共同约束的时间/模拟次数预算；并行进程、模拟时钟、优化目标进入高级设置。当前 v3 记录 `goal` 但不据此改变 Best Found 推荐，界面明确说明这一点。
+- 搜索页直接编辑搜索策略、搜索方式、最长时间、最多模拟次数和并行进程，加入队列时自动保存；模拟时钟和优化目标在页面内的高级设置中。Galaxy 重跑使用同一份共享 Search 配置，可先在搜索页调整。当前 v3 记录 `goal` 但不据此改变 Best Found 推荐，界面明确说明这一点。
 
 ## V1.2 搜索任务
 
@@ -53,8 +56,8 @@
 - Search 偏好独立保存在忽略的 `fleetSimulation/map/search_config.json`，缺失时回退提交的 `poc/search_config.json`；点击开始即自动保存、回读确认、写入任务快照并覆盖到 staged Node。
 - Optimizer 公共配置优先读取忽略的 `fleetSimulation/map/optimizer_v2_daily.json`，缺失时回退提交的 `poc` 默认文件；日常编辑不再污染 Git。
 - Loadout 选择由当前 `allowed_mod_slots` 有序数组驱动：`None + 1 Mod` 显示开关，多个 Mod 显示下拉，无合法 Mod 显示不可用；保存仍保持既有字符串 ID 或数字索引表示。
-- 搜索页以 Best Found 为核心；低频参数只显示紧凑摘要并在设置 Dialog 中编辑，结果直接给出 Outcome / Committed FR / Used FR、按节点宽度展示的完整地图式阵型和按舰种汇总的 Loadout。
-- 节点、搜索、模板、公共配置分别持有独立选择上下文；重启后恢复上次活动页面和各页面选择。
+- 搜索页直接提供常用搜索参数，并以内嵌高级区编辑低频参数；结果给出 Outcome / Committed FR / Used FR、按节点宽度展示的完整地图式阵型和按舰种汇总的 Loadout。
+- 节点、搜索、模板、公共配置分别持有选择上下文；复制创建时同步节点页，保存节点时同步搜索页，重启后恢复上次活动页面和各页面选择。
 - Node、Search、Galaxy Common 与 Optimizer Public 草稿按数据域独立保留。搜索运行期间只锁定任务 Node+Version、任务 Common 和 Optimizer Public，其余应用操作保持可用。
 - Renderer 同时支持 Electron preload 和标准浏览器运行时。浏览器工作区使用 `localStorage` 持久化配置，可用于网页部署与 UI 工作流；真实本地 Optimizer 执行仍由桌面 Main 进程负责，后续网页部署需要受控的本地服务或服务端执行器。
 

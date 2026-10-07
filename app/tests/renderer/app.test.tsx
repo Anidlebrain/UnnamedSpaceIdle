@@ -307,7 +307,7 @@ describe('Renderer preload contract', () => {
     await screen.findByText(/当前选择为 G6\/B1，但编辑中的 Node JSON 标识为 6\/B2/)
     expect(api.save).not.toHaveBeenCalled()
   })
-  it('shows the structured editors after copying a Node and selecting the new Node', async () => {
+  it('selects a copied Node in the editor and syncs the saved Node to Search with fresh data', async () => {
     let created = false
     const originalCatalog = api.catalog.getMockImplementation()!
     const originalLoad = api.load.getMockImplementation()!
@@ -340,17 +340,26 @@ describe('Renderer preload contract', () => {
     try {
       render(<App />)
       await screen.findByLabelText('A1 舰种')
+      fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+      await screen.findByText('搜索目标')
       fireEvent.click(screen.getByRole('button', { name: '模板与复制' }))
       fireEvent.change(screen.getByRole('textbox', { name: '新 Node ID' }), { target: { value: 'B16' } })
       fireEvent.click(screen.getByRole('button', { name: '创建 Node' }))
       await waitFor(() => expect(screen.getByRole('combobox', { name: '节点' }).getAttribute('value')).toBe('B16'))
       fireEvent.click(screen.getByRole('button', { name: /节点配置/ }))
-      fireEvent.click(screen.getByRole('combobox', { name: '节点' }))
-      fireEvent.click(await screen.findByRole('option', { name: 'B16' }))
+      expect(screen.getByRole('combobox', { name: '节点' }).getAttribute('value')).toBe('B16')
       await screen.findByLabelText('A1 舰种')
       expect((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).toContain('"node": "B16"')
       fireEvent.click(screen.getByRole('tab', { name: '环境' }))
       expect(screen.getByText('战斗与环境')).toBeTruthy()
+      fireEvent.click(screen.getByRole('checkbox', { name: '使用当前节点 Hazards（B16）' }))
+      fireEvent.click(screen.getByRole('button', { name: '保存节点' }))
+      await screen.findByText('Node Version 已原子保存。')
+      expect(JSON.parse(localStorage.getItem('fleet-manager-location-v1')!).contexts.search.node).toBe('B16')
+      fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+      expect(screen.getByRole('combobox', { name: '节点' }).getAttribute('value')).toBe('B16')
+      expect(within(screen.getByLabelText('搜索目标与战斗环境')).getAllByText('B16')).toHaveLength(2)
+      expect(JSON.parse(localStorage.getItem('fleet-manager-last-search-v1')!).node).toBe('B16')
     } finally {
       api.catalog.mockImplementation(originalCatalog)
       api.load.mockImplementation(originalLoad)
@@ -649,10 +658,53 @@ describe('Renderer preload contract', () => {
     expect(raw).toContain('"F3"')
   })
 
+  it('toggles the current Hazard without losing other hazards and follows manual edits', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '环境' }))
+    const checkbox = screen.getByRole('checkbox', { name: '使用当前节点 Hazards（B1）' }) as HTMLInputElement
+    const hazards = screen.getByLabelText('Hazards') as HTMLTextAreaElement
+    fireEvent.change(hazards, { target: { value: 'B10, b11' } })
+    fireEvent.click(checkbox)
+    expect(JSON.parse((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).hazards).toEqual([
+      'B10',
+      'B11',
+      'B1',
+    ])
+    fireEvent.click(checkbox)
+    expect(hazards.value).toBe('B10\nB11')
+    fireEvent.change(hazards, { target: { value: 'b1, B10' } })
+    expect(checkbox.checked).toBe(true)
+    fireEvent.click(checkbox)
+    expect(hazards.value).toBe('B10')
+  })
+
+  it('increments both permanent scales by 0.25 and saves the Common only', async () => {
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '公共配置' }))
+    fireEvent.click(await screen.findByRole('button', { name: '伤害与生命 +0.25' }))
+    const config = JSON.parse((screen.getByLabelText('Common JSON 编辑器') as HTMLTextAreaElement).value)
+    expect(config.permanent).toEqual({ damage_scale: 1.25, health_scale: 1.25 })
+    expect(config.temporary).toEqual({ damage_scale: 0, health_scale: 0 })
+    fireEvent.click(screen.getByRole('button', { name: '伤害与生命 +0.25' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存 Galaxy 公共' }))
+    await waitFor(() =>
+      expect(api.saveCommon).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ permanent: { damage_scale: 1.5, health_scale: 1.5 } }),
+      ),
+    )
+    expect(api.save).not.toHaveBeenCalled()
+  })
+
   it('saves a decimal Used FR target on the Node instead of shared Search settings', async () => {
     const user = userEvent.setup()
     render(<App />)
     await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    await screen.findByText('搜索目标')
+    fireEvent.click(screen.getByRole('button', { name: '节点配置' }))
     fireEvent.click(screen.getByRole('tab', { name: '环境' }))
     const target = screen.getByRole('textbox', { name: '普通战目标 Used FR（可选）' }) as HTMLInputElement
     await user.type(target, '27.3')
@@ -670,8 +722,13 @@ describe('Renderer preload contract', () => {
       ),
     )
     expect(api.saveSearchConfig).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '搜索' }))
+    expect(screen.getByText('目标 Used FR ≤ 27.3')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '节点配置' }))
     fireEvent.click(screen.getByText('Boss 存活'))
-    expect(target.disabled).toBe(true)
+    expect((screen.getByRole('textbox', { name: '普通战目标 Used FR（可选）' }) as HTMLInputElement).disabled).toBe(
+      true,
+    )
     expect(
       JSON.parse((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value).search.target_used_fr,
     ).toBeUndefined()
@@ -920,10 +977,9 @@ describe('Renderer preload contract', () => {
     render(<App />)
     await screen.findByText('当前节点')
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    fireEvent.click(screen.getByRole('button', { name: '搜索设置' }))
+    expect(screen.queryByRole('button', { name: '搜索设置' })).toBeNull()
     fireEvent.change(screen.getByLabelText('最多模拟（次）'), { target: { value: '200' } })
     fireEvent.change(screen.getByLabelText('最长时间（秒）'), { target: { value: '200' } })
-    fireEvent.click(screen.getByRole('button', { name: '完成' }))
     expect(screen.queryByRole('button', { name: '保存搜索参数' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
     await waitFor(() =>
@@ -1165,7 +1221,6 @@ describe('Renderer preload contract', () => {
     render(<App />)
     await screen.findByText('当前节点')
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    fireEvent.click(screen.getByRole('button', { name: '搜索设置' }))
     fireEvent.click(screen.getByRole('combobox', { name: '搜索方式' }))
     fireEvent.click(screen.getByRole('option', { name: '扩大探索' }))
     fireEvent.click(screen.getByText('高级设置'))
@@ -1174,7 +1229,6 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('option', { name: '实时同步（对照 / 调试）' }))
     fireEvent.click(screen.getByRole('combobox', { name: '优化目标' }))
     fireEvent.click(screen.getByRole('option', { name: '寻找最佳方案' }))
-    fireEvent.click(screen.getByRole('button', { name: '完成' }))
     fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
     await waitFor(() =>
       expect(api.enqueueSearch).toHaveBeenCalledWith(
@@ -1200,10 +1254,8 @@ describe('Renderer preload contract', () => {
     render(<App />)
     await screen.findByText('当前节点')
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
-    fireEvent.click(screen.getByRole('button', { name: '搜索设置' }))
     fireEvent.click(screen.getByRole('combobox', { name: '搜索策略' }))
     fireEvent.click(screen.getByRole('option', { name: '推荐舰队搜站位' }))
-    fireEvent.click(screen.getByRole('button', { name: '完成' }))
     expect(screen.getByText(/起始站位允许战败/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
     await waitFor(() =>

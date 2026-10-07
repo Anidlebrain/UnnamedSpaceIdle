@@ -46,7 +46,7 @@
 
 ## Manager UI 与本机配置决策
 
-- “搜索”页编辑独立 Search Draft；默认只显示紧凑摘要。Dialog 常用项是搜索方式与共同生效的时间/模拟次数预算；并行进程、模拟时钟和当前 v3 不改变推荐的 goal 放高级设置。点击加入队列时自动保存。
+- “搜索”页直接编辑独立 Search Draft：搜索策略、搜索方式、时间/模拟次数预算与并行进程始终可见，模拟时钟和当前 v3 不改变推荐的 goal 放页面内的高级设置。点击加入队列时自动保存；Galaxy 重跑使用同一份草稿，可先在搜索页调整。
 - “节点配置 → 环境”编辑普通战目标 Used FR；此值随当前 Node Version 保存。Galaxy 重跑使用每个节点各自的目标，Boss 忽略该字段。共享 Search 文件不保存目标。
 - Search 使用 `map/search_config.json → poc/search_config.json`；Optimizer 公共使用 `map/optimizer_v2_daily.json → poc/optimizer_v2_daily.json`。UI 显示当前来源。
 - `poc` 只保存可提交默认值，`map` 是已忽略的本机实际配置，日常修改不会污染 Git。

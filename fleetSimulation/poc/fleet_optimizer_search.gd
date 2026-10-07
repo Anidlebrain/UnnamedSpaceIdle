@@ -62,6 +62,9 @@ var _campaigns := {}
 var _boss_parent_cursor := 0
 var _campaign_search_ms := 0.0
 var _campaign_expansions := 0
+var _worker_ipc_failed := false
+var _worker_interrupted_candidates := 0
+var _worker_ipc := preload("res://fleet_worker_ipc.gd").new()
 
 
 func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> Dictionary:
@@ -238,6 +241,7 @@ func optimize_v2(probe: Node, base_config: Dictionary, settings: Dictionary) -> 
 		"deployment_quotes_derived_from_native_costs": _derived_quotes,
 		"workers_requested": int(_settings.workers), "workers_effective": maxi(1, _workers.size()),
 		"worker_startup": _worker_startup, "worker_warning": _worker_warning,
+		"worker_interrupted_candidates": _worker_interrupted_candidates,
 		"pruning_stats": _pruning_stats, "search_audit": _search_audit,
 		"coverage": {"composition_count": _compositions.size(), "compositions_quoted": _quoted_compositions.size(),
 			"compositions_simulated": _evaluated_compositions.size(),
@@ -459,6 +463,12 @@ func _open_candidate_trace() -> void:
 
 
 func _store_worker_result(fleet: Dictionary, formation: Array, candidate_key: String, result: Dictionary) -> Dictionary:
+	if result.get("search_interrupted", false):
+		# An unfinished job has no battle score. Keep completed candidates eligible
+		# for the mandatory replay; never cache an interruption as a battle result.
+		_worker_interrupted_candidates += 1
+		_candidate_sources.erase(candidate_key)
+		return {}
 	var summary := super._store_worker_result(fleet, formation, candidate_key, result)
 	if _settings.get("search", {}).get("strategy", "portfolio") == "advisor_seeded" and str(summary.get("error", "")) == "":
 		_advisor_elites.append(summary)
@@ -1104,6 +1114,8 @@ func _schedule_before(a: Dictionary, b: Dictionary) -> bool:
 
 
 func _can_simulate() -> bool:
+	if _worker_ipc_failed:
+		return false
 	if _simulations >= int(_settings.max_simulations):
 		return false
 	var replay_battles := maxi(1, int(_campaign_best.get("campaign_battles", 1)))
@@ -1111,6 +1123,8 @@ func _can_simulate() -> bool:
 
 
 func _can_expand() -> bool:
+	if _worker_ipc_failed:
+		return false
 	if _target_reached():
 		_stop_reason = "TARGET USED FR REACHED"
 		return false
@@ -1352,6 +1366,9 @@ func _run_campaign_wave(jobs: Array) -> Array:
 		var results := await _run_worker_wave(configs)
 		for index in range(results.size()):
 			var raw: Dictionary = results[index]
+			if raw.get("search_interrupted", false):
+				_worker_interrupted_candidates += 1
+				continue
 			var job: Dictionary = pending[index]
 			_simulations += 1
 			_pruning_stats.simulated += 1
@@ -1704,7 +1721,10 @@ func _run_worker_wave(configs: Array) -> Array:
 			_workers.clear()
 		else:
 			for worker in _workers:
-				var metadata := _read_worker_json(str(worker.dir).path_join("ready.json"))
+				var message := await _worker_ipc.read_message(str(worker.dir).path_join("ready.json"), get_tree())
+				if not message.ok:
+					return _fail_worker_wave(configs, str(message.error))
+				var metadata: Dictionary = message.value
 				worker["user_data_dir"] = metadata.get("user_data_dir", "")
 				_worker_startup.append(metadata)
 	if _workers.is_empty():
@@ -1716,11 +1736,17 @@ func _run_worker_wave(configs: Array) -> Array:
 		return results
 	var request_id := str(Time.get_ticks_usec())
 	var started := Time.get_ticks_usec()
+	# Never let a stalled worker consume the final native replay reserve.
+	var wait_budget := _worker_wait_budget_ms()
+	var response_deadline := Time.get_ticks_msec() + wait_budget
 	for index in range(configs.size()):
-		_write_worker_json(str(_workers[index].dir).path_join("request.json"), {
-			"id": request_id, "items": [{"index": index, "config": configs[index]}]})
+		var published := await _worker_ipc.write_message(str(_workers[index].dir).path_join("request.json"), {
+			"id": request_id, "items": [{"index": index, "config": configs[index]}]}, get_tree(), mini(2000, maxi(0, response_deadline - Time.get_ticks_msec())))
+		if not published.ok:
+			return _fail_worker_wave(configs, str(published.error))
 	_ipc_ms += (Time.get_ticks_usec() - started) / 1000.0
-	var response_deadline := Time.get_ticks_msec() + 140000
+	var failure := ""
+	var budget_interrupted := false
 	for index in range(configs.size()):
 		var worker: Dictionary = _workers[index]
 		var path := str(worker.dir).path_join("response_%s.json" % request_id)
@@ -1729,12 +1755,48 @@ func _run_worker_wave(configs: Array) -> Array:
 			await get_tree().process_frame
 		if FileAccess.file_exists(path):
 			started = Time.get_ticks_usec()
-			var response := _read_worker_json(path)
+			var message := await _worker_ipc.read_message(path, get_tree(), mini(2000, maxi(0, response_deadline - Time.get_ticks_msec())))
 			DirAccess.remove_absolute(path)
 			_ipc_ms += (Time.get_ticks_usec() - started) / 1000.0
-			results.append(response.results[0].result)
+			if message.ok and _valid_worker_response(message.value, index):
+				results.append(message.value.results[0].result)
+			else:
+				failure = str(message.get("error", "Invalid worker response: %s" % path))
+				results.append({"search_interrupted": true, "error": failure, "battle_config": configs[index]})
 		else:
-			results.append({"error": "Worker failed or timed out", "battle_config": configs[index]})
+			budget_interrupted = budget_interrupted or (wait_budget < 140000 and Time.get_ticks_msec() >= response_deadline and OS.is_process_running(int(worker.pid)))
+			failure = "Worker %s exited or exceeded response budget; log: %s\n  Worker log: %s" % [worker.id, worker.log, _worker_log_tail(worker.log).replace("\n", "\n  Worker log: ")]
+			results.append({"search_interrupted": true, "error": failure, "battle_config": configs[index]})
+	if failure != "":
+		_fail_worker_wave([], failure, budget_interrupted)
+	return results
+
+
+func _worker_wait_budget_ms() -> int:
+	var replay_battles := maxi(1, int(_campaign_best.get("campaign_battles", 1)))
+	var reserve := maxf(5.0, _max_battle_seconds * (replay_battles + 1.5))
+	return int(minf(140.0, maxf(0.0, float(_settings.max_wall_seconds) - _elapsed_seconds() - reserve)) * 1000.0)
+
+
+func _valid_worker_response(response: Dictionary, index: int) -> bool:
+	var items = response.get("results")
+	return items is Array and items.size() == 1 and items[0] is Dictionary and items[0].get("index") == index and items[0].get("result") is Dictionary
+
+
+func _fail_worker_wave(configs: Array, message: String, budget_interrupted: bool = false) -> Array:
+	_worker_ipc_failed = true
+	_stop_reason = "TIME BUDGET REACHED" if budget_interrupted else "WORKER IPC FAILED"
+	_budget_exhausted = _budget_exhausted or budget_interrupted
+	_worker_warning = message
+	print("WARNING: ", message, "; stopping exploration and replaying completed candidates")
+	# Do not submit more requests to a failed or still-busy worker.
+	for worker in _workers:
+		if OS.is_process_running(int(worker.pid)):
+			OS.kill(int(worker.pid))
+	_workers.clear()
+	var results: Array = []
+	for config in configs:
+		results.append({"search_interrupted": true, "error": message, "battle_config": config})
 	return results
 
 

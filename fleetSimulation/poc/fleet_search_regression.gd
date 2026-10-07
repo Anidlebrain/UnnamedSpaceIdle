@@ -3,6 +3,25 @@ extends Node
 var checks: Array = []
 
 
+class FlakyIpc extends "res://fleet_worker_ipc.gd":
+	var read_failures := 0
+	var publish_failures := 0
+	var reads := 0
+	var publishes := 0
+
+	func _open_read(path: String) -> FileAccess:
+		reads += 1
+		if reads <= read_failures:
+			return null
+		return super._open_read(path)
+
+	func _publish(source: String, destination: String) -> int:
+		publishes += 1
+		if publishes <= publish_failures:
+			return ERR_FILE_CANT_WRITE
+		return super._publish(source, destination)
+
+
 func check(label: String, passed: bool) -> void:
 	checks.append({"label": label, "passed": passed})
 	print("SEARCH_REGRESSION %s %s" % [label, "PASS" if passed else "FAIL"])
@@ -84,7 +103,37 @@ func run(friendly: Dictionary, common: Dictionary, settings: Dictionary) -> Dict
 	proposed = friendly.duplicate(true)
 	proposed.search.target_used_fr = -1
 	check("negative target rejected", not resolver.resolve(proposed, common, settings.allowed_mod_slots).ok)
+	await _check_worker_ipc(optimizer)
 	var passed := true
 	for item in checks:
 		passed = passed and item.passed
 	return {"passed": passed, "checks": checks}
+
+
+func _check_worker_ipc(optimizer: Node) -> void:
+	var ipc := FlakyIpc.new()
+	var path := "user://ipc_regression_%s.json" % Time.get_ticks_usec()
+	var payload := {"id": "test", "items": [{"index": 0, "config": {"formation": []}}]}
+	ipc.publish_failures = 2
+	var written := await ipc.write_message(path, payload, get_tree())
+	check("worker publish retries transient rename failures", written.ok and ipc.publishes == 3)
+	ipc.read_failures = 2
+	var message := await ipc.read_message(path, get_tree())
+	check("worker read retries transient open failures", message.ok and message.value.id == payload.id and message.value.items.size() == 1 and message.value.items[0].index == 0 and message.value.items[0].config.formation == [] and ipc.reads == 3)
+	ipc.read_failures = 100000
+	var started := Time.get_ticks_msec()
+	message = await ipc.read_message(path, get_tree(), 30)
+	check("permanent worker read failure returns bounded error", not message.ok and Time.get_ticks_msec() - started < 1000)
+	DirAccess.remove_absolute(path)
+	ipc.publish_failures = 100000
+	written = await ipc.write_message(path, payload, get_tree(), 30)
+	check("permanent worker publish failure cleans temporary message", not written.ok and not FileAccess.file_exists(path) and not FileAccess.file_exists(path + ".tmp"))
+	check("worker response validates item index and result", optimizer._valid_worker_response({"results": [{"index": 1, "result": {}}]}, 1) and not optimizer._valid_worker_response({"results": [{"index": 0, "result": {}}]}, 1) and not optimizer._valid_worker_response({"results": []}, 0))
+	optimizer._settings.max_wall_seconds = optimizer._elapsed_seconds() + 20.0
+	optimizer._max_battle_seconds = 4.0
+	check("worker deadline reserves native replay time", optimizer._worker_wait_budget_ms() <= 10000 and optimizer._worker_wait_budget_ms() > 9000)
+	optimizer._settings.max_wall_seconds = optimizer._elapsed_seconds() - 1.0
+	check("expired budget does not start a new 140 second wait", optimizer._worker_wait_budget_ms() == 0)
+	var failures: Array = optimizer._fail_worker_wave([{}, {}], "injected worker failure")
+	check("worker failure stops exploration with explicit candidate errors", failures.size() == 2 and failures[0].error == "injected worker failure" and not optimizer._can_expand() and not optimizer._can_simulate() and optimizer._stop_reason == "WORKER IPC FAILED")
+	check("unfinished worker job never becomes a scored battle error", optimizer._store_worker_result({}, [], "interrupted", failures[0]).is_empty() and not optimizer._cache.has("interrupted") and optimizer._worker_interrupted_candidates == 1)

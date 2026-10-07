@@ -73,7 +73,7 @@ func _run() -> void:
 			if _has_argument("--search-regression"):
 				var tests := preload("res://fleet_search_regression.gd").new()
 				add_child(tests)
-				var regression: Dictionary = tests.run(friendly, common, optimizer_v2_settings)
+				var regression: Dictionary = await tests.run(friendly, common, optimizer_v2_settings)
 				_finish(regression, 0 if regression.passed else 14, "user://fleet_search_regression.json")
 				return
 			if _has_argument("--grid-regression"):
@@ -500,29 +500,48 @@ func _argument_value(prefix: String) -> String:
 
 
 func _run_fleet_worker(probe: Node, worker_dir: String) -> void:
+	var ipc := preload("res://fleet_worker_ipc.gd").new()
 	DirAccess.make_dir_recursive_absolute(worker_dir)
-	_write_worker_message(worker_dir.path_join("ready.json"), {
+	var ready := await ipc.write_message(worker_dir.path_join("ready.json"), {
 		"pid": OS.get_process_id(),
 		"user_data_dir": OS.get_user_data_dir(),
 		"startup_ms": Time.get_ticks_msec(),
-	})
+	}, get_tree())
+	if not ready.ok:
+		_worker_ipc_failure(ready.error)
+		return
 	while not FileAccess.file_exists(worker_dir.path_join("stop")):
 		var request_path := worker_dir.path_join("request.json")
 		if not FileAccess.file_exists(request_path):
 			OS.delay_msec(5)
 			await get_tree().process_frame
 			continue
-		var request := _load_json(request_path)
-		DirAccess.remove_absolute(request_path)
+		var message := await ipc.read_message(request_path, get_tree())
+		if not message.ok:
+			_worker_ipc_failure(message.error)
+			return
+		var request: Dictionary = message.value
+		if not request.get("id") is String or not request.get("items") is Array or request.items.is_empty():
+			_worker_ipc_failure("Invalid worker request: %s" % request_path)
+			return
+		if DirAccess.remove_absolute(request_path) != OK:
+			_worker_ipc_failure("Unable to consume worker request: %s" % request_path)
+			return
 		var results: Array = []
 		for item in request.get("items", []):
+			if not item is Dictionary or not item.get("config") is Dictionary or not item.has("index"):
+				_worker_ipc_failure("Invalid worker request item: %s" % request_path)
+				return
 			var result: Dictionary = await probe.run_battle(item.config)
 			var cleanup: Dictionary = await probe.cleanup_battle()
 			if not result.has("performance_breakdown"):
 				result["performance_breakdown"] = {}
 			result.performance_breakdown["cleanup_ms"] = cleanup.get("cleanup_ms", 0.0)
 			results.append({"index": item.index, "result": result})
-		_write_worker_message(worker_dir.path_join("response_%s.json" % request.id), {"results": results})
+		var published := await ipc.write_message(worker_dir.path_join("response_%s.json" % request.id), {"results": results}, get_tree())
+		if not published.ok:
+			_worker_ipc_failure(published.error)
+			return
 	probe.queue_free()
 	if get_tree().current_scene != null:
 		get_tree().current_scene.queue_free()
@@ -531,15 +550,9 @@ func _run_fleet_worker(probe: Node, worker_dir: String) -> void:
 	get_tree().quit(0)
 
 
-func _write_worker_message(path: String, value: Dictionary) -> void:
-	var temporary_path := path + ".tmp"
-	var file := FileAccess.open(temporary_path, FileAccess.WRITE)
-	assert(file != null, "Unable to write worker message %s" % path)
-	file.store_string(JSON.stringify(value, "", true, true))
-	file.close()
-	if FileAccess.file_exists(path):
-		DirAccess.remove_absolute(path)
-	assert(DirAccess.rename_absolute(temporary_path, path) == OK, "Unable to publish worker message %s" % path)
+func _worker_ipc_failure(message: String) -> void:
+	printerr("WORKER IPC ERROR: ", message)
+	get_tree().quit(74)
 
 
 func _requested_top_n() -> int:

@@ -36,9 +36,11 @@
 
 日常日志现在实时显示标准错误，启动器每五秒输出阶段心跳；脚本错误立即终止本次进程树，Runner 60 秒未就绪会退出，整体运行超过节点时间预算加 30 秒收尾宽限也会退出。退出码分别为 70（脚本错误）、71（启动超时）、72（整体超时）。搜索周期性输出唯一候选/站位数、胜负数、最佳 FR、目标差距与剩余时间。每场已完成的探索战斗实时写入 `<node>.result.candidates.jsonl`，包含站位、Mods、胜负、实际 FR 和错误；其内容是搜索记录，最终推荐仍以完成重放的 result JSON/TXT 为准。手动停止会保留已刷新的日志，但不会把未完成重放的候选发布为最终推荐。
 
+2026-10-05 修复多 worker 通信中断：G9 B19 的 worker 在打开 `request.json` 失败后触发断言，进程仍存活但不再返回响应，主进程固定等待 140 秒导致退出码 72。日常 v3 的 IPC 现在对文件打开、写入和原子发布做有限重试，持续失败的 worker 明确退出；响应等待受剩余总预算与最终重放预留共同限制。无法恢复时停止探索，记录 `WORKER IPC FAILED` 和 `worker_warning`；预算到期取消则记为 `TIME BUDGET REACHED`。未完成任务计入 `worker_interrupted_candidates`，不当作有效战斗或战斗错误缓存；已完成候选仍须通过原版最终重放才能发布推荐。真实战斗错误和重放失败仍阻止发布。外层超时保护继续保留。
+
 这是独立的搜索策略，与 `boss.priority` 的 `efficiency`、`kill_cost`、`affordable_kill_cost` 分开；Boss 目标仍按原有规则评分和验证。`search.profile` 使用 `fast` 或 `balanced`；`exhaustive` 保留为全部配置空间验证，不与此策略组合。切回普通优化使用 `"strategy": "portfolio"` 或省略此字段。建议保留较大的 `max_simulations`，按 `max_wall_seconds` 控制运行时间；两个限制任一先到都会停止，最终重放可能使模拟总数略高于搜索上限。
 
-推荐信息由用户录入；Optimizer 保持离线，不查询 Advisor 服务。本次未修改 app；新增加的 `target_used_fr` 需直接编辑节点 JSON 并通过 BAT 使用，界面暂存不保证保留此字段。原始日志和候选记录路径会打印到控制台。
+推荐信息由用户录入；Optimizer 保持离线，不查询 Advisor 服务。`target_used_fr` 可在 app 节点环境页编辑，也可直接写入节点 JSON 后通过 BAT 使用。原始日志和候选记录路径会打印到控制台。
 
 v3 部署报价优化：Baseline 和未知装配先建立原版场景，读取真实 Mod 后单组成本；同一战斗环境内，后续不同数量按原版 `calc_total_deployment()` 的逐组 Overdeploy 加价顺序累计，继续使用原版 `NumberUtils.fleet_less_or_equal` 判定预算，避免为已知成本反复创建整个战斗场景。战斗评分和最终验证仍运行原版场景。性能输出分别记录原生场景报价、推导报价及缓存命中，不把推导报价计作原生场景调用。
 

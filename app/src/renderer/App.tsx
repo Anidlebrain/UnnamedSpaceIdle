@@ -176,7 +176,6 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     search: 'default',
     optimizer: 'default',
   })
-  const [searchSettingsOpen, setSearchSettingsOpen] = useState(false)
   const [nodeSource, setNodeSource] = useState('')
   const [commonSource, setCommonSource] = useState('')
   const [savedNodeSource, setSavedNodeSource] = useState('')
@@ -517,6 +516,19 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     pageContextsRef.current = updated
     setPageContexts(updated)
   }
+  const syncPageSelection = (page: 'node' | 'search', next: Selection) => {
+    const contexts = pageContextsRef.current
+    if (!contexts) return
+    const updated = { ...contexts, [page]: next }
+    pageContextsRef.current = updated
+    setPageContexts(updated)
+    localStorage.setItem(LAST_LOCATION_KEY, JSON.stringify({ workspace, contexts: updated }))
+    if (page === 'search') {
+      localStorage.setItem(LAST_SEARCH_KEY, JSON.stringify(next))
+      setSearchTask(null)
+      setGalaxyDetail(null)
+    }
+  }
   const applyUpdate = <K extends keyof Selection>(field: K, value: Selection[K]) => {
     setMessage('')
     setErrorDetail('')
@@ -566,6 +578,8 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       setNodeSource(source)
       setSavedNodeSource(source)
       nodeDrafts.current.set(nodeDomainKey(selection), { value: parsed, source, savedSource: source })
+      searchDrafts.current.set(nodeDomainKey(selection), { value: parsed, source, savedSource: source })
+      syncPageSelection('search', { ...selection })
     })
   const saveCommon = () =>
     act('Common 配置已原子保存。', async () => {
@@ -887,7 +901,9 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       })
       const next = await refresh()
       const targetGalaxy = next.galaxies.find(g => g.id === galaxy)!
-      setCurrentSelection({ galaxy, node: created.node, version: created.version, common: targetGalaxy.defaultCommon })
+      const target = { galaxy, node: created.node, version: created.version, common: targetGalaxy.defaultCommon }
+      setCurrentSelection(target)
+      syncPageSelection('node', target)
       setNewNode('')
     })
   }
@@ -900,7 +916,9 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
       if (!node) throw new Error('请输入初始 Node ID。')
       const created = await api.createGalaxy({ galaxy, node, versionName: '默认', source: selection })
       await refresh()
-      setCurrentSelection({ galaxy, node: created.node, version: created.version, common: created.common })
+      const target = { galaxy, node: created.node, version: created.version, common: created.common }
+      setCurrentSelection(target)
+      syncPageSelection('node', target)
       setNewNodeGalaxy(galaxy)
       setNewGalaxy('')
     })
@@ -1631,24 +1649,14 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           activeRun={activeRun}
           changes={changes.length}
           applied={Boolean(activeRun?.task && appliedTaskIds.has(activeRun.task.taskId))}
-          onOpenSettings={() => setSearchSettingsOpen(true)}
+          onSearchChange={next => {
+            setSearchConfig(next)
+            setSearchConfigSource(format(next))
+          }}
           onStart={() => void start()}
           onStopCurrent={stopCurrent}
           onStopAll={stopAll}
           onUseBest={useBest}
-        />
-      ) : null}
-      {searchSettingsOpen && searchConfig ? (
-        <SearchSettingsDialog
-          config={searchConfig}
-          dirty={searchDirty}
-          readOnly={false}
-          source={configSources.search}
-          onChange={next => {
-            setSearchConfig(next)
-            setSearchConfigSource(format(next))
-          }}
-          onClose={() => setSearchSettingsOpen(false)}
         />
       ) : null}
       {dialog ? <AppDialog dialog={dialog} onClose={() => setDialog(null)} /> : null}
@@ -1699,55 +1707,6 @@ function AppDialog({ dialog, onClose }: { dialog: DialogState; onClose: () => vo
             onClick={confirm}
           >
             {dialog.confirmLabel}
-          </button>
-        </div>
-      </section>
-    </div>
-  )
-}
-
-function SearchSettingsDialog({
-  config,
-  dirty,
-  readOnly,
-  source,
-  onChange,
-  onClose,
-}: {
-  config: SearchConfig
-  dirty: boolean
-  readOnly: boolean
-  source: ConfigSource
-  onChange: (value: SearchConfig) => void
-  onClose: () => void
-}) {
-  return (
-    <div
-      className="dialog-backdrop"
-      role="presentation"
-      onMouseDown={event => event.target === event.currentTarget && onClose()}
-    >
-      <section
-        className="app-dialog search-settings-dialog"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="search-settings-title"
-      >
-        <div className="dialog-heading">
-          <div>
-            <h2 id="search-settings-title">搜索设置</h2>
-            <p>下次点击“加入搜索队列”时自动保存并重新读取确认。</p>
-          </div>
-          <span className="config-source">{source === 'local' ? 'map 本机配置' : 'poc 默认值'}</span>
-        </div>
-        {readOnly ? <p className="lock-notice">当前任务正在使用这份配置，任务结束后可编辑。</p> : null}
-        <fieldset className="editor-lock" disabled={readOnly}>
-          <SearchSettings config={config} onChange={onChange} />
-        </fieldset>
-        <div className="dialog-actions search-dialog-actions">
-          <small>{dirty ? '修改已保留，将在启动搜索时自动保存。' : '当前配置已持久化。'}</small>
-          <button className="primary" onClick={onClose}>
-            完成
           </button>
         </div>
       </section>
@@ -1886,6 +1845,13 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
       [field]: nodes,
     })
   }
+  const currentHazard = config.node.toUpperCase()
+  const hasCurrentHazard = config.hazards.some(item => String(item).toUpperCase() === currentHazard)
+  const toggleCurrentHazard = (checked: boolean) => {
+    const hazards = config.hazards.filter(item => String(item).toUpperCase() !== currentHazard)
+    if (checked) hazards.push(currentHazard)
+    updateNodes('hazards', hazards.join('\n'))
+  }
   return (
     <section className="config-section node-basics">
       <div className="section-heading">
@@ -1940,14 +1906,24 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
         {alive ? <p className="setting-help">Boss 使用独立的评分目标，此项不可用。</p> : null}
       </div>
       <div className="environment-config">
-        <Label text="Hazards（每行或逗号分隔）">
-          <textarea
-            aria-label="Hazards"
-            value={nodeText.hazards}
-            onChange={event => updateNodes('hazards', event.target.value)}
-            placeholder="例如 B10"
-          />
-        </Label>
+        <div className="hazards-field">
+          <label className="switch-field">
+            <input
+              type="checkbox"
+              checked={hasCurrentHazard}
+              onChange={event => toggleCurrentHazard(event.target.checked)}
+            />
+            <span>使用当前节点 Hazards（{currentHazard}）</span>
+          </label>
+          <Label text="Hazards（每行或逗号分隔）">
+            <textarea
+              aria-label="Hazards"
+              value={nodeText.hazards}
+              onChange={event => updateNodes('hazards', event.target.value)}
+              placeholder="例如 B10"
+            />
+          </Label>
+        </div>
         <Label text="Supports（每行或逗号分隔）">
           <textarea
             aria-label="Supports"
@@ -1979,7 +1955,7 @@ function SearchWorkspace({
   activeRun,
   changes,
   applied,
-  onOpenSettings,
+  onSearchChange,
   onStart,
   onStopCurrent,
   onStopAll,
@@ -2002,7 +1978,7 @@ function SearchWorkspace({
   activeRun: RunResult | null | undefined
   changes: number
   applied: boolean
-  onOpenSettings: () => void
+  onSearchChange: (value: SearchConfig) => void
   onStart: () => void
   onStopCurrent: () => void
   onStopAll: () => void
@@ -2039,7 +2015,6 @@ function SearchWorkspace({
   const boss = (environment.boss ?? {}) as Record<string, unknown>
   const bossAlive = Boolean(boss.alive)
   const targetUsedFr = snapshot ? snapshot.search.target_used_fr : node?.search.target_used_fr
-  const profile = search ? `${strategyName(search.strategy)} · ${profileName(search.profile)}` : '—'
   return (
     <section className="search-workspace workspace-view">
       <div className="search-context panel" aria-label="搜索目标与战斗环境">
@@ -2100,18 +2075,14 @@ function SearchWorkspace({
         {running ? <button onClick={onStopCurrent}>停止当前</button> : null}
         {running ? <button onClick={onStopAll}>停止全部</button> : null}
         <p className="search-summary">
-          <strong>{profile}</strong>
-          <span>
-            预算：最长 {search?.max_wall_seconds ?? '—'} 秒 / 最多 {search?.max_simulations ?? '—'} 次模拟
-          </span>
-          <span>{search?.workers ?? '—'} 个并行进程</span>
           {!bossAlive && targetUsedFr != null ? <span>目标 Used FR ≤ {targetUsedFr}</span> : null}
           {dirty ? <em>待自动保存</em> : <small>{searchSource === 'local' ? '本机配置' : 'poc 默认'}</small>}
         </p>
-        <button className="search-settings-button" onClick={onOpenSettings} disabled={readOnly}>
-          <Icon name="settings" />
-          搜索设置
-        </button>
+        {search ? (
+          <fieldset className="editor-lock inline-search-settings" disabled={readOnly} aria-label="搜索参数">
+            <SearchSettings config={search} onChange={onSearchChange} />
+          </fieldset>
+        ) : null}
       </section>
       <section className="panel run-status">
         <h2>运行状态</h2>
@@ -2867,6 +2838,24 @@ function CommonEditor({ config, onChange }: { config: CommonConfig; onChange: (v
       {(['permanent', 'temporary'] as const).map(group => (
         <fieldset key={group}>
           <legend>{group === 'permanent' ? '永久加成' : '临时加成'}</legend>
+          {group === 'permanent' ? (
+            <button
+              type="button"
+              className="permanent-increment"
+              onClick={() =>
+                onChange({
+                  ...config,
+                  permanent: {
+                    ...config.permanent,
+                    damage_scale: Number((config.permanent.damage_scale + 0.25).toFixed(10)),
+                    health_scale: Number((config.permanent.health_scale + 0.25).toFixed(10)),
+                  },
+                })
+              }
+            >
+              伤害与生命 +0.25
+            </button>
+          ) : null}
           <Label text="伤害倍率">
             <input
               type="number"
@@ -3143,7 +3132,7 @@ function SearchSettings({ config, onChange }: { config: SearchConfig; onChange: 
   const update = <K extends keyof SearchConfig>(field: K, value: SearchConfig[K]) =>
     onChange({ ...config, [field]: value })
   return (
-    <div className="search-settings">
+    <div className="search-settings is-inline">
       <div className="settings-group">
         <h3>常用</h3>
         <Label text="搜索策略">
@@ -3224,21 +3213,21 @@ function SearchSettings({ config, onChange }: { config: SearchConfig; onChange: 
             </Label>
           </div>
         </div>
+        <Label text="并行进程">
+          <input
+            aria-label="并行进程"
+            type="number"
+            min="1"
+            max="4"
+            step="1"
+            value={config.workers}
+            onChange={event => update('workers', Number(event.target.value))}
+          />
+        </Label>
       </div>
       <details className="settings-advanced">
         <summary>高级设置</summary>
         <div className="settings-group">
-          <Label text="并行进程">
-            <input
-              aria-label="并行进程"
-              type="number"
-              min="1"
-              max="4"
-              step="1"
-              value={config.workers}
-              onChange={event => update('workers', Number(event.target.value))}
-            />
-          </Label>
           <p className="setting-help">
             同时运行的 Godot Worker 数（1–4）。启动失败时会回退到单进程；并行数不保证等比提速。
           </p>
