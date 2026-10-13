@@ -32,7 +32,7 @@
 - fleetSimulation/work/：原版恢复脚本、数据和运行时文件。
 - fleetSimulation/map/：本机 Galaxy/Node 输入文件，按要求不纳入 Git。
 - app/data/：个人本机正式配置和导入结果，整个目录不纳入 Git。
-- app/runtime/：应用运行时任务快照和临时状态，不纳入 Git；仓库只提交 `app/runtime/.gitkeep`。
+- app/runtime/：应用运行时任务快照和临时状态，整个目录不纳入 Git；应用会在需要时自动创建目录。
 - app/node_modules/、app/out/、.pnpm-store/：依赖、构建产物和包管理器缓存，不纳入 Git。
 - .agents/、app/.hallmark/：本机 Codex/设计工具资源和日志，不纳入 Git。
 - *.log、地图运行结果、时间戳结果、latest.* 和多 worker 临时结果。

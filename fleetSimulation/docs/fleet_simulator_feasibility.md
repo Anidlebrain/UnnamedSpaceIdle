@@ -37,7 +37,7 @@ simulate(config)
 |---|---|
 | 游戏版本 | `0.85.1.0`；内部整数 `85100`，来自 `PlayerInfo.gd` |
 | Steam App / Build | App ID `2471100`；本机 Build ID `25145163` |
-| Godot | PCK 记录 `4.7.2`；PCK 格式 4；实测使用 `E:\tools\Godot_v4.7.2-stable_win64\Godot_v4.7.2-stable_win64_console.exe`，版本 `4.7.2-stable (official)` |
+| Godot | PCK 记录 `4.7.2`；PCK 格式 4；实测使用官方 Godot `4.7.2-stable` 控制台版本 |
 | 原版 PCK | 68,319,828 字节；SHA-256 `47E161C73741E11DF9C5F2B8FCB8DCB71B5930180D1A60407EAAAE8D85B4C5CC` |
 | 安装目录核对 | 配置中安装 PCK 与项目备份 SHA-256 相同；只读核对，未修改 |
 | GDRETools | `2.6.4` |
@@ -193,14 +193,14 @@ Advisor 的“Validate”明确是重新跑一次客户端原生战斗并比较�
 
 ### 运行方案与 PCK
 
-1. 已找到独立原版 PCK：`E:\LenovoSoftstore\Install\Steam\steamapps\common\Unnamed Space Idle\SpaceIdle.pck`，与项目备份 SHA-256 一致。安装目录中的 `SpaceIdle.exe` 与同名旁置 PCK 分离，PCK 含 `project.binary`。
+1. 已找到独立原版 PCK，与项目备份 SHA-256 一致。安装目录中的 `SpaceIdle.exe` 与同名旁置 PCK 分离，PCK 含 `project.binary`。
 2. “原版 `SpaceIdle.exe` + 测试 PCK”本轮未实跑。它需要重新打包测试 PCK，而仓库 `AGENTS.md` 当前明确禁止解包/重新打包或创建测试 PCK，因此没有绕过该限制，也没有修改或安装正式 PCK。
 3. 按既定优先级改用独立 Godot 4.7.2 官方版，直接运行完整恢复工程；主场景使用原版 `Game.tscn`，原版 Autoload 保持不变，测试 Runner 是新增的第一个 Autoload。
 
 ### `user://` 隔离
 
-- 正式版实际目录：`C:\Users\Anidlebrain\AppData\Roaming\Godot\app_userdata\SpaceIdle`。
-- 测试版实际目录：`C:\Users\Anidlebrain\AppData\Roaming\Unnamed Space Idle Fleet Test`。
+- 正式版数据目录位于当前 Windows 用户的 Godot `user://` 路径下。
+- 测试版使用独立的 `Unnamed Space Idle Fleet Test` 用户数据目录。
 - 测试副本的 `project.godot` 使用 `config/use_custom_user_dir=true` 和 `config/custom_user_dir_name="Unnamed Space Idle Fleet Test"`。运行前只确认正式目录存在，未读取其内容；测试结果也回报了测试目录的实际全路径。
 
 ### 单场输出

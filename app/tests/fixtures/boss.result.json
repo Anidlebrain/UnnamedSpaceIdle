@@ -1136,7 +1136,7 @@
     "used_cache_only": true
   },
   "compositions_pruned_by_fr": 0,
-  "daily_result_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\results/g5_b35_20260912_152556.json",
+  "daily_result_path": "PROJECT_ROOT/fleetSimulation/results/g5_b35_20260912_152556.json",
   "deployment_quotes": 21,
   "engine_time_scale": 1.0,
   "engine_version": "4.7.2-stable (official)",
@@ -1177,13 +1177,13 @@
     "priority": "kill_cost",
     "status": "COMPLETE"
   },
-  "latest_result_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\results/latest.json",
-  "latest_summary_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\results/latest_summary.json",
-  "latest_text_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\results/latest.txt",
+  "latest_result_path": "PROJECT_ROOT/fleetSimulation/results/latest.json",
+  "latest_summary_path": "PROJECT_ROOT/fleetSimulation/results/latest_summary.json",
+  "latest_text_path": "PROJECT_ROOT/fleetSimulation/results/latest.txt",
   "losses": 1,
   "mode": "realistic",
   "network_protection": "HTTP/HTTPS proxied to 127.0.0.1:9; Steam singleton unavailable",
-  "node_result_path": "E:\\code\\UnnamedSpaceIdle\\fleet_simulation\\map\\g5\\B35.result.json",
+  "node_result_path": "PROJECT_ROOT/fleetSimulation/map/g5/B35.result.json",
   "objective": "boss",
   "optimizer_version": "2.2",
   "overdeploy_candidates": 192,
@@ -1959,7 +1959,7 @@
     }
   ],
   "unique_results": 1,
-  "user_data_dir": "C:/Users/Anidlebrain/AppData/Roaming/Unnamed Space Idle Fleet Test",
+  "user_data_dir": "C:/Users/FixtureUser/AppData/Roaming/Unnamed Space Idle Fleet Test",
   "v1_regression": {
     "enabled": false
   },

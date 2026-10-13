@@ -30,8 +30,7 @@ fleetSimulation/map/**/*.result.json
 fleetSimulation/map/**/*.result.txt
 
 app/data/
-app/runtime/*
-!app/runtime/.gitkeep
+app/runtime/
 app/node_modules/
 app/out/
 .pnpm-store/
@@ -66,3 +65,4 @@ fleetSimulation/results/*/
 backup/.gitkeep
 
 !fleetSimulation/results/optimizer_v3_benchmark_summary.json
+fleetSimulation/tools/__pycache__/*

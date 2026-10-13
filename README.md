@@ -1,60 +1,25 @@
-# Unnamed Space Idle 中文翻译补丁
+# Unnamed Space Idle 舰队优化与管理工具
 
-这是《Unnamed Space Idle》内容探索与中文翻译补丁的长期维护工程。项目根目录就是 `E:\code\UnnamedSpaceIdle`，翻译资料集中在 `translation/`。
+本仓库围绕《Unnamed Space Idle》的 Fleet Battle 搜索与舰队管理展开。核心由两个活跃项目组成：`fleetSimulation/` 复用游戏原版战斗逻辑进行舰队搜索，`app/` 提供配置管理、搜索运行和结果查看界面。`translation/` 保存早期中文本地化工作及验证资料，目前因无法可靠恢复完整原文 key 映射而暂停批量翻译。
 
-## 当前阶段
+## 项目组成
 
-- Phase 2：PCK 与本地化结构验证已完成。原版 PCK 已按 SHA-256 备份；已定位 Godot 编译翻译资源；已生成并静态验证只改一条普通标签的 `translation\output\SpaceIdle.test.pck`。
-- app-Phase 1：舰队优化器管理桌面应用已完成。`app/` 提供 Electron + React + TypeScript 界面，负责配置导入、版本化保存、JSON 校验、Optimizer 启动、实时输出和 Baseline/Best Found 差异展示；实际战斗与搜索仍复用 `fleetSimulation/`，应用不会自行重实现或自动安装 PCK。
-- app-Phase 2：配置生命周期和结果应用流程已完成。支持 Node Version/Common 的新建、复制、重命名、删除、默认项切换，模板管理和从模板/版本创建 Node；支持通过现有 `run_optimizer.bat --c` 安全应用 Best Found，并在校验失败、退出码非零或结果身份不匹配时保护 Manager 数据。
-- APP V1 暂时封板：在上述能力基础上完成 Galaxy 全局默认配置重跑、网页运行时兼容、舰种选择器和中文工作台 UI；重跑本身只发现变化，完成后可手动逐节点或批量应用有变化节点的 Best Found。
-- Optimizer 公共配置优先读取并写入本机 `fleetSimulation/map/optimizer_v2_daily.json`，不存在时读取已提交的 `fleetSimulation/poc/optimizer_v2_daily.json` 作为默认值；应用不会在 `app/data/` 另建运行配置副本。
-- APP V1 封板后的维护整理：搜索页、公共配置页和 Galaxy 重跑页分离工作区；Node `search` 参数的最终生效顺序已形成文档，搜索配置来源以 `app/docs/search-config-source-of-truth.md` 为准。
-- 当前搜索任务使用不可变快照绑定实际选择与配置哈希；任务期间锁定任务相关 Node、Version、Common 与 Optimizer Public，避免页面切换误写回。Node 字段审计见 `app/docs/node-field-audit.md`。
+- [`fleetSimulation/`](fleetSimulation/README.md)：Fleet Battle 原生模拟复用、Optimizer 搜索与命令行工作流。日常入口是 `fleetSimulation/run_optimizer.bat`；搜索与战斗规则以该目录 README 和当前代码为准。
+- [`app/`](app/README.md)：面向 Optimizer 的 Electron + React 管理界面，负责配置、调用既有 Optimizer、显示日志与比较结果，不另行实现搜索或战斗模拟。
+- `translation/`：中文本地化相关数据与历史验证。来源 key 未可靠恢复前，不进行批量翻译、合并或正式资源构建。
+- `docs/`、`status/`、`scripts/`、`tools/`：通用说明、项目状态和维护脚本/工具说明。
 
-测试 PCK **尚未安装**，Steam 游戏目录未被修改。
+## AI 辅助开发
 
-## 关键目录
+本项目在代码编写、问题分析、文档整理和验证过程中使用 AI 辅助开发。AI 生成或建议的内容由维护者结合仓库代码、原版行为和可复现结果审核；项目行为与功能结论以当前实现和验证证据为准。舰队模拟和搜索仍由仓库中的 Optimizer 调用隔离工程内的原版 Godot 战斗逻辑执行。
 
-- `config/`：本机配置；`config.local.json` 不提交
-- `translation/`：翻译子项目；包含词典、正式数据、工作区、输出、状态和本地化文档
-- `fleetSimulation/`：Fleet Battle 原生模拟复用研究；包含侦察报告、最小 PoC 和本地恢复工作区
-- `app/`：舰队优化器管理桌面应用；包含 Electron 主进程、preload bridge、React renderer、共享契约、APP V1 文档、设计规范和测试。`app/data/` 是个人本机数据目录，整个目录不提交
-- `status/`：游戏/PCK 基础分析等通用状态
-- `docs/`：通用项目文档；翻译报告位于 `translation/docs/`
-- `scripts/`：检测、校验、备份、安装和恢复脚本
-- `backup/`：按原包 SHA 建立的备份，不提交
-- `translation/work/`：翻译提取、转换与日志，不提交
-- `translation/output/`：翻译构建产物，不提交
-- `tools/`：只记录外部工具，不存放 GDRETools 二进制
+## 开发入口
 
-翻译资料统一存放在 `translation/`；根目录仅保留通用项目资料和操作入口。
+Optimizer 的参数、输入输出、搜索策略与验证限制见 [`fleetSimulation/README.md`](fleetSimulation/README.md)。管理应用的架构、数据边界与命令见 [`app/README.md`](app/README.md)。
 
-## 常用命令
+在 `app/` 目录运行开发和检查命令：
 
 ```powershell
-.\scripts\init.ps1
-.\scripts\show-status.ps1
-.\scripts\detect-game.ps1
-.\scripts\validate-translations.ps1
-```
-
-人工安装测试包前必须退出游戏，然后由用户明确决定是否运行：
-
-```powershell
-.\scripts\install-test-pck.ps1
-```
-
-恢复时必须显式指定备份：
-
-```powershell
-.\scripts\restore-pck.ps1 -BackupDirectory "E:\code\UnnamedSpaceIdle\backup\2026-09-06_47E161C7"
-```
-
-舰队优化器管理应用的 Phase 1/2 开发命令：
-
-```powershell
-cd app
 pnpm install
 pnpm dev
 pnpm format
@@ -64,8 +29,18 @@ pnpm build
 pnpm test
 ```
 
-安装和恢复脚本都会拒绝在游戏运行时操作，并采用临时文件、SHA-256 校验和安全替换。不要手工删除游戏 PCK 后再复制。
+通用项目脚本：
 
-## 提交范围
+```powershell
+.\scripts\init.ps1
+.\scripts\show-status.ps1
+.\scripts\detect-game.ps1
+.\scripts\validate-translations.ps1
+```
 
-项目的可提交功能分为三块：translation/ 负责本地化数据、占位符校验和测试 PCK 流程；fleetSimulation/ 负责基于原版 Fleet Battle 场景的参数化模拟与舰队优化；app/ 负责本地配置管理和 Optimizer 桌面操作界面。提交边界和本机派生文件的处理方式见 docs/submission-scope.md。
+## 本机数据与安全边界
+
+- `app/data/`、`app/runtime/`、`fleetSimulation/map/`、`fleetSimulation/work/`、`translation/work/`、`translation/output/` 和备份目录包含本机配置或派生数据，按仓库忽略规则处理，不应作为通用项目资料提交。
+- Optimizer 使用隔离的 Godot 工程和 `user://` 目录，不读取或修改正式存档，不自动安装或替换游戏 PCK。
+- 安装或恢复测试 PCK 会修改游戏目录，必须由用户明确决定并使用仓库现有脚本；不要手动替换游戏文件。
+- 提交边界见 [`docs/submission-scope.md`](docs/submission-scope.md)。
