@@ -1,3 +1,4 @@
+import { commonForGalaxy, validateGalaxyLoadouts } from '../shared/galaxy-mods'
 import type {
   Catalog,
   FleetManagerApi,
@@ -307,7 +308,7 @@ export function createBrowserApi(): FleetManagerApi {
       return clone(searchConfig)
     },
     saveCommon: async (selection, common) => {
-      commons.set(commonKey(selection), clone(common))
+      commons.set(commonKey(selection), commonForGalaxy(clone(common), selection.galaxy))
       persistWorkspace()
     },
     saveOptimizerConfig: async config => {
@@ -406,6 +407,7 @@ export function createBrowserApi(): FleetManagerApi {
       const source = nodes.get(key(request.source))
       const sourceCommon = commons.get(commonKey(request.source))
       if (!source || !sourceCommon) throw new Error('来源配置不存在。')
+      commonForGalaxy(sourceCommon, request.galaxy)
       const version = 'default'
       const common = 'default'
       const next = nodeConfigSchema.parse({
@@ -438,6 +440,7 @@ export function createBrowserApi(): FleetManagerApi {
       persistWorkspace()
       const staged = { ...current, search: clone(searchForNode(searchConfig, current)) }
       const common = clone(commons.get(commonKey(selection))!)
+      validateGalaxyLoadouts(staged, common, optimizerConfig)
       const task: SearchTaskSnapshot = {
         ...request,
         formation_columns: current.formation_columns,
@@ -478,6 +481,7 @@ export function createBrowserApi(): FleetManagerApi {
       searchConfig = clone(withoutNodeTarget(request.search))
       persistWorkspace()
       const current = nodes.get(key(request))!
+      validateGalaxyLoadouts(current, commons.get(commonKey(request))!, optimizerConfig)
       const item: SearchQueueItem = {
         snapshot: {
           ...request,
@@ -544,6 +548,7 @@ export function createBrowserApi(): FleetManagerApi {
             const selection = { galaxy, node: node.id, version: node.defaultVersion, common: target.defaultCommon }
             const current = clone(nodes.get(key(selection))!)
             const common = clone(commons.get(commonKey(selection))!)
+            validateGalaxyLoadouts(current, common, optimizerConfig)
             const search = clone(searchForNode(typeof request === 'string' ? searchConfig : request.search, current))
             const task: SearchTaskSnapshot = {
               ...selection,

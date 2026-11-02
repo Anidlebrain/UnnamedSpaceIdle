@@ -1,3 +1,4 @@
+import { hasCrf, hasTm, nodeSlotOptions, setGalaxyMod, TM_MOD } from '../shared/galaxy-mods'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   Catalog,
@@ -1361,7 +1362,10 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         <section className="management panel workspace-view">
           <div>
             <h2>创建 Galaxy</h2>
-            <p>复制当前 Galaxy 的 Common 和当前 Node / Version，作为新 Galaxy 的初始配置。</p>
+            <p>
+              复制当前 Galaxy 的 Common 和当前 Node / Version，作为新 Galaxy 的初始配置。带 CRF / TM 的 Common 仅可用于
+              G11；复制到其他 Galaxy 前请先关闭两个开关并保存。Node 若已装备 TM，也需改为其他 Primary。
+            </p>
             <div className="inline">
               <input
                 aria-label="新 Galaxy ID"
@@ -1508,6 +1512,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           <fieldset className="editor-lock" disabled={commonTab === 'galaxy' ? commonReadOnly : optimizerReadOnly}>
             {common && commonTab === 'galaxy' ? (
               <CommonEditor
+                galaxy={Number(selection.galaxy.slice(1))}
                 config={common}
                 onChange={next => {
                   setCommon(next)
@@ -1604,7 +1609,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
                 <FleetStateEditor key={nodeDomainKey(selection)} config={node} common={common} onChange={tableChange} />
               ) : null}
               {nodeMatchesSelection && node && optimizerConfig && editorTab === 'loadout' ? (
-                <LoadoutEditor config={node} optimizer={optimizerConfig} onChange={tableChange} />
+                <LoadoutEditor config={node} common={common} optimizer={optimizerConfig} onChange={tableChange} />
               ) : null}
               {nodeMatchesSelection && node && editorTab === 'environment' ? (
                 <EnvironmentEditor
@@ -2243,6 +2248,20 @@ function BestFound({
     Boolean(result.affordable_best_result?.formation.length)
   return (
     <div className="best-found">
+      <p className="apply-target">
+        本次运行星系 Mod：
+        {Array.isArray(result.base_config?.galaxy_mods)
+          ? result.base_config.galaxy_mods.includes('CorvetteRapidFire')
+            ? 'CRF（护卫舰快速开火）已生效'
+            : '无 CRF'
+          : '旧结果未记录解锁状态'}
+        {' · '}TM（连发充能激光）：
+        {Array.isArray(result.base_config?.galaxy_mods)
+          ? result.base_config.galaxy_mods.includes(TM_MOD)
+            ? '本次可选，实际装备见 Primary'
+            : '本次未解锁'
+          : '旧结果未记录解锁状态'}
+      </p>
       <div className="best-found-heading">
         <div>
           <h2>Best Found</h2>
@@ -2682,10 +2701,12 @@ function FormationEditor({
 
 function LoadoutEditor({
   config,
+  common,
   optimizer,
   onChange,
 }: {
   config: NodeConfig
+  common: CommonConfig | null
   optimizer: OptimizerConfig
   onChange: (n: NodeConfig) => void
 }) {
@@ -2716,6 +2737,26 @@ function LoadoutEditor({
         <div>
           <h3>装配</h3>
           <p>Mod ID 保持 Optimizer 原值；数字槽位编辑时保留数字类型。</p>
+          <p>
+            G11 专属 CRF（护卫舰 / Corvette 快速开火）：
+            {config.galaxy === 11
+              ? hasCrf(common, config.galaxy)
+                ? '当前 Common 已解锁，搜索自动附加三级 Mod。'
+                : '当前 Common 未解锁。'
+              : '当前 Galaxy 不适用。'}{' '}
+            在“公共配置 → Galaxy 公共”设置并保存；此处显示所选 Common
+            的当前草稿；保存后用于新搜索，运行结果以任务快照为准。
+          </p>
+          <p>
+            TM（连发充能激光）：
+            {config.galaxy === 11
+              ? hasTm(common, config.galaxy)
+                ? '本次旅行已解锁，可在护卫舰 Primary 中选择。'
+                : '本次旅行未解锁。'
+              : '仅 G11 可用。'}
+            与普通充能激光共用 Primary，二者互斥；可搭配护盾与 CRF。普通优化会自动将已解锁 TM
+            加入候选；推荐舰队策略只按当前装备搜索站位。 旅行重置后请在 Galaxy 公共手动关闭 TM 并保存。
+          </p>
         </div>
       </div>
       <div className="table-scroll">
@@ -2743,7 +2784,8 @@ function LoadoutEditor({
                       ship={canonicalShip}
                       slot="primary"
                       value={l.primary}
-                      options={slotOptions(optimizer, canonicalShip, 'primary')}
+                      options={nodeSlotOptions(optimizer, common, config.galaxy, canonicalShip, 'primary')}
+                      selectorOptions={slotOptions(optimizer, canonicalShip, 'primary')}
                       onChange={value => load(ship, 'primary', value)}
                     />
                   </td>
@@ -2752,13 +2794,18 @@ function LoadoutEditor({
                       ship={canonicalShip}
                       slot="secondary"
                       value={l.secondary}
-                      options={slotOptions(optimizer, canonicalShip, 'secondary')}
+                      options={nodeSlotOptions(optimizer, common, config.galaxy, canonicalShip, 'secondary')}
+                      selectorOptions={slotOptions(optimizer, canonicalShip, 'secondary')}
                       onChange={value => load(ship, 'secondary', value)}
                     />
                   </td>
                   <td>
-                    <span className="slot-unavailable" title="Standard Galaxy 的 Tertiary 由原版 Fleet 作用域自动附加">
-                      自动 / 无手选槽位
+                    <span className="slot-unavailable" title="星系专属三级 Mod 由 Galaxy Common 解锁状态决定">
+                      {canonicalShip === 'Corvette' && config.galaxy === 11
+                        ? hasCrf(common, config.galaxy)
+                          ? 'CRF 已解锁 · 自动附加'
+                          : 'CRF 未解锁 · 无'
+                        : '自动 / 无手选槽位'}
                     </span>
                   </td>
                 </tr>
@@ -2776,20 +2823,23 @@ function ModSlotControl({
   slot,
   value,
   options,
+  selectorOptions = options,
   onChange,
 }: {
   ship: string
   slot: ModSlot
   value: unknown
   options: Array<string | null>
+  selectorOptions?: Array<string | null>
   onChange: (value: string | null) => void
 }) {
   const concrete = Array.from(new Set(options.filter((option): option is string => typeof option === 'string')))
   const allowsNone = options.includes(null)
-  const resolved = resolveModSelector(value, options)
+  const resolved = resolveModSelector(value, selectorOptions)
+  const incompatible = Boolean(resolved && !concrete.includes(resolved))
   const label = `${ship} ${slot}`
-  if (concrete.length === 0) return <span className="slot-unavailable">不可用</span>
-  if (concrete.length === 1) {
+  if (concrete.length === 0 && !incompatible) return <span className="slot-unavailable">不可用</span>
+  if (concrete.length === 1 && !incompatible) {
     const id = concrete[0]
     if (!allowsNone) return <span title={id}>{modDisplayName(id)}（必选）</span>
     return (
@@ -2805,21 +2855,42 @@ function ModSlotControl({
     )
   }
   return (
-    <SmartSelect
-      label={label}
-      value={resolved ?? ''}
-      onChange={value => onChange(value || null)}
-      searchable
-      options={[
-        ...(allowsNone ? [{ value: '', label: '无' }] : []),
-        ...concrete.map(id => ({ value: id, label: modDisplayName(id, true) })),
-        ...(resolved && !concrete.includes(resolved) ? [{ value: resolved, label: `不兼容：${resolved}` }] : []),
-      ]}
-    />
+    <div>
+      {incompatible ? (
+        <p role="alert">
+          {resolved === TM_MOD
+            ? slot !== 'primary' || ship !== 'Corvette'
+              ? 'TM 只能装备在护卫舰 Primary；请清除当前错误槽位中的 TM。'
+              : '仍装备 TM，但本次旅行未解锁或当前 Galaxy 不适用；请开启 Galaxy Common 的 TM，或改选其他 Primary。'
+            : `当前模组不在可选范围：${resolved}`}
+        </p>
+      ) : null}
+      <SmartSelect
+        label={label}
+        value={resolved ?? ''}
+        onChange={value => onChange(value || null)}
+        searchable
+        options={[
+          ...(allowsNone ? [{ value: '', label: '无' }] : []),
+          ...concrete.map(id => ({ value: id, label: modDisplayName(id, true) })),
+          ...(resolved && incompatible
+            ? [{ value: resolved, label: `不可用：${modDisplayName(resolved, true)}` }]
+            : []),
+        ]}
+      />
+    </div>
   )
 }
 
-function CommonEditor({ config, onChange }: { config: CommonConfig; onChange: (value: CommonConfig) => void }) {
+function CommonEditor({
+  config,
+  galaxy,
+  onChange,
+}: {
+  config: CommonConfig
+  galaxy: number
+  onChange: (value: CommonConfig) => void
+}) {
   const update = (group: 'permanent' | 'temporary', field: 'damage_scale' | 'health_scale', value: string) =>
     onChange({ ...config, [group]: { ...config[group], [field]: Number(value) } })
   const updateShip = (ship: string, value: string) =>
@@ -2835,6 +2906,37 @@ function CommonEditor({ config, onChange }: { config: CommonConfig; onChange: (v
           <p>当前 Galaxy 搜索时使用的永久与临时倍率。</p>
         </div>
       </div>
+      {galaxy === 11 ? (
+        <fieldset className="galaxy-mods-fieldset">
+          <legend>G11 星系 Mod 解锁</legend>
+          <label className="mod-toggle">
+            <input
+              type="checkbox"
+              aria-label="CRF 已解锁"
+              checked={hasCrf(config, galaxy)}
+              onChange={event => onChange(setGalaxyMod(config, 'CorvetteRapidFire', event.target.checked))}
+            />
+            <span>CRF 已解锁 · 护卫舰快速开火</span>
+          </label>
+          <p>
+            仅在游戏已购买后勾选。保存 Galaxy 公共后，G11 的护卫舰（Corvette）在
+            Baseline、搜索候选和最终重放中自动获得此三级 Mod，主副模组仍按装配设置。
+          </p>
+          <label className="mod-toggle">
+            <input
+              type="checkbox"
+              aria-label="TM 本次旅行已解锁"
+              checked={hasTm(config, galaxy)}
+              onChange={event => onChange(setGalaxyMod(config, TM_MOD, event.target.checked))}
+            />
+            <span>TM 本次旅行已解锁 · 护卫舰连发充能激光</span>
+          </label>
+          <p>
+            仅 G11 生效；旅行重置后请手动关闭并保存。开启只解锁 Primary 选项，不会自动装备。普通优化会将 TM
+            加入候选；推荐舰队策略沿用节点所选 Primary。可与 CRF 同时开启。
+          </p>
+        </fieldset>
+      ) : null}
       {(['permanent', 'temporary'] as const).map(group => (
         <fieldset key={group}>
           <legend>{group === 'permanent' ? '永久加成' : '临时加成'}</legend>
@@ -2945,6 +3047,10 @@ function OptimizerConfigEditor({
         <div>
           <h3>Optimizer 公共配置</h3>
           <p>跨 Galaxy 的搜索空间与精炼规则。Node 搜索页覆盖 objective、时钟、workers 和日常总预算。</p>
+          <p>
+            G11 的 TM（连发充能激光）由 Galaxy Common 的本次旅行解锁开关控制，作为护卫舰 Primary
+            候选加入；不在此处统一开放。
+          </p>
         </div>
         <span className="format-hint">
           {source === 'local' ? 'map/optimizer_v2_daily.json' : 'poc/optimizer_v2_daily.json（默认）'}
@@ -3084,7 +3190,7 @@ function OptimizerConfigEditor({
                   )
                 })}
                 <td>
-                  <span className="slot-unavailable">原版自动附加</span>
+                  <span className="slot-unavailable">按 Galaxy Common 解锁状态自动附加</span>
                 </td>
               </tr>
             ))}

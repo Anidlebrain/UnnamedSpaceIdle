@@ -339,6 +339,8 @@ func _validate_config(config: Dictionary) -> void:
 		assert(ship_id in db.fleet_ships)
 		assert(ship_id in config.ships_available)
 		assert(_config_ship_enabled(config, ship_id), "Ship is disabled or has zero availability: %s" % ship_id)
+		if item.get("primary_mod") == "CorvetteChargeLaserBurst":
+			assert(ship_id == "Corvette" and str(config.galaxy_id) == "galaxy11" and "CorvetteChargeLaserBurst" in config.get("galaxy_mods", []), "TM requires a G11 trip unlock")
 		var mod_signature := JSON.stringify(_player_mods_from_entry(item))
 		assert(not mods_by_ship.has(ship_id) or mods_by_ship[ship_id] == mod_signature, "All deployments of one ship type share the same original mod slots")
 		mods_by_ship[ship_id] = mod_signature
@@ -442,6 +444,16 @@ func _configure_ship_mods(config: Dictionary) -> void:
 		var ship_state: Dictionary = Fleet.get_fleet_ship_dict(ship_id)
 		ship_state.selected_mods = ["", ""]
 		ship_state.mods = _native_ship_mod_scopes.get(ship_id, {}).duplicate(true)
+	# Galaxy unlocks are environment state, independent of candidate loadouts.
+	# Rebuild on every battle so disabling CRF or changing Galaxy cannot leak it.
+	if "CorvetteRapidFire" in config.get("galaxy_mods", []):
+		assert(str(config.galaxy_id) == "galaxy11", "CorvetteRapidFire requires G11")
+		_validate_mod("CorvetteRapidFire", Fleet.ModSlot.TERTIARY)
+		Fleet.get_fleet_ship_dict("Corvette").mods["CorvetteRapidFire"] = "galaxy11"
+	if "CorvetteChargeLaserBurst" in config.get("galaxy_mods", []):
+		assert(str(config.galaxy_id) == "galaxy11", "TM requires G11")
+		_validate_mod("CorvetteChargeLaserBurst", Fleet.ModSlot.PRIMARY)
+		Fleet.get_fleet_ship_dict("Corvette").mods["CorvetteChargeLaserBurst"] = "galaxy11"
 	for ship_id in config.get("fleet_mod_loadouts", {}):
 		_apply_mod_list(str(ship_id), _player_mods_from_entry(config.fleet_mod_loadouts[ship_id]))
 	for item in config.formation:

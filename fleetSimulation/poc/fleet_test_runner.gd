@@ -76,6 +76,14 @@ func _run() -> void:
 				var regression: Dictionary = await tests.run(friendly, common, optimizer_v2_settings)
 				_finish(regression, 0 if regression.passed else 14, "user://fleet_search_regression.json")
 				return
+			if _has_argument("--galaxy-mod-regression"):
+				var tests := preload("res://fleet_galaxy_mod_regression.gd").new()
+				add_child(tests)
+				var regression: Dictionary = await tests.run(probe)
+				regression["tm_text_passed"] = _mod_number_text("CorvetteChargeLaserBurst", "Corvette", "primary", {}) == "CorvetteChargeLaserBurst"
+				regression.passed = regression.passed and regression.tm_text_passed
+				_finish(regression, 0 if regression.passed else 15, "user://fleet_galaxy_mod_regression.json")
+				return
 			if _has_argument("--grid-regression"):
 				var tests := preload("res://fleet_grid_regression.gd").new()
 				add_child(tests)
@@ -715,6 +723,7 @@ func _print_daily_resolved(config: Dictionary) -> void:
 	print("  Boss: %s" % ("none" if not bool(boss.alive) else "%s (%s), HP %s / %s" % [boss.command_ship_name, boss.command_ship_id, boss.remaining_hp, boss.max_hp]))
 	print("  Hazards: %s" % ("none" if config.hazards.is_empty() else ", ".join(config.hazards)))
 	print("  Supports: %s" % ("none" if config.supports.is_empty() else ", ".join(config.supports)))
+	print("  Galaxy Mods: %s" % ("none" if config.get("galaxy_mods", []).is_empty() else ", ".join(config.galaxy_mods)))
 	print("  Scales: %s" % config.get("scales", {}))
 	print("  Simulation Clock: %s" % config.get("simulation_clock", "realtime"))
 
@@ -807,6 +816,7 @@ func _build_compact_summary(summary: Dictionary, config: Dictionary) -> Dictiona
 		"galaxy": friendly.get("galaxy"),
 		"node": friendly.get("node"),
 		"formation_columns": int(config.get("grid_size", [2, 5])[0]),
+		"galaxy_mods": config.get("galaxy_mods", []),
 		"objective": summary.get("objective"),
 		"priority": summary.get("boss_priority"),
 		"recommendation_note": summary.get("recommendation_note", ""),
@@ -898,6 +908,7 @@ func _build_text_summary(compact: Dictionary, allowed_mod_slots: Dictionary = {}
 	lines.append("Search Time: %.1fs" % float(compact.search.get("wall_seconds", 0.0)))
 	lines.append("Simulations: %s" % compact.search.get("simulations", 0))
 	lines.append("Search Strategy: %s" % compact.search.get("strategy", "portfolio"))
+	lines.append("Galaxy Mods: %s" % ("none" if compact.get("galaxy_mods", []).is_empty() else ", ".join(compact.galaxy_mods)))
 	if compact.get("best", {}).is_empty():
 		lines.append("No verified recommendation. No formation is available to copy.")
 		for note in compact.get("notes", []):
@@ -1029,6 +1040,9 @@ func _ship_number_text(ship_type: String) -> String:
 func _mod_number_text(value, ship_type: String, slot: String, allowed_mod_slots: Dictionary) -> String:
 	if value == null or str(value) == "":
 		return "0"
+	# TM is appended per run, never persist a transient public-slot index.
+	if value == "CorvetteChargeLaserBurst":
+		return str(value)
 	var ship_slots = allowed_mod_slots.get(ship_type, {})
 	var options = ship_slots.get(slot, []) if ship_slots is Dictionary else []
 	if options is Array:

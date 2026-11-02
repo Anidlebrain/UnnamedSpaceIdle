@@ -67,6 +67,24 @@ python -m unittest tools/test_copy_result_columns.py -v
 
 ## Daily Usage（日常使用）
 
+### G11 CRF：快速开火
+
+G11 地图的 `CRF` 贡献升级解锁 `CorvetteRapidFire`，仅对 G11 的 Corvette（游戏中文为轻型护卫舰）生效。它是自动附加的 Tertiary Mod，可与充能激光和护盾强化同时使用，不占用 Primary / Secondary 搜索选项。原版能力为 `G11RapidFire`（充能 3 秒、2 倍射速，效果持续 15 秒）；由原版场景执行，不应手工把伤害倍率乘二。
+
+隔离搜索不会读取游戏存档，必须明确录入已解锁状态。在 `map/g11/common.json` 的顶层增加 `"galaxy_mods": ["CorvetteRapidFire"]`；未解锁时省略该字段或使用空数组。Manager 中在“公共配置 → Galaxy 公共 → G11”的 CRF 开关录入并保存，运行时使用所选 Common。不要把 `CRF` 填入 Hazards / Supports，也不要把它当作单舰种可选装备。
+
+此状态会进入 Baseline、候选模拟、worker、最终重放以及结果 `base_config.galaxy_mods`，运行日志和 TXT 的 `Galaxy Mods` 行可核对。每场恢复独立 Mod 状态，关闭后不会沿用上场效果；其他 Galaxy 配置 CRF 会报错。旧配置默认未解锁，不推测玩家进度；此前未传入 CRF 的 G11 结果需重新搜索。
+
+隔离回归入口：`python tools/benchmark_preserved.py --label <唯一测试名> --seconds 180 --extra --galaxy-mod-regression --validation-galaxies=11 --battle-config=res://ui_ab_test_02_config.json`。它验证原版 Mod 与能力、主副槽保留、实际战斗快照、开关恢复、错误配置及缓存环境区别，并备份恢复暂存工程输入。日常启动仍使用下面的 BAT。
+
+### G11 TM：本次旅行的连发充能激光
+
+G11 的 `TM` 解锁 `CorvetteChargeLaserBurst`，这是 Corvette 的可选 **Primary**，与普通充能激光二选一，可同时使用 Shield 与 CRF。解锁有效期仅为本次旅行。Manager 在“公共配置 → Galaxy 公共 → G11”勾选 TM 并保存即可；直接 BAT 使用 `common.json` 顶层 `"galaxy_mods": ["CorvetteChargeLaserBurst"]`。同时解锁 CRF 时使用 `["CorvetteRapidFire", "CorvetteChargeLaserBurst"]`。新的旅行尚未取得 TM 时必须手动关闭；程序不会读取存档或推测旅行进度。
+
+开启后，本次普通搜索自动在原有 Corvette Primary 候选之外加入 TM，与允许的 Secondary 配对，不要求修改跨 Galaxy 的 `allowed_mod_slots`，也不会自动把 Baseline 装备换成 TM。“推荐舰队搜站位”仍固定 Baseline 装配；要使用 TM，先在节点装配的护卫舰 Primary 选择“连发充能激光”并保存。未解锁或非 G11 时不会生成 TM 候选，即使旧公共 JSON 曾手工加入 TM；Baseline / diagnostic 仍选了 TM 时会明确报错，要求修改装配或确认解锁。旧公共选项只有 TM 时，锁定后回退为无 Primary，保留 Secondary。
+
+TM 解锁状态不等于已装备：结果 `base_config.galaxy_mods` 是本次可用状态，实际使用看结果的 `primary_mod`。数字装配仍按原公共数组解析，TM 的新增候选不改变已有索引。TM 在 TXT 与 `--copy` 回写中始终使用稳定 ID `CorvetteChargeLaserBurst`，可以与数字阵型、数字 Secondary 共存，避免下一次搜索被瞬态索引误解码。不要将 TM 加入 Hazards / Supports，不要手工修改舰队伤害倍率。
+
 map/ 是本机输入目录，已加入 Git 忽略；从远端克隆后需在本机自行准备 Galaxy/Node JSON 和 common.json。
 
 1. 编辑 `map/<galaxy>/<node>.json` 和同目录的 `common.json`。
@@ -80,7 +98,7 @@ map/ 是本机输入目录，已加入 Git 忽略；从远端克隆后需在本�
 Friendly Config 的舰种既可沿用英文名，也可使用数字：`1=Fighter`、`2=Corvette`、`3=Frigate`、`4=Cruiser`、`5=Heavy Cruiser`。`baseline.formation`（以及 diagnostic candidate 的 formation）可以把 A1–B5 全部写出，空位使用 `0` 或 `null`。`player_state.ships` 与 `loadouts` 的键也兼容字符串数字键 `"1"`–`"5"`。
 Baseline 阵型引用了尚未配置装配的舰种时，Resolver 自动按无 Primary/Secondary Mod 处理；已有装配不会被重置。diagnostic candidate 仍要求显式提供装配。
 
-`primary` / `secondary` 可以沿用内部 Mod ID，也可使用数字索引：`0` 表示不使用，`1` 表示该槽位在 `poc/optimizer_v2_daily.json` 中的第一个 Mod，未来存在第二个 Mod 时使用 `2`。越界索引会直接报错，不会静默替换。数字格式输入文件可使用 `<node>_num.json`，例如 `run_optimizer.bat g6 B16_num` 会读取 `B16_num.json`，校验其中的 `node: "B16"`，并仍输出 `B16.result.json` / `B16.result.txt`。TXT 中推荐舰种、阵型和两个 Mod 槽位均使用同一数字表示，空阵位显示为 `0`。
+`primary` / `secondary` 可以沿用内部 Mod ID，也可使用数字索引：`0` 表示不使用，其余数字按实际生效的 `allowed_mod_slots` 数组索引解析（默认数组以 `null` 开头，`1` 是第一个 Mod）。越界索引会直接报错，不会静默替换。数字格式输入文件可使用 `<node>_num.json`，例如 `run_optimizer.bat g6 B16_num` 会读取 `B16_num.json`，校验其中的 `node: "B16"`，并仍输出 `B16.result.json` / `B16.result.txt`。TXT 中推荐舰种、阵型和常规模组使用数字表示，空阵位显示为 `0`；TM Primary 始终使用稳定字符串 `CorvetteChargeLaserBurst`。
 
 日常使用不需要 Codex。模拟和优化完全在本机 Godot 中运行，不会消耗 Codex token。用户只填写 Friendly Config；Fleet Event、Battle、敌舰、Hazard、Support 和 Command Ship 等内部 ID 继续由 Resolver 从原版数据解析。
 

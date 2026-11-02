@@ -2,6 +2,19 @@
 
 这是舰队优化器管理应用的 V1.2 工作台实现，基于 Electron、React、Vite、TypeScript、Zod 和 Vitest。
 
+## G11 CRF / TM 解锁状态
+
+在“公共配置 → Galaxy 公共”选择 G11 与所用 Common，按游戏中已获得的状态独立勾选 CRF 和 TM，再保存 Galaxy 公共。不会自动修改已有配置。`common.json.galaxy_mods` 支持 `"CorvetteRapidFire"`（CRF）和 `"CorvetteChargeLaserBurst"`（TM）组成的无重复数组；缺省或 `[]` 表示均未解锁。两个开关互相保留，且仅 G11 生效。
+
+- CRF：护卫舰快速开火，三级 Mod。由既有 Optimizer 自动应用于 Baseline、所有候选和最终重放，不占用 Primary / Secondary。
+- TM：护卫舰连发充能激光，本次旅行的 Primary 可选模组。旅行重置后必须手动关闭并保存。开启只解锁选项；普通优化会自动加入候选，推荐舰队策略 `advisor_seeded` 沿用节点选中的装备，只搜索站位。与普通充能激光互斥，可搭配 Shield 和 CRF。
+
+节点装配显示所选 Common 当前草稿的状态与设置入口。TM 选项随 G11 与 Common 状态增加或过滤，但旧数字装备始终按原始 Optimizer `allowed_mod_slots` 的有序数组解码。选择 TM 永远保存字符串 `CorvetteChargeLaserBurst`，普通主副模组沿用既有表示。仍装备锁定 TM 的节点会保留原值并显示警告；运行暂存及浏览器模拟执行时拒绝这类 Baseline，不会悄悄清空。
+
+Best Found 按结果 `base_config.galaxy_mods` 显示本次 CRF 生效与 TM 可选状态；TM 实际是否装备以候选 Primary 为准，旧结果显示未记录。草稿、保存、任务冻结和暂存沿用现有 Common 流程，不修改跨 Galaxy 共用的 daily JSON。
+
+携带 CRF / TM 的 Common 不能保存或暂存到其他 Galaxy，跨 Galaxy 复制会明确报错；先在来源 Common 关闭两个开关并保存，Node 已装备 TM 时也应改选其他 Primary。未知 Mod ID、重复 ID 和错误字段类型在保存时拒绝。
+
 ## V1.2.1 可用性调整
 
 - 节点环境页可勾选“使用当前节点 Hazards”，自动加入当前节点名；取消时只移除当前节点，其他 Hazards 保留，手动输入也会同步勾选状态。

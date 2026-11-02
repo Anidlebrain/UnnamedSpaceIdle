@@ -730,6 +730,15 @@ th {
   border-radius: var(--radius-sm);
 }
 
+.common-form fieldset.galaxy-mods-fieldset {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.common-form .galaxy-mods-fieldset > p {
+  margin: 0;
+}
+
 .node-basics,
 .environment-config {
   display: grid;

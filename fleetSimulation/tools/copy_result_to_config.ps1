@@ -101,10 +101,12 @@ try {
         $primary = $matches[2].Trim()
         $secondary = $matches[3].Trim()
         if ($numeric) {
-            if ($primary -notmatch '^\d+$' -or $secondary -notmatch '^\d+$') {
+            $isTm = $ship -eq 'Corvette' -and $primary -ceq 'CorvetteChargeLaserBurst'
+            if (($primary -notmatch '^\d+$' -and -not $isTm) -or $secondary -notmatch '^\d+$') {
                 Fail "numeric Formation requires numeric Mod values for $ship"
             }
-            $foundLoadouts[$ship] = [ordered]@{ primary=[int]$primary; secondary=[int]$secondary }
+            $primaryValue = if ($isTm) { $primary } else { [int]$primary }
+            $foundLoadouts[$ship] = [ordered]@{ primary=$primaryValue; secondary=[int]$secondary }
         }
         else {
             if ($primary -ieq 'none' -or $primary -eq '0') { $primary = $null }

@@ -91,6 +91,10 @@ export const nodeConfigSchema = z.preprocess(normalizeNodeShips, rawNodeConfigSc
 export const commonConfigSchema = z.preprocess(
   normalizeCommonShips,
   jsonObject.extend({
+    galaxy_mods: z
+      .array(z.enum(['CorvetteRapidFire', 'CorvetteChargeLaserBurst']))
+      .refine(mods => new Set(mods).size === mods.length, 'Galaxy Mods 不得重复')
+      .optional(),
     permanent: scaleSchema,
     temporary: scaleSchema,
     // Absent in older Galaxy data: those Nodes keep their original absolute ship counts.

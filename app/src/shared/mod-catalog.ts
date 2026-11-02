@@ -69,8 +69,16 @@ export const MOD_CATALOG: readonly ModDefinition[] = [
     id: 'CorvetteRapidFire',
     ship: 'Corvette',
     slot: 'tertiary',
-    zh: '快速射击',
+    zh: '快速开火',
     en: 'Rapid Fire',
+    manuallySelectable: false,
+  },
+  {
+    id: 'CorvetteChargeLaserBurst',
+    ship: 'Corvette',
+    slot: 'primary',
+    zh: 'TM 连发充能激光',
+    en: 'Charge Laser Burst',
     manuallySelectable: false,
   },
 ] as const
@@ -106,6 +114,8 @@ export function preserveModSelectorFormat(
   next: string | null,
   options: Array<string | null>,
 ): string | number | null {
+  // Galaxy-scoped TM never uses the cross-Galaxy daily numeric indexes.
+  if (next === 'CorvetteChargeLaserBurst') return next
   if (typeof previous === 'number' || (typeof previous === 'string' && /^\d+$/.test(previous.trim()))) {
     const index = options.findIndex(option => option === next)
     const numeric = index >= 0 ? index : 0

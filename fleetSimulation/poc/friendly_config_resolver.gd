@@ -22,6 +22,22 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 	var galaxy_id := "galaxy%d" % galaxy_number
 	if galaxy_id not in Fleet.galaxy_nodes:
 		return _error("Unknown galaxy in original Fleet data: %d" % galaxy_number)
+	var galaxy_mods = common.get("galaxy_mods", [])
+	if not galaxy_mods is Array:
+		return _error("common.json.galaxy_mods must be an array of unlocked Galaxy Mod IDs")
+	var active_galaxy_mods: Array = []
+	for mod_id in galaxy_mods:
+		# Original G11 CRF/TM contributions unlock Galaxy-scoped Corvette Mods.
+		# The isolated runtime cannot infer purchased upgrades from a game save.
+		if not mod_id is String or mod_id not in ["CorvetteRapidFire", "CorvetteChargeLaserBurst"]:
+			return _error("Unsupported common.json.galaxy_mods entry: %s" % str(mod_id))
+		if galaxy_number != 11:
+			return _error("%s is only available in G11; remove it from common.json.galaxy_mods" % mod_id)
+		var expected_slot: int = Fleet.ModSlot.TERTIARY if mod_id == "CorvetteRapidFire" else Fleet.ModSlot.PRIMARY
+		if mod_id not in db.fleet_mods or int(db.fleet_mods[mod_id].slot) != expected_slot:
+			return _error("Original DB is missing the expected Galaxy Mod: %s" % mod_id)
+		if mod_id not in active_galaxy_mods:
+			active_galaxy_mods.append(mod_id)
 
 	var node_name := str(friendly.node).strip_edges().to_upper()
 	var fleet_event = _event_by_friendly_name(galaxy_id, node_name)
@@ -165,6 +181,9 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 		if not bool(normalized_baseline.ok):
 			return _error(str(normalized_baseline.error))
 		baseline = normalized_baseline.candidate
+		var unlock_error := _validate_galaxy_loadouts(baseline, active_galaxy_mods)
+		if unlock_error != "":
+			return _error(unlock_error)
 		var baseline_error := _validate_baseline(baseline, ships, grid)
 		if baseline_error != "":
 			return _error(baseline_error)
@@ -183,12 +202,16 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 			if not bool(normalized_candidate.ok):
 				return _error(str(normalized_candidate.error))
 			diagnostic[candidate_name] = normalized_candidate.candidate
+			var unlock_error := _validate_galaxy_loadouts(normalized_candidate.candidate, active_galaxy_mods)
+			if unlock_error != "":
+				return _error(unlock_error)
 			var candidate_error := _validate_candidate(normalized_candidate.candidate, ships, candidate_label, grid)
 			if candidate_error != "":
 				return _error(candidate_error)
 
 	var resolved := {
 		"galaxy_id": galaxy_id,
+		"galaxy_mods": active_galaxy_mods,
 		"fleet_event_id": str(fleet_event.fleet_event),
 		"battle_id": battle_id,
 		"grid_size": [grid.x, grid.y],
@@ -234,6 +257,18 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 	}
 	_print_summary(galaxy_number, node_name, resolved)
 	return {"ok": true, "config": resolved}
+
+
+func _validate_galaxy_loadouts(candidate: Dictionary, galaxy_mods: Array) -> String:
+	for ship in candidate.get("loadouts", {}):
+		var loadout: Dictionary = candidate.loadouts[ship]
+		for slot in ["primary", "secondary"]:
+			if loadout.get(slot) == "CorvetteChargeLaserBurst":
+				if ship != "Corvette" or slot != "primary":
+					return "TM CorvetteChargeLaserBurst requires Corvette primary slot"
+				if "CorvetteChargeLaserBurst" not in galaxy_mods:
+					return "TM CorvetteChargeLaserBurst is not unlocked for this trip; enable it in G11 common.json.galaxy_mods or change the baseline primary Mod"
+	return ""
 
 
 func _resolve_player_ships(node_ships, common: Dictionary) -> Dictionary:

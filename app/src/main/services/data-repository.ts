@@ -1,3 +1,4 @@
+import { commonForGalaxy, validateGalaxyLoadouts } from '../../shared/galaxy-mods'
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
@@ -359,7 +360,7 @@ export class DataRepository {
     this.validateSelection(selection)
     await atomicJson(
       join(this.commonDir(selection.galaxy), 'versions', `${selection.common}.json`),
-      commonConfigSchema.parse(common),
+      commonForGalaxy(common, selection.galaxy),
     )
   }
 
@@ -544,7 +545,7 @@ export class DataRepository {
       galaxy: Number(request.galaxy.slice(1)),
       node: request.node.replace(/_num$/i, ''),
     })
-    const common = commonConfigSchema.parse(source.common)
+    const common = commonForGalaxy(source.common, request.galaxy)
     const parent = join(this.dataRoot, 'galaxies')
     const temporary = join(parent, `.${request.galaxy}-${randomUUID()}.tmp`)
     await mkdir(temporary, { recursive: true })
@@ -577,8 +578,9 @@ export class DataRepository {
   async stageValues(selection: Selection, node: NodeConfig, common: CommonConfig): Promise<void> {
     this.validateSelection(selection)
     const parsedNode = nodeConfigSchema.parse(node)
-    const parsedCommon = commonConfigSchema.parse(common)
+    const parsedCommon = commonForGalaxy(common, selection.galaxy)
     this.assertIdentity(selection, parsedNode)
+    validateGalaxyLoadouts(parsedNode, parsedCommon, await this.loadOptimizerConfig())
     const target = join(this.mapRoot, selection.galaxy)
     // Materialize negative ship deltas for the existing BAT/Resolver, which accepts only nonnegative counts.
     const hasShipReduction = Object.values(parsedNode.player_state.ships).some(count => count < 0)

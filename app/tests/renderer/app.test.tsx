@@ -679,6 +679,121 @@ describe('Renderer preload contract', () => {
     expect(hazards.value).toBe('B10')
   })
 
+  it('keeps the G11 CRF Common draft across pages and saves the unlock separately from node loadouts', async () => {
+    const catalog = await api.catalog()
+    api.catalog.mockResolvedValue({ ...catalog, galaxies: [{ ...catalog.galaxies[0], id: 'g11' }] })
+    api.load.mockResolvedValue({
+      node: { ...node, galaxy: 11 },
+      common: { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 0, health_scale: 0 } },
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: /^公共配置/ }))
+    const toggle = (await screen.findByRole('checkbox', { name: 'CRF 已解锁' })) as HTMLInputElement
+    expect(toggle.checked).toBe(false)
+    fireEvent.click(toggle)
+    expect(api.saveCommon).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: '节点配置' }))
+    fireEvent.click(await screen.findByRole('tab', { name: '装配' }))
+    expect(await screen.findByText('CRF 已解锁 · 自动附加')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /^公共配置/ }))
+    expect(((await screen.findByRole('checkbox', { name: 'CRF 已解锁' })) as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: '保存 Galaxy 公共' }))
+    await waitFor(() =>
+      expect(api.saveCommon).toHaveBeenCalledWith(
+        expect.objectContaining({ galaxy: 'g11' }),
+        expect.objectContaining({ galaxy_mods: ['CorvetteRapidFire'] }),
+      ),
+    )
+    expect(api.save).not.toHaveBeenCalled()
+  })
+
+  it('keeps TM and CRF independent and saves TM as a string from a numeric primary', async () => {
+    const catalog = await api.catalog()
+    api.catalog.mockResolvedValue({ ...catalog, galaxies: [{ ...catalog.galaxies[0], id: 'g11' }] })
+    api.load.mockResolvedValue({
+      node: {
+        ...node,
+        galaxy: 11,
+        baseline: { ...node.baseline, loadouts: { Corvette: { primary: 1, secondary: 'ShieldMod' } } },
+      },
+      common: commonConfigSchema.parse({
+        permanent: { damage_scale: 1, health_scale: 1 },
+        temporary: { damage_scale: 0, health_scale: 0 },
+      }),
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('button', { name: /^公共配置/ }))
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'TM 本次旅行已解锁' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'CRF 已解锁' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'CRF 已解锁' }))
+    expect((screen.getByRole('checkbox', { name: 'TM 本次旅行已解锁' }) as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'CRF 已解锁' }))
+    fireEvent.click(screen.getByRole('checkbox', { name: 'TM 本次旅行已解锁' }))
+    expect((screen.getByRole('checkbox', { name: 'CRF 已解锁' }) as HTMLInputElement).checked).toBe(true)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'TM 本次旅行已解锁' }))
+    fireEvent.click(screen.getByRole('button', { name: '保存 Galaxy 公共' }))
+    await waitFor(() =>
+      expect(api.saveCommon).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ galaxy_mods: ['CorvetteRapidFire', 'CorvetteChargeLaserBurst'] }),
+      ),
+    )
+    fireEvent.click(screen.getByRole('button', { name: '节点配置' }))
+    fireEvent.click(await screen.findByRole('tab', { name: '装配' }))
+    const primary = await screen.findByRole('combobox', { name: 'Corvette primary' })
+    expect(primary.textContent).toContain('充能激光')
+    fireEvent.click(primary)
+    fireEvent.click(screen.getByRole('option', { name: /TM 连发充能激光/ }))
+    const saved = JSON.parse((screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement).value)
+    expect(saved.baseline.loadouts.Corvette).toMatchObject({
+      primary: 'CorvetteChargeLaserBurst',
+      secondary: 'ShieldMod',
+    })
+    expect(await screen.findByText('CRF 已解锁 · 自动附加')).toBeTruthy()
+  })
+
+  it('decodes old primary numbers before filtering TM and keeps locked TM visible with a warning', async () => {
+    const catalog = await api.catalog()
+    api.catalog.mockResolvedValue({ ...catalog, galaxies: [{ ...catalog.galaxies[0], id: 'g11' }] })
+    api.loadOptimizerConfig.mockResolvedValueOnce({
+      ...optimizerConfig,
+      allowed_mod_slots: {
+        ...optimizerConfig.allowed_mod_slots,
+        Corvette: {
+          primary: [null, 'CorvetteChargeLaserBurst', 'CorvetteChargeLaserMod'],
+          secondary: [null, 'ShieldMod'],
+        },
+      },
+    })
+    api.load.mockResolvedValue({
+      node: {
+        ...node,
+        galaxy: 11,
+        baseline: { ...node.baseline, loadouts: { Corvette: { primary: 2, secondary: 1 } } },
+      },
+      common: commonConfigSchema.parse({
+        permanent: { damage_scale: 1, health_scale: 1 },
+        temporary: { damage_scale: 0, health_scale: 0 },
+      }),
+    })
+    render(<App />)
+    await screen.findByText('当前节点')
+    fireEvent.click(screen.getByRole('tab', { name: '装配' }))
+    expect(((await screen.findByLabelText(/Corvette primary.*充能激光/)) as HTMLInputElement).checked).toBe(true)
+    const raw = screen.getByLabelText('Node JSON 编辑器') as HTMLTextAreaElement
+    const changed = JSON.parse(raw.value)
+    changed.baseline.loadouts.Corvette.primary = 'CorvetteChargeLaserBurst'
+    fireEvent.change(raw, { target: { value: JSON.stringify(changed) } })
+    fireEvent.click(screen.getByRole('button', { name: '保存节点' }))
+    expect(await screen.findByRole('alert')).toHaveProperty('textContent', expect.stringContaining('仍装备 TM'))
+    expect((await screen.findByRole('combobox', { name: 'Corvette primary' })).textContent).toContain(
+      '不可用：TM 连发充能激光',
+    )
+    expect(JSON.parse(raw.value).baseline.loadouts.Corvette.primary).toBe('CorvetteChargeLaserBurst')
+  })
+
   it('increments both permanent scales by 0.25 and saves the Common only', async () => {
     render(<App />)
     await screen.findByText('当前节点')
@@ -802,6 +917,7 @@ describe('Renderer preload contract', () => {
       finishedAt: '2026-01-01T00:00:04.000Z',
       task,
       result: {
+        base_config: { galaxy_mods: ['CorvetteChargeLaserBurst'] },
         verified_baseline: {
           formation: [{ position: 'A1', ship: 'Fighter' }],
           fleet_resources_committed: 100,
@@ -834,6 +950,7 @@ describe('Renderer preload contract', () => {
     fireEvent.click(screen.getByRole('button', { name: '搜索' }))
     fireEvent.click(screen.getByRole('button', { name: '加入搜索队列' }))
     await screen.findByText('最终编队')
+    expect(screen.getByText(/TM（连发充能激光）：本次可选，实际装备见 Primary/)).toBeTruthy()
     expect(JSON.parse(localStorage.getItem('fleet-manager-last-search-v1')!)).toMatchObject({
       galaxy: 'g6',
       node: 'B1',
@@ -864,7 +981,7 @@ describe('Renderer preload contract', () => {
     ).toEqual(['B5 空位', 'A5 空位'])
     expect(document.querySelectorAll('.best-loadouts > div')).toHaveLength(1)
     expect(screen.getByText('舰船最终配置')).toBeTruthy()
-    expect(screen.getByText(/充能激光/)).toBeTruthy()
+    expect(within(document.querySelector('.best-loadouts') as HTMLElement).getByText(/充能激光/)).toBeTruthy()
     expect(screen.getByText('应用到：G6 / B1 / 默认')).toBeTruthy()
     expect(screen.getByRole('button', { name: '使用最优配置' })).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: /节点配置/ }))

@@ -581,12 +581,39 @@ func _normalize_settings() -> void:
 		_base_config.ships_available = _settings.ships_available.duplicate(true)
 	if _settings.has("allowed_mod_slots"):
 		_settings.allowed_loadouts = _expand_slot_loadouts(_settings.allowed_mod_slots)
+	_apply_galaxy_primary_unlocks()
 	if not _settings.has("kill_refine_top_n"):
 		_settings.kill_refine_top_n = 10
 	if not _settings.has("kill_sequence_max_battles"):
 		_settings.kill_sequence_max_battles = 100
 	if not _settings.has("kill_refine_reserve_simulations"):
 		_settings.kill_refine_reserve_simulations = int(_settings.kill_refine_top_n) * 3
+
+
+func _apply_galaxy_primary_unlocks() -> void:
+	# Keep public slot arrays untouched: existing numeric selectors use their
+	# original indexes. TM extends only this run's effective loadout candidates.
+	var unlocked: bool = str(_base_config.get("galaxy_id", "")) == "galaxy11" and "CorvetteChargeLaserBurst" in _base_config.get("galaxy_mods", [])
+	for ship in _settings.get("allowed_loadouts", {}):
+		var choices: Array = _settings.allowed_loadouts[ship]
+		var legal: Array = []
+		var secondaries: Array = []
+		for choice in choices:
+			if choice.get("secondary_mod") not in secondaries:
+				secondaries.append(choice.get("secondary_mod"))
+			if choice.get("primary_mod") != "CorvetteChargeLaserBurst":
+				legal.append(choice)
+		# A legacy public override containing only TM must still allow a legal
+		# unmodified primary when TM is unavailable, without changing its indexes.
+		if legal.is_empty() and not choices.is_empty() and not (ship == "Corvette" and unlocked):
+			for secondary in secondaries:
+				legal.append({"id": _slot_loadout_id(null, secondary), "primary_mod": null,
+					"secondary_mod": secondary, "tertiary_mods": []})
+		if ship == "Corvette" and unlocked:
+			for secondary in secondaries:
+				legal.append({"id": _slot_loadout_id("CorvetteChargeLaserBurst", secondary),
+					"primary_mod": "CorvetteChargeLaserBurst", "secondary_mod": secondary, "tertiary_mods": []})
+		_settings.allowed_loadouts[ship] = legal
 
 
 func _expand_slot_loadouts(slot_options: Dictionary) -> Dictionary:

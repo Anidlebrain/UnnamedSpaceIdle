@@ -121,6 +121,25 @@ class CopyResultColumnsTests(unittest.TestCase):
         self.assertEqual(baseline["loadouts"]["Cruiser"],
                          {"primary": "LaserMod", "secondary": None})
 
+    def test_tm_string_round_trips_with_numeric_formation(self):
+        self.write_config(1)
+        self.write_result([("A", [2, 0, 0, 0, 0])], metadata=1)
+        original = self.result_path.read_text(encoding="utf-8")
+        self.result_path.write_text(original.replace("4: Primary=1; Secondary=0",
+            "2: Primary=CorvetteChargeLaserBurst; Secondary=1"), encoding="utf-8")
+        result = self.run_copy()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        config = json.loads(self.config_path.read_text(encoding="utf-8"))
+        self.assertEqual(config['baseline']['loadouts']['Corvette'],
+            {'primary': 'CorvetteChargeLaserBurst', 'secondary': 1})
+        self.assertEqual(config['baseline']['formation']['A1'], 2)
+        before = self.config_path.read_bytes()
+        for bad in ['4: Primary=CorvetteChargeLaserBurst; Secondary=1',
+                    '2: Primary=UnexpectedMod; Secondary=1']:
+            self.result_path.write_text(original.replace('4: Primary=1; Secondary=0', bad), encoding='utf-8')
+            self.assertNotEqual(self.run_copy().returncode, 0)
+            self.assertEqual(self.config_path.read_bytes(), before)
+
     def test_integer_valued_json_number_and_invalid_types(self):
         rows = [(letter, [4, 0, 0, 0, 0]) for letter in "ABC"]
         self.write_config(3.0)
