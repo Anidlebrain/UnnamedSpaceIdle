@@ -22,7 +22,9 @@ def read(path):
 
 
 def main():
+    global PROJECT
     p = argparse.ArgumentParser()
+    p.add_argument('--project', type=Path, default=PROJECT)
     p.add_argument('--label', required=True)
     p.add_argument('--config')
     p.add_argument('--case')
@@ -36,6 +38,7 @@ def main():
     p.add_argument('--source', default=str(ROOT / 'poc'))
     p.add_argument('--extra', nargs=argparse.REMAINDER, default=[])
     args = p.parse_args()
+    PROJECT = args.project.resolve()
     out = ROOT / 'results/optimizer_v3' / args.label
     out.mkdir(parents=True, exist_ok=False)
     source = Path(args.source)
@@ -83,13 +86,17 @@ def main():
                '-LogPath', str(out / 'native.godot.log'), '-MaxWallSeconds', str(args.seconds),
                '-WorkerId', 'bench_' + args.label]
     start = time.perf_counter()
+    appdata = out / 'appdata'
+    appdata.mkdir()
+    (appdata / 'Unnamed Space Idle Fleet Test').mkdir()
     with (out / 'stdout.log').open('w', encoding='utf-8') as stdout, (out / 'stderr.log').open('w', encoding='utf-8') as stderr:
-        proc = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, creationflags=subprocess.CREATE_NO_WINDOW)
+        proc = subprocess.Popen(cmd, stdout=stdout, stderr=stderr, creationflags=subprocess.CREATE_NO_WINDOW,
+                                env=dict(os.environ, APPDATA=str(appdata)))
         # Query CPU from the process handle even after it exits. Children are measured
         # separately by the optimizer when available, never inferred from wall time.
         sampled_updates = []
         seen_updates = 0
-        userdir = Path(os.environ['APPDATA']) / ('Unnamed Space Idle Fleet Worker bench_' + args.label)
+        userdir = appdata / ('Unnamed Space Idle Fleet Worker bench_' + args.label)
         child_handles = {}
         kernel = ctypes.windll.kernel32
         kernel.OpenProcess.restype = ctypes.c_void_p
@@ -132,7 +139,7 @@ def main():
                 source_sha256=hashes, command=cmd,
                 native_sha256={str(f.relative_to(PROJECT)): hashlib.sha256(f.read_bytes()).hexdigest()
                     for folder in [PROJECT / "fleet", PROJECT / "projectiles"] for f in folder.rglob("*.gd")})
-    userdir = Path(os.environ['APPDATA']) / ('Unnamed Space Idle Fleet Worker bench_' + args.label)
+    userdir = appdata / ('Unnamed Space Idle Fleet Worker bench_' + args.label)
     for f in userdir.glob('*.json'):
         shutil.copy2(f, out / f.name)
     (out / 'process.json').write_text(json.dumps(meta, indent=2), encoding='utf-8')

@@ -1,0 +1,47 @@
+{
+  "weapons": [
+    {
+      "id": "TitanLaser",
+      "level": 60,
+      "milestones": {
+        "10": "TitanLaserMile11",
+        "20": "TitanLaserMile22",
+        "30": "TitanLaserMile32",
+        "40": "TitanLaserMile41",
+        "50": "TitanLaserMile51",
+        "60": "TitanLaserMile62"
+      },
+      "targeting": {"type": "Unarmored", "priority": "Highest Max HP", "swapping": "Change Target", "overlap": "Allow"}
+    },
+    {
+      "id": "TitanCannon",
+      "level": 60,
+      "milestones": {
+        "10": "TitanCannonMile11",
+        "20": "TitanCannonMile22",
+        "30": "TitanCannonMile31",
+        "40": "TitanCannonMile41",
+        "50": "TitanCannonMile51",
+        "60": "TitanCannonMile61"
+      },
+      "targeting": {"type": "Armored", "priority": "Highest Max HP", "swapping": "Change Target", "overlap": "Allow"}
+    },
+    {
+      "id": "TitanShockwaveCannon",
+      "level": 20,
+      "milestones": {"10": "TitanShockwaveMile12", "20": "TitanShockwaveMile21"},
+      "targeting": {"type": "Armored", "priority": "Biggest Cluster", "swapping": "Change Target", "overlap": "Allow"}
+    }
+  ],
+  "shield": {"id": "TitanShield", "level": 50, "milestones": {}},
+  "array_core": {"id": "TitanArray", "level": 40, "milestones": {}},
+  "array_capacity": 23,
+  "sequence": [
+    {"id": "kinetic_honing_shot", "targets": ["1:2", "1:1"]},
+    {"id": "hull_damage_boost", "targets": []},
+    {"id": "laser_shot", "targets": ["1:1"]},
+    {"id": "armor_damage_boost", "targets": []},
+    {"id": "basic_damage_boost", "targets": []},
+    {"id": "kinetic_shot", "targets": ["2:1"]}
+  ]
+}

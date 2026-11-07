@@ -1,5 +1,7 @@
 extends "res://fleet_optimizer.gd"
 
+const GalaxyMods = preload("res://fleet_galaxy_mods.gd")
+
 var _probe: Node
 var _base_config: Dictionary
 var _settings: Dictionary
@@ -593,26 +595,31 @@ func _normalize_settings() -> void:
 func _apply_galaxy_primary_unlocks() -> void:
 	# Keep public slot arrays untouched: existing numeric selectors use their
 	# original indexes. TM extends only this run's effective loadout candidates.
-	var unlocked: bool = str(_base_config.get("galaxy_id", "")) == "galaxy11" and "CorvetteChargeLaserBurst" in _base_config.get("galaxy_mods", [])
 	for ship in _settings.get("allowed_loadouts", {}):
+		var unlocked: Array = []
+		for mod_id in _base_config.get("galaxy_mods", []):
+			if GalaxyMods.is_primary(mod_id):
+				var definition: Dictionary = GalaxyMods.DEFINITIONS[mod_id]
+				if ship == definition.ship and str(_base_config.get("galaxy_id", "")) == "galaxy%d" % definition.galaxy:
+					unlocked.append(mod_id)
 		var choices: Array = _settings.allowed_loadouts[ship]
 		var legal: Array = []
 		var secondaries: Array = []
 		for choice in choices:
 			if choice.get("secondary_mod") not in secondaries:
 				secondaries.append(choice.get("secondary_mod"))
-			if choice.get("primary_mod") != "CorvetteChargeLaserBurst":
+			if not GalaxyMods.is_primary(choice.get("primary_mod")):
 				legal.append(choice)
 		# A legacy public override containing only TM must still allow a legal
 		# unmodified primary when TM is unavailable, without changing its indexes.
-		if legal.is_empty() and not choices.is_empty() and not (ship == "Corvette" and unlocked):
+		if legal.is_empty() and not choices.is_empty() and unlocked.is_empty():
 			for secondary in secondaries:
 				legal.append({"id": _slot_loadout_id(null, secondary), "primary_mod": null,
 					"secondary_mod": secondary, "tertiary_mods": []})
-		if ship == "Corvette" and unlocked:
+		for mod_id in unlocked:
 			for secondary in secondaries:
-				legal.append({"id": _slot_loadout_id("CorvetteChargeLaserBurst", secondary),
-					"primary_mod": "CorvetteChargeLaserBurst", "secondary_mod": secondary, "tertiary_mods": []})
+				legal.append({"id": _slot_loadout_id(mod_id, secondary),
+					"primary_mod": mod_id, "secondary_mod": secondary, "tertiary_mods": []})
 		_settings.allowed_loadouts[ship] = legal
 
 

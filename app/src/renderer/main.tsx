@@ -6,6 +6,7 @@ import { createBrowserApi } from './web-runtime-api'
 import '../../tokens.css'
 import './styles.css'
 import './phase4.css'
+import './titan.css'
 
 if (!window[FLEET_MANAGER_BRIDGE_NAME]) {
   window[FLEET_MANAGER_BRIDGE_NAME] = createBrowserApi()

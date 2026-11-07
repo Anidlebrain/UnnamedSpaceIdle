@@ -101,7 +101,8 @@ try {
         $primary = $matches[2].Trim()
         $secondary = $matches[3].Trim()
         if ($numeric) {
-            $isTm = $ship -eq 'Corvette' -and $primary -ceq 'CorvetteChargeLaserBurst'
+            $tripMods = @{ Corvette='CorvetteChargeLaserBurst'; Frigate='FrigateRapidMissileMod'; Fighter='FighterJumpGatling' }
+            $isTm = $tripMods.ContainsKey($ship) -and $primary -ceq $tripMods[$ship]
             if (($primary -notmatch '^\d+$' -and -not $isTm) -or $secondary -notmatch '^\d+$') {
                 Fail "numeric Formation requires numeric Mod values for $ship"
             }

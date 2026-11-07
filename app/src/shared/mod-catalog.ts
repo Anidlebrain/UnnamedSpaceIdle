@@ -1,4 +1,5 @@
 import type { OptimizerConfig } from './schemas'
+import { isGalaxyPrimary } from './galaxy-mod-catalog'
 
 export type ModSlot = 'primary' | 'secondary' | 'tertiary'
 
@@ -15,6 +16,38 @@ type ModDefinition = {
 // Fleet.get_ship_mods slot rules. Scoped tertiary Mods are automatic in
 // Standard Galaxy battles, so they are documented but not manually selectable.
 export const MOD_CATALOG: readonly ModDefinition[] = [
+  {
+    id: 'FrigateHealthBoost',
+    ship: 'Frigate',
+    slot: 'tertiary',
+    zh: 'FHB',
+    en: 'Frigate Health Boost',
+    manuallySelectable: false,
+  },
+  {
+    id: 'FrigateRapidMissileMod',
+    ship: 'Frigate',
+    slot: 'primary',
+    zh: 'TM',
+    en: 'Frigate Rapid Missiles',
+    manuallySelectable: false,
+  },
+  {
+    id: 'FighterBarrier',
+    ship: 'Fighter',
+    slot: 'tertiary',
+    zh: 'FB',
+    en: 'Fighter Barrier',
+    manuallySelectable: false,
+  },
+  {
+    id: 'FighterJumpGatling',
+    ship: 'Fighter',
+    slot: 'primary',
+    zh: 'TM',
+    en: 'Fighter Jump Gatling',
+    manuallySelectable: false,
+  },
   {
     id: 'FighterMiniRailgunMod',
     ship: 'Fighter',
@@ -115,7 +148,7 @@ export function preserveModSelectorFormat(
   options: Array<string | null>,
 ): string | number | null {
   // Galaxy-scoped TM never uses the cross-Galaxy daily numeric indexes.
-  if (next === 'CorvetteChargeLaserBurst') return next
+  if (isGalaxyPrimary(next)) return next
   if (typeof previous === 'number' || (typeof previous === 'string' && /^\d+$/.test(previous.trim()))) {
     const index = options.findIndex(option => option === next)
     const numeric = index >= 0 ? index : 0

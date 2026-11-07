@@ -1,5 +1,40 @@
 # Fleet Battle 原生模拟复用
 
+## 当前游戏资源：0.90.0.1（G12 / G13）
+
+2026-11-07 已将本机默认 `work/full_recovered/` 更新至原版 **0.90.0.1**，日常仍运行 `run_optimizer.bat g12 B1`。旧日志中的 `game version 0.85.1.0` 来自搜索器的旧恢复工程；它只有 11 个 Galaxy，所以会报 `Unknown optimizer galaxy: galaxy12`。新版直接要求 0.90.0.1，不提供旧游戏版本兼容分支。版本不符时退出 73 并提示准备新资源。
+
+此次更新使用项目内已有可信恢复副本（原始 PCK SHA256 `5e352f56259de38093870449e28585d584790fffefcfde2c95cd982ceb5fe307`），完整替换运行资源，保留原版 `FleetBattle`、碰撞分组、敌舰、地图、支援与 `force_team` 行为。没有重写战斗公式、读取正式存档或修改游戏安装。旧的本机运行工程归档于 `work/full_recovered_085_backup_20261107/`，用于保留原有输入和证据，不再作为运行来源。
+
+G12 的 B1–B21 / BB1、G13 的 B1–B18 / BB1 均从原版解析；G13 的第 3 个战斗分为 **B3A / B3B**。G12 B21、G13 B18 必须设置 `formation_columns: 3`。Hazards / Supports 继续按源节点名填写，例如 G12 的 PF1 / PF2；不能把模组解锁节点当作 Support。
+
+各星系 `common.json` 顶层的 `galaxy_mods` 录入已获得的状态，省略表示未解锁：
+
+| Galaxy | 自动附加的 Tertiary | 本次旅行可选 Primary（TM） |
+|---|---|---|
+| G11 | `CorvetteRapidFire`（CRF） | `CorvetteChargeLaserBurst` |
+| G12 | `FrigateHealthBoost`（FHB，2 倍生命与原版 Dampening Field） | `FrigateRapidMissileMod` |
+| G13 | `FighterBarrier`（FB） | `FighterJumpGatling` |
+
+例如 G12 两项已解锁时使用 `"galaxy_mods": ["FrigateHealthBoost", "FrigateRapidMissileMod"]`。Manager 的“公共配置 → Galaxy 公共”提供对应开关。TM 只解锁候选，不自动替换 Baseline；`advisor_seeded` 仍固定输入装配。旅行重置后手动关闭 TM。自动三级模组不占主副槽，具体能力交由原版执行。错误星系、舰种、槽位或未解锁的 TM 会拒绝；每场重新建立解锁状态。TXT / `--copy` 对所有 TM 使用稳定字符串 ID，原有数字装备索引不变。
+
+恢复资源不提交 Git。需要在其他机器重建时，用已有完整 0.90.0.1 恢复工程运行：
+
+```powershell
+python tools/prepare_fleet_runtime.py --source <已有恢复工程目录> --target work/full_recovered
+```
+
+目标目录必须不存在且位于 `fleetSimulation/work/`；脚本拒绝覆盖已有目录，也不提取或下载 PCK。已有运行工程先保留归档，再准备新目录。脚本保留 UID / 导入资源缓存，复制当前 PoC，设置独立 `user://`，禁用 Steam / Purchase 初始化与存档加载，并记录 `fleet_runtime_manifest.json` 原版文件哈希。日常 BAT 会继续同步最新适配脚本。
+
+新版验证入口（仅测试，日常仍使用 BAT）：
+
+```powershell
+python tools/benchmark_preserved.py --label <唯一标签> --seconds 300 --extra --runtime-regression --validation-galaxies=12,13 --battle-config=res://ui_ab_test_02_config.json
+python -m unittest discover -s tools -p 'test_*.py' -q
+```
+
+专项回归覆盖节点解析、Boss HP、三列要求、新模组解锁/候选/缓存/场间恢复、真实战斗、支援和 G13 `force_team`。已通过 103 项检查；G11 CRF/TM 的 38 项回归也通过。G12 双 worker 合成搜索通过最终原版重放。用户原 G12 B1 输入经标准 BAT / 4 worker 完成 90 个站位和最终重放（91 次模拟、0 错误），找到 Used FR 23.5 的胜利方案；测试后原配置与已有结果按字节恢复，独立证据保留在 `results/optimizer_v3/g12_090_daily_bat/`。合成结果只验证适配，不代表用户进度或全局最优。基准运行使用每次独立的项目内 APPDATA，并备份恢复暂存输入；`--project` 可先验证新运行目录再启用。下文历史测试中的 0.85.1.0 数值保留作历史证据，不作为新版战斗结果。
+
 ## 当前日常 Optimizer：v3
 
 日常入口已切换为 `poc/fleet_optimizer_search.gd`。普通战按 **WIN → 最低真实 Used FR** 排名；Boss 有三种 `boss.priority`：`efficiency`（伤害效率，允许 LOSS）、`kill_cost`（最低击杀总成本，输入 FR 为每次部署上限，每场恢复同一上限）、`affordable_kill_cost`（当前资源内完整击杀，逐场使用原版账本结算，剩余 FR 必须足够下一次部署，且累计实际 Used FR 不超过输入 FR）。两个击杀策略都使用原版逐场模拟至 Boss HP 为零的成绩，最后一场保留原版退款；投影场数/成本只用于探索排序。

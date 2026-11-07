@@ -10,10 +10,11 @@ PROJECT = ROOT / 'work/full_recovered'
 
 def main():
     args = sys.argv[1:]
+    project = Path(args[args.index('--project') + 1]).resolve() if '--project' in args else PROJECT
     source = Path(args[args.index('--source') + 1]) if '--source' in args else ROOT / 'poc'
     names = {f.name for f in source.iterdir() if f.suffix in ('.gd', '.tscn', '.json')}
     names.update(['config.json', 'common.json'])
-    originals = {name: (PROJECT / name).read_bytes() if (PROJECT / name).exists() else None for name in names}
+    originals = {name: (project / name).read_bytes() if (project / name).exists() else None for name in names}
     # Persist recovery material even if the calling terminal is interrupted.
     label = args[args.index('--label') + 1]
     backup = ROOT / 'results/optimizer_v3' / (label + '_inputs_backup')
@@ -26,7 +27,7 @@ def main():
         return subprocess.call([sys.executable, str(ROOT / 'tools/benchmark_optimizer.py'), *args])
     finally:
         for name, content in originals.items():
-            path = PROJECT / name
+            path = project / name
             if content is None:
                 path.unlink(missing_ok=True)
             else:

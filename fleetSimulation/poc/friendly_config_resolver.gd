@@ -1,5 +1,7 @@
 extends Node
 
+const GalaxyMods = preload("res://fleet_galaxy_mods.gd")
+
 const SHIP_NUMBER_TO_ID := {
 	1: "Fighter",
 	2: "Corvette",
@@ -27,13 +29,12 @@ func resolve(friendly: Dictionary, common: Dictionary = {}, allowed_mod_slots: D
 		return _error("common.json.galaxy_mods must be an array of unlocked Galaxy Mod IDs")
 	var active_galaxy_mods: Array = []
 	for mod_id in galaxy_mods:
-		# Original G11 CRF/TM contributions unlock Galaxy-scoped Corvette Mods.
-		# The isolated runtime cannot infer purchased upgrades from a game save.
-		if not mod_id is String or mod_id not in ["CorvetteRapidFire", "CorvetteChargeLaserBurst"]:
+		if not mod_id is String or mod_id not in GalaxyMods.DEFINITIONS:
 			return _error("Unsupported common.json.galaxy_mods entry: %s" % str(mod_id))
-		if galaxy_number != 11:
-			return _error("%s is only available in G11; remove it from common.json.galaxy_mods" % mod_id)
-		var expected_slot: int = Fleet.ModSlot.TERTIARY if mod_id == "CorvetteRapidFire" else Fleet.ModSlot.PRIMARY
+		var definition: Dictionary = GalaxyMods.DEFINITIONS[mod_id]
+		if galaxy_number != definition.galaxy:
+			return _error("%s is only available in G%d; remove it from common.json.galaxy_mods" % [mod_id, definition.galaxy])
+		var expected_slot: int = definition.slot
 		if mod_id not in db.fleet_mods or int(db.fleet_mods[mod_id].slot) != expected_slot:
 			return _error("Original DB is missing the expected Galaxy Mod: %s" % mod_id)
 		if mod_id not in active_galaxy_mods:
@@ -263,11 +264,17 @@ func _validate_galaxy_loadouts(candidate: Dictionary, galaxy_mods: Array) -> Str
 	for ship in candidate.get("loadouts", {}):
 		var loadout: Dictionary = candidate.loadouts[ship]
 		for slot in ["primary", "secondary"]:
-			if loadout.get(slot) == "CorvetteChargeLaserBurst":
-				if ship != "Corvette" or slot != "primary":
-					return "TM CorvetteChargeLaserBurst requires Corvette primary slot"
-				if "CorvetteChargeLaserBurst" not in galaxy_mods:
-					return "TM CorvetteChargeLaserBurst is not unlocked for this trip; enable it in G11 common.json.galaxy_mods or change the baseline primary Mod"
+			var error := GalaxyMods.loadout_error(ship, loadout.get(slot), 0 if slot == "primary" else 1, galaxy_mods)
+			if error != "":
+				return error
+		for field in ["tertiary", "tertiary_mods"]:
+			var mods = loadout.get(field, [])
+			if not mods is Array:
+				return "%s.%s must be an array" % [ship, field]
+			for mod_id in mods:
+				var error := GalaxyMods.loadout_error(ship, mod_id, 2, galaxy_mods)
+				if error != "":
+					return error
 	return ""
 
 

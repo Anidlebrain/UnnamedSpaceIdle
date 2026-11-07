@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -6,6 +6,8 @@ import { is } from '@electron-toolkit/utils'
 import { DataRepository } from './services/data-repository'
 import { OptimizerRunner } from './services/optimizer-runner'
 import { GalaxyRerunService } from './services/galaxy-rerun'
+import { TitanService } from './services/titan-service'
+import { installWindowUnloadConfirmation } from './services/window-unload'
 import type {
   CreateGalaxyRequest,
   CreateNodeRequest,
@@ -38,6 +40,9 @@ const runner = new OptimizerRunner(
 const galaxyRerun = new GalaxyRerunService(repo, runner, progress =>
   window?.webContents.send('galaxy-rerun:progress', progress),
 )
+const titan = new TitanService(dataRoot, join(projectRoot, '..', 'titanSimulation'), task =>
+  window?.webContents.send('titan:task', task),
+)
 function createWindow() {
   if (is.dev) console.info('[preload-path]', { preloadPath, exists: existsSync(preloadPath), mainUrl, mainDirectory })
   window = new BrowserWindow({
@@ -47,6 +52,7 @@ function createWindow() {
     minHeight: 720,
     webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false },
   })
+  installWindowUnloadConfirmation(window, (owner, options) => dialog.showMessageBoxSync(owner, options))
   window.webContents.on('preload-error', (_event, failedPreloadPath, error) =>
     console.error('[preload-error]', failedPreloadPath, error),
   )
@@ -61,6 +67,13 @@ function createWindow() {
   else void window.loadFile(join(mainDirectory, '../renderer/index.html'))
 }
 app.whenReady().then(() => {
+  ipcMain.handle('titan:load', () => titan.load())
+  ipcMain.handle('titan:save-player', (_, player) => titan.savePlayer(player))
+  ipcMain.handle('titan:save-settings', (_, settings) => titan.saveSettings(settings))
+  ipcMain.handle('titan:inspect', (_, request) => titan.inspect(request))
+  ipcMain.handle('titan:start', (_, request) => titan.start(request))
+  ipcMain.handle('titan:current', () => titan.current())
+  ipcMain.handle('titan:stop', () => titan.stop())
   ipcMain.handle('data:preview-import', () => repo.previewImport())
   ipcMain.handle('data:import', () => repo.importMap())
   ipcMain.handle('data:catalog', () => repo.catalog())
@@ -120,4 +133,16 @@ app.whenReady().then(() => {
 })
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
+})
+
+let closingTitan = false
+app.on('before-quit', event => {
+  if (!closingTitan && titan.current()?.status === 'running') {
+    event.preventDefault()
+    closingTitan = true
+    void titan
+      .stop()
+      .catch(error => console.error('[titan-stop]', error))
+      .finally(() => app.quit())
+  }
 })

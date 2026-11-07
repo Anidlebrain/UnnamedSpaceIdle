@@ -1,3 +1,4 @@
+import { createBrowserTitanApi } from './web-titan-api'
 import { commonForGalaxy, validateGalaxyLoadouts } from '../shared/galaxy-mods'
 import type {
   Catalog,
@@ -660,5 +661,6 @@ export function createBrowserApi(): FleetManagerApi {
       return () => progressListeners.delete(listener)
     },
   }
+  api.titan = createBrowserTitanApi()
   return api
 }

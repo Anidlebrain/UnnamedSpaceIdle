@@ -2,7 +2,33 @@
 
 这是舰队优化器管理应用的 V1.2 工作台实现，基于 Electron、React、Vite、TypeScript、Zod 和 Vitest。
 
+## 关闭窗口与未保存修改
+
+节点、公共配置、搜索设置或泰坦档案有未保存修改时，关闭窗口或重新加载会显示桌面确认框。默认“取消”返回应用保留草稿；明确选择“放弃修改并继续”后才允许离开。没有未保存修改时直接关闭。浏览器继续使用浏览器自己的离开提示。
+
+## 泰坦搜索工作区
+
+左侧“泰坦搜索”接入独立的 `../titanSimulation/run_titan.bat`，不复写搜索算法。原生搜索器、恢复工程、Python 3.10+ 与 Godot 仍需在本机可用；搜索范围与约束以 [泰坦搜索器说明](../titanSimulation/README.md) 为准。
+
+1. 打开“玩家档案”，填写统计总览、读数时层域、校准、阵列核心 Base Damage、可同时达到的核心等级与本轮进度。支持科学计数法，未解锁普通武器留空，等级 0 会保留。核对临时技能已结束与三槽等级条件后保存。游戏更新后重新采集统计，不能只更换版本标签。
+2. 在“搜索与结果”选择区域、层域、首领击杀或挂机距离。区域支持 `164`、`160A` 及原版内部 ID；实际区域解析和原生校验沿用搜索器。运行环境中设置 Godot，恢复工程留空则沿用 `titanSimulation/local/current_source.json`。首次尝试从现有 Fleet BAT 只读检测有效 Godot 路径。
+3. 保存搜索设置或直接开始，开始前自动保存设置。总预算包含工程准备、初始化、候选与复核；默认 180 秒。运行中显示任务目标、耗时和实时日志，可停止整棵进程树。切换工作区保留草稿和当前任务；更改目标不会改写静态玩家档案或已完成任务。
+4. 完成后展示三槽武器、里程碑、四项目标、护盾、阵列顺序和有序部件目标。挂机显示三次独立长战斗复核证据，可复制搜索器原始推荐文本。没有游戏内自动应用功能。
+
+只有模式对应的 `KILL_FOUND` / `BEST_VALIDATED_DISTANCE_FOUND` 且证据通过检查才显示推荐。预算内未找到、停止和运行失败分别显示；未找到不代表无解，预算内结果不保证全局最优，有限挂机复核不证明无限期稳定。读取区域资料仅展示原版结构，不表示玩家准入或战斗验证。
+
+数据与隔离边界：
+
+- Manager 档案与偏好分别存入 `app/data/titan/player.json`、`settings.json`（打包后沿用应用 userData 数据根）。首次无 Manager 档案时只读加载 `titanSimulation/local/player.json`；本机没有档案时显示空白，不填合成示例。
+- 每次任务独立保存 `titan/tasks/<任务 ID>/player.json` 与 `request.json`，通过 `--player` 指向冻结快照。结果仍由原搜索器写入 `titanSimulation/results/<任务 ID>/`，原生隔离工作目录仍在 `titanSimulation/work/`。App 校验任务路径、玩家哈希、区域、层域、模式与成功证据，避免旧结果串用。
+- 不覆盖 `local/player.json`、Fleet 暂存输入、恢复工程、Steam 或正式存档。泰坦与 Fleet 使用独立服务与工作目录。
+- 浏览器使用独立 `localStorage` 键 `fleet-manager-web-titan-v1` 保存档案和设置；明确禁用原生搜索和本机区域读取，不制造模拟成功结果。
+
+验证入口：`pnpm test` 包含独立临时目录服务测试、桥接与界面测试。真实 BAT 区域读取及原生搜索为显式 opt-in，详见 `tests/titan-service.test.ts`、`tests/real-titan-smoke.test.ts`；合成 smoke 只验证接入链路，不表示玩家实战成绩。
+
 ## G11 CRF / TM 解锁状态
+
+2026-11-07：舰队运行资源更新为 0.90.0.1，新增 G12 / G13 的专属模组开关与节点装配校验。G12 支持 FHB `FrigateHealthBoost`（自动三级）与 TM `FrigateRapidMissileMod`（Primary）；G13 支持 FB `FighterBarrier`（自动三级）与 TM `FighterJumpGatling`（Primary）。在对应 Galaxy 公共中录入已获得状态并保存。TM 在普通优化中自动加入候选；推荐舰队搜站位仍固定节点装配，旅行重置后手动关闭。所有 TM 以字符串 ID 保存，公共数字索引保持不变。跨星系复制带专属模组的 Common 会拒绝。恢复工程的更新与验证方法见 [`../fleetSimulation/README.md`](../fleetSimulation/README.md)。
 
 在“公共配置 → Galaxy 公共”选择 G11 与所用 Common，按游戏中已获得的状态独立勾选 CRF 和 TM，再保存 Galaxy 公共。不会自动修改已有配置。`common.json.galaxy_mods` 支持 `"CorvetteRapidFire"`（CRF）和 `"CorvetteChargeLaserBurst"`（TM）组成的无重复数组；缺省或 `[]` 表示均未解锁。两个开关互相保留，且仅 G11 生效。
 

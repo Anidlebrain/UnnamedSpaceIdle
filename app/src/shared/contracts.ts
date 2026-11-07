@@ -1,3 +1,4 @@
+import type { TitanApi } from './titan'
 import type { CommonConfig, NodeConfig, OptimizerConfig, OptimizerResult, SearchConfig } from './schemas'
 
 export type ImportPreview = { galaxies: Array<{ id: string; nodes: string[]; common: boolean }> }
@@ -74,6 +75,7 @@ export type CreateNodeRequest = {
 }
 export type CreateGalaxyRequest = { galaxy: string; node: string; versionName: string; source: Selection }
 export type FleetManagerApi = {
+  titan?: TitanApi
   runtime?: 'desktop' | 'web'
   previewImport(): Promise<ImportPreview>
   importMap(): Promise<void>

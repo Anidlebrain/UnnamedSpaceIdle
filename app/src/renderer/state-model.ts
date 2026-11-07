@@ -1,7 +1,7 @@
 import type { Catalog, SearchQueueItem, SearchTaskSnapshot, Selection } from '../shared/contracts'
 import type { CommonConfig, NodeConfig, OptimizerConfig, OptimizerResult } from '../shared/schemas'
 
-export type Workspace = 'node' | 'common' | 'search' | 'rerun' | 'templates'
+export type Workspace = 'node' | 'common' | 'search' | 'rerun' | 'templates' | 'titan'
 export type PageContexts = {
   node: Selection
   search: Selection

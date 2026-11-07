@@ -1,13 +1,15 @@
 import { commonConfigSchema, type CommonConfig, type NodeConfig, type OptimizerConfig } from './schemas'
 import { resolveModSelector, slotOptions, type ModSlot } from './mod-catalog'
+import { GALAXY_MOD_DEFINITIONS, isGalaxyPrimary } from './galaxy-mod-catalog'
 export const TM_MOD = 'CorvetteChargeLaserBurst'
 type GalaxyMod = NonNullable<CommonConfig['galaxy_mods']>[number]
 export function commonForGalaxy(common: CommonConfig, galaxy: string): CommonConfig {
   const parsed = commonConfigSchema.parse(common)
-  if (Number(galaxy.slice(1)) !== 11 && parsed.galaxy_mods?.length)
-    throw new Error(
-      'CRF / TM 星系 Mod 仅适用于 G11。请先在来源 Common 关闭 CRF 和 TM，再复制到其他 Galaxy；或移除 galaxy_mods 后保存。',
-    )
+  for (const id of parsed.galaxy_mods ?? []) {
+    const mod = GALAXY_MOD_DEFINITIONS.find(item => item.id === id)!
+    if (Number(galaxy.slice(1)) !== mod.galaxy)
+      throw new Error(`${mod.label} 星系 Mod 仅适用于 G${mod.galaxy}。请在来源 Common 关闭后再复制到其他 Galaxy。`)
+  }
   return parsed
 }
 export function hasCrf(common: CommonConfig | null | undefined, galaxy: number): boolean {
@@ -29,13 +31,40 @@ export function nodeSlotOptions(
   slot: ModSlot,
 ): Array<string | null> {
   const original = slotOptions(optimizer, ship, slot)
-  const options = original.filter(mod => mod !== TM_MOD)
-  if (ship === 'Corvette' && slot === 'primary' && hasTm(common, galaxy)) return [...options, TM_MOD]
-  return options.length === 0 && original.includes(TM_MOD) ? [null] : options
+  const options = original.filter(mod => !GALAXY_MOD_DEFINITIONS.some(def => def.id === mod))
+  for (const mod of GALAXY_MOD_DEFINITIONS)
+    if (
+      mod.galaxy === galaxy &&
+      mod.ship === ship &&
+      mod.slot === slot &&
+      slot === 'primary' &&
+      common?.galaxy_mods?.includes(mod.id)
+    )
+      options.push(mod.id)
+  return options.length === 0 && original.some(isGalaxyPrimary) ? [null] : options
 }
 export function validateGalaxyLoadouts(node: NodeConfig, common: CommonConfig, optimizer: OptimizerConfig): void {
   commonForGalaxy(common, `g${node.galaxy}`)
   for (const [ship, loadout] of Object.entries(node.baseline.loadouts)) {
+    for (const slot of ['primary', 'secondary', 'tertiary'] as const) {
+      const ids =
+        slot === 'tertiary'
+          ? [...(loadout.tertiary ?? []), ...(loadout.tertiary_mods ?? [])]
+          : [resolveModSelector(loadout[slot], slotOptions(optimizer, ship, slot))]
+      for (const id of ids) {
+        // G11 messages below remain specific to the existing controls.
+        if (id === TM_MOD) continue
+        const mod = GALAXY_MOD_DEFINITIONS.find(item => item.id === id)
+        if (
+          mod &&
+          (mod.ship !== ship ||
+            mod.slot !== slot ||
+            mod.galaxy !== node.galaxy ||
+            !common.galaxy_mods?.includes(mod.id))
+        )
+          throw new Error(`${mod.label} 需要 G${mod.galaxy} Common 解锁，且只能用于 ${mod.ship} ${mod.slot}。`)
+      }
+    }
     if (
       resolveModSelector(loadout.secondary, slotOptions(optimizer, ship, 'secondary')) === TM_MOD ||
       loadout.tertiary?.includes(TM_MOD) ||

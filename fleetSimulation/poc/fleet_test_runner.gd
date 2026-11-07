@@ -25,6 +25,15 @@ func _enter_tree() -> void:
 		ProjectSettings.set_setting("application/config/use_custom_user_dir", true)
 		ProjectSettings.set_setting("application/config/custom_user_dir_name", "Unnamed Space Idle Fleet Worker %s" % worker_id)
 	DirAccess.make_dir_recursive_absolute(OS.get_user_data_dir())
+	# 0.90 reads this legacy key before creating defaults on first startup.
+	# Seed only our isolated runtime preferences, before Config autoload starts.
+	for name in ["config.cfg", "betaconfig.cfg"]:
+		var path: String = "user://" + name
+		var preferences := ConfigFile.new()
+		preferences.load(path)
+		if not preferences.has_section_key("Crew", "confirm_rank_allocation"):
+			preferences.set_value("Crew", "confirm_rank_allocation", false)
+			preferences.save(path)
 	get_tree().node_added.connect(_on_node_added)
 
 
@@ -75,6 +84,14 @@ func _run() -> void:
 				add_child(tests)
 				var regression: Dictionary = await tests.run(friendly, common, optimizer_v2_settings)
 				_finish(regression, 0 if regression.passed else 14, "user://fleet_search_regression.json")
+				return
+			if _has_argument("--runtime-regression"):
+				var tests := preload("res://fleet_runtime_regression.gd").new()
+				add_child(tests)
+				var regression: Dictionary = await tests.run(probe)
+				for mod_id in ["FrigateRapidMissileMod", "FighterJumpGatling"]:
+					regression.passed = regression.passed and _mod_number_text(mod_id, "", "primary", {}) == mod_id
+				_finish(regression, 0 if regression.passed else 16, "user://fleet_runtime_regression.json")
 				return
 			if _has_argument("--galaxy-mod-regression"):
 				var tests := preload("res://fleet_galaxy_mod_regression.gd").new()
@@ -572,6 +589,7 @@ func _requested_top_n() -> int:
 
 
 func _add_runtime_metadata(result: Dictionary) -> void:
+	result["game_version"] = PlayerInfo.version
 	result["engine_version"] = Engine.get_version_info().string
 	result["physics_ticks_per_second"] = Engine.physics_ticks_per_second
 	result["engine_time_scale"] = Engine.time_scale
@@ -1041,7 +1059,7 @@ func _mod_number_text(value, ship_type: String, slot: String, allowed_mod_slots:
 	if value == null or str(value) == "":
 		return "0"
 	# TM is appended per run, never persist a transient public-slot index.
-	if value == "CorvetteChargeLaserBurst":
+	if preload("res://fleet_galaxy_mods.gd").is_primary(value):
 		return str(value)
 	var ship_slots = allowed_mod_slots.get(ship_type, {})
 	var options = ship_slots.get(slot, []) if ship_slots is Dictionary else []

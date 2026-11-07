@@ -1,4 +1,5 @@
 import { hasCrf, hasTm, nodeSlotOptions, setGalaxyMod, TM_MOD } from '../shared/galaxy-mods'
+import { GALAXY_MOD_DEFINITIONS, isGalaxyPrimary } from '../shared/galaxy-mod-catalog'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
   Catalog,
@@ -41,6 +42,7 @@ import {
 } from '../shared/mod-catalog'
 import { GalaxyRerunPanel } from './GalaxyRerunPanel'
 import { SmartSelect } from './SmartSelect'
+import { TitanWorkspace } from './TitanWorkspace'
 import { runErrorSummary } from '../shared/run-errors'
 import {
   commonDomainKey,
@@ -316,7 +318,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         pageContextsRef.current = contexts
         setPageContexts(contexts)
         const page =
-          saved?.workspace && ['node', 'common', 'search', 'rerun', 'templates'].includes(saved.workspace)
+          saved?.workspace && ['node', 'common', 'search', 'rerun', 'templates', 'titan'].includes(saved.workspace)
             ? saved.workspace
             : 'node'
         setWorkspace(page)
@@ -329,7 +331,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
             version: first?.defaultVersion ?? '',
             common: galaxy?.defaultCommon ?? '',
           })
-        } else setSelection(contexts[page])
+        } else if (page !== 'titan') setSelection(contexts[page])
         void api.searchQueue().then(setSearchQueue)
       })
       .catch(error => setMessage(`无法读取 Manager / Optimizer 配置：${(error as Error).message}`))
@@ -497,6 +499,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     if (!contexts) return
     setWorkspace(next)
     setGalaxyDetail(null)
+    if (next === 'titan') return
     if (next === 'rerun') {
       const galaxy = catalog.galaxies.find(item => item.id === contexts.rerunGalaxy) ?? catalog.galaxies[0]
       const first = galaxy?.nodes[0]
@@ -925,7 +928,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     })
   }
 
-  if (!catalog.galaxies.length)
+  if (!catalog.galaxies.length && workspace !== 'titan')
     return (
       <main className="empty">
         <h1>舰队优化器管理器</h1>
@@ -934,7 +937,11 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
         <button onClick={() => void importMap()} disabled={busy}>
           {preview ? '确认导入 map' : '扫描现有 map'}
         </button>
+        <button onClick={() => setWorkspace('titan')}>打开泰坦搜索</button>
         {message ? <p className="notice">{message}</p> : null}
+        <div key="titan-workspace" className="titan-mount workspace-view" hidden>
+          <TitanWorkspace api={api.titan} runtime={api.runtime} />
+        </div>
       </main>
     )
   const tableChange = (next: NodeConfig) => {
@@ -951,6 +958,7 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
     search: { title: '搜索', description: '选择目标，运行 Optimizer，并按 Best Found 配置舰队' },
     rerun: { title: 'Galaxy 重跑', description: '串行检查当前 Galaxy 的默认配置' },
     templates: { title: '模板与复制', description: '创建 Galaxy、Node 和可复用模板' },
+    titan: { title: '泰坦搜索', description: '维护玩家档案，搜索首领击杀与已验证的挂机距离' },
   }
   const optimizerGlobalContext = workspace === 'common' && commonTab === 'optimizer'
   const showNodeContext = workspace === 'node' || workspace === 'search' || workspace === 'templates'
@@ -998,6 +1006,10 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           <button className={workspace === 'rerun' ? 'active' : ''} onClick={() => switchWorkspace('rerun')}>
             <Icon name="play" />
             Galaxy 重跑
+          </button>
+          <button className={workspace === 'titan' ? 'active' : ''} onClick={() => switchWorkspace('titan')}>
+            <Icon name="search" />
+            泰坦搜索
           </button>
           <button className={workspace === 'templates' ? 'active' : ''} onClick={() => switchWorkspace('templates')}>
             <Icon name="copy" />
@@ -1097,120 +1109,122 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           ) : null}
         </div>
       </header>
-      <section className="contextbar" aria-label="当前配置上下文">
-        {optimizerGlobalContext ? (
-          <div className="global-context">
-            <span>作用范围</span>
-            <strong>全局 / 所有 Galaxy</strong>
+      {workspace !== 'titan' ? (
+        <section className="contextbar" aria-label="当前配置上下文">
+          {optimizerGlobalContext ? (
+            <div className="global-context">
+              <span>作用范围</span>
+              <strong>全局 / 所有 Galaxy</strong>
+            </div>
+          ) : (
+            <Label text="Galaxy">
+              <SmartSelect
+                label="Galaxy"
+                value={selection.galaxy}
+                onChange={value => update('galaxy', value)}
+                disabled={workspace === 'rerun' && (rerunStarting || rerunActive)}
+                options={catalog.galaxies.map(g => ({ value: g.id, label: g.id.toUpperCase() }))}
+              />
+            </Label>
+          )}
+          {showNodeContext ? (
+            <Label text="节点">
+              <SmartSelect
+                label="节点"
+                value={selection.node}
+                onChange={value => update('node', value)}
+                searchable
+                options={currentGalaxy?.nodes.map(n => ({ value: n.id, label: n.id })) ?? []}
+              />
+            </Label>
+          ) : null}
+          {showNodeContext ? (
+            <Label text="版本">
+              <SmartSelect
+                label="版本"
+                value={selection.version}
+                onChange={value => update('version', value)}
+                searchable
+                options={
+                  currentNode?.versions.map(v => ({ value: v.id, label: `${v.name}${v.isDefault ? ' ★' : ''}` })) ?? []
+                }
+              />
+              <ActionMenu
+                label="管理版本"
+                resetKey={`${workspace}/${selection.galaxy}/${selection.node}`}
+                actions={[
+                  { label: '新建版本', onClick: () => createVersion(false) },
+                  { label: '复制当前版本', onClick: () => createVersion(true) },
+                  { label: '重命名', onClick: renameVersion },
+                  {
+                    label: '设为默认',
+                    disabled: currentVersion?.isDefault,
+                    onClick: () =>
+                      void act('已设为默认版本。', async () => {
+                        await api.setDefaultVersion(selection)
+                        await refresh()
+                      }),
+                  },
+                  {
+                    label: '删除版本',
+                    danger: true,
+                    disabled: currentVersion?.isDefault || (currentNode?.versions.length ?? 0) <= 1,
+                    onClick: deleteVersion,
+                  },
+                ]}
+                disabled={busy || nodeReadOnly}
+              />
+            </Label>
+          ) : null}
+          {showCommonContext ? (
+            <Label text="公共配置">
+              <SmartSelect
+                label="公共配置"
+                value={selection.common}
+                onChange={value => update('common', value)}
+                searchable
+                options={
+                  currentGalaxy?.commons.map(c => ({ value: c.id, label: `${c.name}${c.isDefault ? ' ★' : ''}` })) ?? []
+                }
+              />
+              <ActionMenu
+                label="管理公共配置"
+                resetKey={`${workspace}/${selection.galaxy}/${selection.node}`}
+                actions={[
+                  { label: '新建配置', onClick: () => createCommon(false) },
+                  { label: '复制当前配置', onClick: () => createCommon(true) },
+                  { label: '重命名', onClick: renameCommon },
+                  {
+                    label: '设为默认',
+                    disabled: currentCommon?.isDefault,
+                    onClick: () =>
+                      void act('已设为默认公共配置。', async () => {
+                        await api.setDefaultCommon(selection)
+                        await refresh()
+                      }),
+                  },
+                  {
+                    label: '删除配置',
+                    danger: true,
+                    disabled: currentCommon?.isDefault || (currentGalaxy?.commons.length ?? 0) <= 1,
+                    onClick: deleteCommon,
+                  },
+                ]}
+                disabled={busy || commonReadOnly}
+              />
+            </Label>
+          ) : null}
+          <div className={`save-state ${dirty ? 'dirty' : 'saved'}`} role="status">
+            <span aria-hidden="true">{dirty ? '●' : '✓'}</span>
+            <div>
+              <strong>{dirty ? '有未保存修改' : '已保存'}</strong>
+              <small>
+                {selection.galaxy.toUpperCase()} / {selection.node}
+              </small>
+            </div>
           </div>
-        ) : (
-          <Label text="Galaxy">
-            <SmartSelect
-              label="Galaxy"
-              value={selection.galaxy}
-              onChange={value => update('galaxy', value)}
-              disabled={workspace === 'rerun' && (rerunStarting || rerunActive)}
-              options={catalog.galaxies.map(g => ({ value: g.id, label: g.id.toUpperCase() }))}
-            />
-          </Label>
-        )}
-        {showNodeContext ? (
-          <Label text="节点">
-            <SmartSelect
-              label="节点"
-              value={selection.node}
-              onChange={value => update('node', value)}
-              searchable
-              options={currentGalaxy?.nodes.map(n => ({ value: n.id, label: n.id })) ?? []}
-            />
-          </Label>
-        ) : null}
-        {showNodeContext ? (
-          <Label text="版本">
-            <SmartSelect
-              label="版本"
-              value={selection.version}
-              onChange={value => update('version', value)}
-              searchable
-              options={
-                currentNode?.versions.map(v => ({ value: v.id, label: `${v.name}${v.isDefault ? ' ★' : ''}` })) ?? []
-              }
-            />
-            <ActionMenu
-              label="管理版本"
-              resetKey={`${workspace}/${selection.galaxy}/${selection.node}`}
-              actions={[
-                { label: '新建版本', onClick: () => createVersion(false) },
-                { label: '复制当前版本', onClick: () => createVersion(true) },
-                { label: '重命名', onClick: renameVersion },
-                {
-                  label: '设为默认',
-                  disabled: currentVersion?.isDefault,
-                  onClick: () =>
-                    void act('已设为默认版本。', async () => {
-                      await api.setDefaultVersion(selection)
-                      await refresh()
-                    }),
-                },
-                {
-                  label: '删除版本',
-                  danger: true,
-                  disabled: currentVersion?.isDefault || (currentNode?.versions.length ?? 0) <= 1,
-                  onClick: deleteVersion,
-                },
-              ]}
-              disabled={busy || nodeReadOnly}
-            />
-          </Label>
-        ) : null}
-        {showCommonContext ? (
-          <Label text="公共配置">
-            <SmartSelect
-              label="公共配置"
-              value={selection.common}
-              onChange={value => update('common', value)}
-              searchable
-              options={
-                currentGalaxy?.commons.map(c => ({ value: c.id, label: `${c.name}${c.isDefault ? ' ★' : ''}` })) ?? []
-              }
-            />
-            <ActionMenu
-              label="管理公共配置"
-              resetKey={`${workspace}/${selection.galaxy}/${selection.node}`}
-              actions={[
-                { label: '新建配置', onClick: () => createCommon(false) },
-                { label: '复制当前配置', onClick: () => createCommon(true) },
-                { label: '重命名', onClick: renameCommon },
-                {
-                  label: '设为默认',
-                  disabled: currentCommon?.isDefault,
-                  onClick: () =>
-                    void act('已设为默认公共配置。', async () => {
-                      await api.setDefaultCommon(selection)
-                      await refresh()
-                    }),
-                },
-                {
-                  label: '删除配置',
-                  danger: true,
-                  disabled: currentCommon?.isDefault || (currentGalaxy?.commons.length ?? 0) <= 1,
-                  onClick: deleteCommon,
-                },
-              ]}
-              disabled={busy || commonReadOnly}
-            />
-          </Label>
-        ) : null}
-        <div className={`save-state ${dirty ? 'dirty' : 'saved'}`} role="status">
-          <span aria-hidden="true">{dirty ? '●' : '✓'}</span>
-          <div>
-            <strong>{dirty ? '有未保存修改' : '已保存'}</strong>
-            <small>
-              {selection.galaxy.toUpperCase()} / {selection.node}
-            </small>
-          </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
       {message ? (
         <div className="notice" role="status">
           <p>{message}</p>
@@ -1363,8 +1377,8 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           <div>
             <h2>创建 Galaxy</h2>
             <p>
-              复制当前 Galaxy 的 Common 和当前 Node / Version，作为新 Galaxy 的初始配置。带 CRF / TM 的 Common 仅可用于
-              G11；复制到其他 Galaxy 前请先关闭两个开关并保存。Node 若已装备 TM，也需改为其他 Primary。
+              复制当前 Galaxy 的 Common 和当前 Node / Version，作为新 Galaxy 的初始配置。星系专属 Mod 仅可用于对应
+              Galaxy；复制到其他 Galaxy 前请先关闭解锁开关并保存。Node 若已装备 TM，也需改为其他 Primary。
             </p>
             <div className="inline">
               <input
@@ -1664,6 +1678,9 @@ function FleetManagerApp({ api }: { api: FleetManagerApi }) {
           onUseBest={useBest}
         />
       ) : null}
+      <div key="titan-workspace" className="titan-mount workspace-view" hidden={workspace !== 'titan'}>
+        <TitanWorkspace api={api.titan} runtime={api.runtime} />
+      </div>
       {dialog ? <AppDialog dialog={dialog} onClose={() => setDialog(null)} /> : null}
     </main>
   )
@@ -2250,17 +2267,29 @@ function BestFound({
     <div className="best-found">
       <p className="apply-target">
         本次运行星系 Mod：
-        {Array.isArray(result.base_config?.galaxy_mods)
-          ? result.base_config.galaxy_mods.includes('CorvetteRapidFire')
-            ? 'CRF（护卫舰快速开火）已生效'
-            : '无 CRF'
-          : '旧结果未记录解锁状态'}
-        {' · '}TM（连发充能激光）：
-        {Array.isArray(result.base_config?.galaxy_mods)
-          ? result.base_config.galaxy_mods.includes(TM_MOD)
-            ? '本次可选，实际装备见 Primary'
-            : '本次未解锁'
-          : '旧结果未记录解锁状态'}
+        {result.base_config?.galaxy_id === 'galaxy12' || result.base_config?.galaxy_id === 'galaxy13' ? (
+          Array.isArray(result.base_config.galaxy_mods) ? (
+            result.base_config.galaxy_mods
+              .map(id => `${modDisplayName(id)}：${isGalaxyPrimary(id) ? '本次可选，实际装备见 Primary' : '已生效'}`)
+              .join(' · ') || '无星系专属模组'
+          ) : (
+            '结果未记录解锁状态'
+          )
+        ) : (
+          <>
+            {Array.isArray(result.base_config?.galaxy_mods)
+              ? result.base_config.galaxy_mods.includes('CorvetteRapidFire')
+                ? 'CRF（护卫舰快速开火）已生效'
+                : '无 CRF'
+              : '旧结果未记录解锁状态'}
+            {' · '}TM（连发充能激光）：
+            {Array.isArray(result.base_config?.galaxy_mods)
+              ? result.base_config.galaxy_mods.includes(TM_MOD)
+                ? '本次可选，实际装备见 Primary'
+                : '本次未解锁'
+              : '旧结果未记录解锁状态'}
+          </>
+        )}
       </p>
       <div className="best-found-heading">
         <div>
@@ -2737,26 +2766,38 @@ function LoadoutEditor({
         <div>
           <h3>装配</h3>
           <p>Mod ID 保持 Optimizer 原值；数字槽位编辑时保留数字类型。</p>
-          <p>
-            G11 专属 CRF（护卫舰 / Corvette 快速开火）：
-            {config.galaxy === 11
-              ? hasCrf(common, config.galaxy)
-                ? '当前 Common 已解锁，搜索自动附加三级 Mod。'
-                : '当前 Common 未解锁。'
-              : '当前 Galaxy 不适用。'}{' '}
-            在“公共配置 → Galaxy 公共”设置并保存；此处显示所选 Common
-            的当前草稿；保存后用于新搜索，运行结果以任务快照为准。
-          </p>
-          <p>
-            TM（连发充能激光）：
-            {config.galaxy === 11
-              ? hasTm(common, config.galaxy)
-                ? '本次旅行已解锁，可在护卫舰 Primary 中选择。'
-                : '本次旅行未解锁。'
-              : '仅 G11 可用。'}
-            与普通充能激光共用 Primary，二者互斥；可搭配护盾与 CRF。普通优化会自动将已解锁 TM
-            加入候选；推荐舰队策略只按当前装备搜索站位。 旅行重置后请在 Galaxy 公共手动关闭 TM 并保存。
-          </p>
+          {config.galaxy >= 12 ? (
+            <p>
+              {GALAXY_MOD_DEFINITIONS.filter(mod => mod.galaxy === config.galaxy)
+                .map(mod => `${mod.label}：${common?.galaxy_mods?.includes(mod.id) ? '已解锁' : '未解锁'}`)
+                .join(' · ')}
+              。 在“公共配置 → Galaxy 公共”录入并保存。三级模组自动附加，TM 需要选择
+              Primary；推荐舰队策略固定装配只搜站位。旅行重置后手动关闭 TM。
+            </p>
+          ) : (
+            <>
+              <p>
+                G11 专属 CRF（护卫舰 / Corvette 快速开火）：
+                {config.galaxy === 11
+                  ? hasCrf(common, config.galaxy)
+                    ? '当前 Common 已解锁，搜索自动附加三级 Mod。'
+                    : '当前 Common 未解锁。'
+                  : '当前 Galaxy 不适用。'}{' '}
+                在“公共配置 → Galaxy 公共”设置并保存；此处显示所选 Common
+                的当前草稿；保存后用于新搜索，运行结果以任务快照为准。
+              </p>
+              <p>
+                TM（连发充能激光）：
+                {config.galaxy === 11
+                  ? hasTm(common, config.galaxy)
+                    ? '本次旅行已解锁，可在护卫舰 Primary 中选择。'
+                    : '本次旅行未解锁。'
+                  : '仅 G11 可用。'}
+                与普通充能激光共用 Primary，二者互斥；可搭配护盾与 CRF。普通优化会自动将已解锁 TM
+                加入候选；推荐舰队策略只按当前装备搜索站位。 旅行重置后请在 Galaxy 公共手动关闭 TM 并保存。
+              </p>
+            </>
+          )}
         </div>
       </div>
       <div className="table-scroll">
@@ -2805,7 +2846,15 @@ function LoadoutEditor({
                         ? hasCrf(common, config.galaxy)
                           ? 'CRF 已解锁 · 自动附加'
                           : 'CRF 未解锁 · 无'
-                        : '自动 / 无手选槽位'}
+                        : GALAXY_MOD_DEFINITIONS.filter(
+                            mod =>
+                              mod.galaxy === config.galaxy && mod.ship === canonicalShip && mod.slot === 'tertiary',
+                          )
+                            .map(
+                              mod =>
+                                `${mod.label} ${common?.galaxy_mods?.includes(mod.id) ? '已解锁 · 自动附加' : '未解锁 · 无'}`,
+                            )
+                            .join(' · ') || '自动 / 无手选槽位'}
                     </span>
                   </td>
                 </tr>
@@ -2862,7 +2911,9 @@ function ModSlotControl({
             ? slot !== 'primary' || ship !== 'Corvette'
               ? 'TM 只能装备在护卫舰 Primary；请清除当前错误槽位中的 TM。'
               : '仍装备 TM，但本次旅行未解锁或当前 Galaxy 不适用；请开启 Galaxy Common 的 TM，或改选其他 Primary。'
-            : `当前模组不在可选范围：${resolved}`}
+            : isGalaxyPrimary(resolved)
+              ? `仍装备 ${resolved}，但本次旅行未解锁或当前 Galaxy / 槽位不适用；请检查 Galaxy Common 或改选其他 Primary。`
+              : `当前模组不在可选范围：${resolved}`}
         </p>
       ) : null}
       <SmartSelect
@@ -2934,6 +2985,28 @@ function CommonEditor({
           <p>
             仅 G11 生效；旅行重置后请手动关闭并保存。开启只解锁 Primary 选项，不会自动装备。普通优化会将 TM
             加入候选；推荐舰队策略沿用节点所选 Primary。可与 CRF 同时开启。
+          </p>
+        </fieldset>
+      ) : null}
+      {galaxy === 12 || galaxy === 13 ? (
+        <fieldset className="galaxy-mods-fieldset">
+          <legend>G{galaxy} 星系 Mod 解锁</legend>
+          {GALAXY_MOD_DEFINITIONS.filter(mod => mod.galaxy === galaxy).map(mod => (
+            <label key={mod.id} className="mod-toggle">
+              <input
+                type="checkbox"
+                aria-label={`${mod.label} 已解锁`}
+                checked={Boolean(config.galaxy_mods?.includes(mod.id))}
+                onChange={event => onChange(setGalaxyMod(config, mod.id, event.target.checked))}
+              />
+              <span>
+                {mod.label} {mod.slot === 'primary' ? '本次旅行已解锁' : '已解锁'}
+              </span>
+            </label>
+          ))}
+          <p>
+            仅在游戏已获得后勾选并保存。FHB / FB 自动附加三级模组；TM 解锁 Primary
+            选项，普通搜索自动加入候选，推荐舰队策略沿用节点装配。旅行重置后手动关闭 TM。
           </p>
         </fieldset>
       ) : null}
@@ -3048,8 +3121,7 @@ function OptimizerConfigEditor({
           <h3>Optimizer 公共配置</h3>
           <p>跨 Galaxy 的搜索空间与精炼规则。Node 搜索页覆盖 objective、时钟、workers 和日常总预算。</p>
           <p>
-            G11 的 TM（连发充能激光）由 Galaxy Common 的本次旅行解锁开关控制，作为护卫舰 Primary
-            候选加入；不在此处统一开放。
+            G11–G13 的 TM 由各自 Galaxy Common 的本次旅行解锁开关控制，作为对应舰种 Primary 候选加入；不在此处统一开放。
           </p>
         </div>
         <span className="format-hint">

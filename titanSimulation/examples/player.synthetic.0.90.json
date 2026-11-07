@@ -1,0 +1,36 @@
+{
+  "statistics": {
+    "reference_layer": "surface",
+    "temporary_combat_effects_active": false,
+    "summary_stats": {
+      "titan_damage": 4e+22,
+      "titan_max_shields": 3e+23,
+      "array_capacity": 23
+    },
+    "alignment": {
+      "antumbra": 10000,
+      "penumbra": 100000
+    },
+    "reference_array_level": 40,
+    "reference_array_base_damage": 5.72e+25,
+    "core_level_caps": {
+      "TitanLaser": 60,
+      "TitanCannon": 60,
+      "TitanShockwaveCannon": 20,
+      "TitanShield": 50,
+      "TitanArray": 40
+    },
+    "game_version": "0.90.0.1"
+  },
+  "progress": {
+    "highest_sectors": {
+      "surface": 170,
+      "antumbra": 170,
+      "penumbra": 170,
+      "umbra": 160
+    },
+    "umbra_sector_number": 160,
+    "reintegration": true,
+    "galaxy12_unlocked": false
+  }
+}

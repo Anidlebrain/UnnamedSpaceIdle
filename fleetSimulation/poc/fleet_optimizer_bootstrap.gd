@@ -3,7 +3,10 @@ extends Node
 
 func _ready() -> void:
 	var galaxy_id := _argument_value("--optimizer-galaxy=")
-	assert(galaxy_id in db.fleet_galaxies, "Unknown optimizer galaxy: %s" % galaxy_id)
+	if PlayerInfo.version != "0.90.0.1" or galaxy_id not in db.fleet_galaxies:
+		printerr("Unsupported Fleet runtime: game %s, requested %s. Prepare the 0.90.0.1 recovered project with tools/prepare_fleet_runtime.py; see fleetSimulation/README.md." % [PlayerInfo.version, galaxy_id])
+		get_tree().quit(73)
+		return
 	EventHelper.set_process(false)
 
 	var battle_area := preload("res://fleet_optimizer_battle_area.gd").new()

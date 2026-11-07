@@ -6,6 +6,20 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 if (isDevelopment) console.info('[preload] started')
 const api: FleetManagerApi = {
   runtime: 'desktop',
+  titan: {
+    load: () => ipcRenderer.invoke('titan:load'),
+    savePlayer: player => ipcRenderer.invoke('titan:save-player', player),
+    saveSettings: settings => ipcRenderer.invoke('titan:save-settings', settings),
+    inspect: request => ipcRenderer.invoke('titan:inspect', request),
+    start: request => ipcRenderer.invoke('titan:start', request),
+    current: () => ipcRenderer.invoke('titan:current'),
+    stop: () => ipcRenderer.invoke('titan:stop'),
+    onTask: listener => {
+      const handler = (_: Electron.IpcRendererEvent, task: Parameters<typeof listener>[0]) => listener(task)
+      ipcRenderer.on('titan:task', handler)
+      return () => ipcRenderer.removeListener('titan:task', handler)
+    },
+  },
   previewImport: () => ipcRenderer.invoke('data:preview-import'),
   importMap: () => ipcRenderer.invoke('data:import'),
   catalog: () => ipcRenderer.invoke('data:catalog'),

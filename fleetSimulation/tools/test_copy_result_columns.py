@@ -155,6 +155,25 @@ class CopyResultColumnsTests(unittest.TestCase):
             self.assertNotEqual(self.run_copy().returncode, 0)
             self.assertEqual(self.config_path.read_bytes(), before)
 
+    def test_new_galaxy_tm_round_trips_and_rejects_wrong_ship(self):
+        for number, ship, mod in [(3, 'Frigate', 'FrigateRapidMissileMod'),
+                                  (1, 'Fighter', 'FighterJumpGatling')]:
+            with self.subTest(mod=mod):
+                self.write_config(1)
+                self.write_result([('A', [number, 0, 0, 0, 0])], metadata=1)
+                original = self.result_path.read_text(encoding='utf-8')
+                self.result_path.write_text(original.replace('4: Primary=1; Secondary=0',
+                    f'{number}: Primary={mod}; Secondary=0'), encoding='utf-8')
+                result = self.run_copy()
+                self.assertEqual(result.returncode, 0, result.stderr)
+                config = json.loads(self.config_path.read_text(encoding='utf-8'))
+                self.assertEqual(config['baseline']['loadouts'][ship]['primary'], mod)
+                before = self.config_path.read_bytes()
+                self.result_path.write_text(original.replace('4: Primary=1; Secondary=0',
+                    f'4: Primary={mod}; Secondary=0'), encoding='utf-8')
+                self.assertNotEqual(self.run_copy().returncode, 0)
+                self.assertEqual(self.config_path.read_bytes(), before)
+
 
 if __name__ == "__main__":
     unittest.main()

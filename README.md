@@ -6,6 +6,7 @@
 
 - [`fleetSimulation/`](fleetSimulation/README.md)：Fleet Battle 原生模拟复用、Optimizer 搜索与命令行工作流。日常入口是 `fleetSimulation/run_optimizer.bat`；搜索与战斗规则以该目录 README 和当前代码为准。
 - [`app/`](app/README.md)：面向 Optimizer 的 Electron + React 管理界面，负责配置、调用既有 Optimizer、显示日志与比较结果，不另行实现搜索或战斗模拟。
+- [`titanSimulation/`](titanSimulation/README.md)：独立的主线泰坦研究搜索器，支持 160+ 区域首领一次击杀、最远稳定挂机距离及核心/阵列联合搜索；玩家参数独立保存，复用原版主线战斗并限制总时间，不依赖 Fleet Battle 的运行流程。
 - `translation/`：中文本地化相关数据与历史验证。来源 key 未可靠恢复前，不进行批量翻译、合并或正式资源构建。
 - `docs/`、`status/`、`scripts/`、`tools/`：通用说明、项目状态和维护脚本/工具说明。
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { GALAXY_MOD_DEFINITIONS } from '../src/shared/galaxy-mod-catalog'
 import { commonConfigSchema, type NodeConfig, type OptimizerConfig } from '../src/shared/schemas'
 import { preserveModSelectorFormat, resolveModSelector, catalogMods } from '../src/shared/mod-catalog'
 import {
@@ -11,6 +12,35 @@ import {
   validateGalaxyLoadouts,
 } from '../src/shared/galaxy-mods'
 const common = { permanent: { damage_scale: 1, health_scale: 1 }, temporary: { damage_scale: 1, health_scale: 1 } }
+describe('0.90 scoped unlocks', () => {
+  for (const galaxy of [12, 13]) {
+    const mods = GALAXY_MOD_DEFINITIONS.filter(mod => mod.galaxy === galaxy)
+    const primary = mods.find(mod => mod.slot === 'primary')!
+    const tertiary = mods.find(mod => mod.slot === 'tertiary')!
+    it(`G${galaxy} validates, expands, preserves numeric mapping and round trips the stable ID`, () => {
+      const unlocked = setGalaxyMod(setGalaxyMod(common, primary.id, true), tertiary.id, true)
+      const config = {
+        allowed_mod_slots: { [primary.ship]: { primary: [null, primary.id, 'ExistingMod'], secondary: [null] } },
+      } as unknown as OptimizerConfig
+      expect(commonForGalaxy(unlocked, `g${galaxy}`).galaxy_mods).toEqual([primary.id, tertiary.id])
+      expect(() => commonForGalaxy(unlocked, 'g11')).toThrow(`G${galaxy}`)
+      expect(nodeSlotOptions(config, unlocked, galaxy, primary.ship, 'primary')).toEqual([
+        null,
+        'ExistingMod',
+        primary.id,
+      ])
+      expect(nodeSlotOptions(config, common, galaxy, primary.ship, 'primary')).toEqual([null, 'ExistingMod'])
+      expect(nodeSlotOptions(config, unlocked, 11, primary.ship, 'primary')).not.toContain(primary.id)
+      expect(preserveModSelectorFormat(0, primary.id, config.allowed_mod_slots[primary.ship].primary)).toBe(primary.id)
+      const node = { galaxy, baseline: { loadouts: { [primary.ship]: { primary: 1 } } } } as unknown as NodeConfig
+      expect(() => validateGalaxyLoadouts(node, unlocked, config)).not.toThrow()
+      expect(() => validateGalaxyLoadouts(node, common, config)).toThrow(primary.label)
+      node.baseline.loadouts[primary.ship] = { primary: null, secondary: primary.id }
+      expect(() => validateGalaxyLoadouts(node, unlocked, config)).toThrow(primary.label)
+      expect(setGalaxyMod(unlocked, primary.id, false).galaxy_mods).toEqual([tertiary.id])
+    })
+  }
+})
 describe('Galaxy Mods contract', () => {
   it('defaults old Common to locked and validates supported IDs', () => {
     expect(hasCrf(commonConfigSchema.parse(common), 11)).toBe(false)

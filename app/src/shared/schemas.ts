@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { GALAXY_MOD_IDS } from './galaxy-mod-catalog'
 import { canonicalShipRecord, shipSelectorToId } from './ship-selectors'
 import { formationColumns, MAX_FORMATION_COLUMNS, validFormationPosition } from './formation-grid'
 
@@ -92,7 +93,7 @@ export const commonConfigSchema = z.preprocess(
   normalizeCommonShips,
   jsonObject.extend({
     galaxy_mods: z
-      .array(z.enum(['CorvetteRapidFire', 'CorvetteChargeLaserBurst']))
+      .array(z.enum(GALAXY_MOD_IDS))
       .refine(mods => new Set(mods).size === mods.length, 'Galaxy Mods 不得重复')
       .optional(),
     permanent: scaleSchema,

@@ -1,11 +1,14 @@
 param(
-    [string]$DataPath = (Join-Path $PSScriptRoot "..\work\recovered_data\game_data.cdb"),
+    [string]$DataPath = (Join-Path $PSScriptRoot "..\work\full_recovered\game_data.cdb"),
     [string]$JsonPath = (Join-Path $PSScriptRoot "..\results\fleet_loadout_catalog.json"),
     [string]$MarkdownPath = (Join-Path $PSScriptRoot "..\results\fleet_loadout_catalog.md")
 )
 
 $ErrorActionPreference = "Stop"
-$shipIds = @("Fighter", "Corvette", "Frigate", "Cruiser")
+$shipIds = @("Fighter", "Corvette", "Frigate", "Cruiser", "HeavyCruiser")
+$playerInfo = Get-Content -LiteralPath (Join-Path (Split-Path -Parent $DataPath) 'PlayerInfo.gd') -Raw
+if ($playerInfo -notmatch '(?m)^var version = "([^"]+)"') { throw 'Unable to identify recovered game version' }
+$gameVersion = $matches[1]
 $slotNames = @("Primary", "Secondary", "Tertiary")
 $statTypeNames = @("ADD", "MULTIPLY", "REPLACE", "ADDITIVE_MULTIPLY")
 
@@ -215,9 +218,9 @@ foreach ($modId in $allIds) {
 $orderedItems = @($items | Sort-Object @{ Expression = { switch ($_.classification) { "standard_galaxy" { 0 }; "standard_and_unstable_transit" { 1 }; default { 2 } } } }, slot_code, id)
 $catalog = [ordered]@{
     catalog_version = 1
-    game_version = "0.85.1.0"
+    game_version = $gameVersion
     generated_from = [ordered]@{
-        game_data = "fleetSimulation/work/recovered_data/game_data.cdb"
+        game_data = "fleetSimulation/work/full_recovered/game_data.cdb"
         fleet_code = @(
             "fleet/Fleet.gd:get_fleet_ships_available",
             "fleet/Fleet.gd:get_ship_mods",
@@ -226,7 +229,7 @@ $catalog = [ordered]@{
         )
     }
     scope_notes = @(
-        "Standard Galaxy entries are derived from UnlockFleetShipMod upgrade effects for Fighter, Corvette, Frigate, and Cruiser.",
+        "Standard Galaxy entries are derived from UnlockFleetShipMod upgrade effects for Fighter, Corvette, Frigate, Cruiser, and HeavyCruiser.",
         "A standard scope of all means the source unlock stores target all; a galaxy id means Fleet only exposes it while viewing that Galaxy.",
         "UT-only entries are derived from unstable_transit player_ships.available_mods and universal_mods. They are eligible reward-pool entries, not a claim that a player owns them.",
         "Primary and Secondary occupy selected slots. Standard-Galaxy Tertiary Mods are automatically added by Fleet.get_ship_mods when their scope matches the active galaxy.",
@@ -240,7 +243,7 @@ $json = $catalog | ConvertTo-Json -Depth 20
 [System.IO.File]::WriteAllText($JsonPath, $json + [Environment]::NewLine, [System.Text.UTF8Encoding]::new($false))
 
 $markdown = New-Object System.Collections.Generic.List[string]
-$markdown.Add("# Fleet Loadout / Mod Catalog (0.85.1.0)")
+$markdown.Add("# Fleet Loadout / Mod Catalog ($gameVersion)")
 $markdown.Add("")
 $markdown.Add("Generated from the recovered original game_data.cdb and Fleet source. It describes version-level eligibility only; it does not inspect or infer player unlocks.")
 $markdown.Add("")
