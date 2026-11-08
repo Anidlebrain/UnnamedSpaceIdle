@@ -1,4 +1,4 @@
-import { hasCrf, hasTm, nodeSlotOptions, setGalaxyMod, TM_MOD } from '../shared/galaxy-mods'
+import { hasCrf, nodeSlotOptions, setGalaxyMod, TM_MOD, travelModForGalaxy } from '../shared/galaxy-mods'
 import { GALAXY_MOD_DEFINITIONS, isGalaxyPrimary } from '../shared/galaxy-mod-catalog'
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type {
@@ -1831,6 +1831,7 @@ function FleetStateEditor({
 }
 
 function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange: (value: NodeConfig) => void }) {
+  const travelMod = travelModForGalaxy(config.galaxy)
   const boss = (config.boss ?? {}) as Record<string, unknown>
   const alive = Boolean(boss.alive)
   const [nodeText, setNodeText] = useState({
@@ -1882,6 +1883,20 @@ function EnvironmentEditor({ config, onChange }: { config: NodeConfig; onChange:
           <p>填写游戏中的节点名；Resolver 会校验它们是否真实影响当前战斗。</p>
         </div>
       </div>
+      {travelMod ? (
+        <fieldset className="galaxy-mods-fieldset">
+          <legend>本次旅行</legend>
+          <label className="mod-toggle">
+            <input
+              type="checkbox"
+              checked={config.travel_mod_unlocked ?? false}
+              onChange={event => onChange({ ...config, travel_mod_unlocked: event.target.checked })}
+            />
+            <span>{travelMod.label} 本次旅行已解锁</span>
+          </label>
+          <p>保存后对当前节点版本生效。开启后可在装配中选择 TM；旅行重置后请关闭并保存。</p>
+        </fieldset>
+      ) : null}
       <fieldset className="boss-config">
         <legend>Boss</legend>
         <label className="switch-field">
@@ -2766,13 +2781,13 @@ function LoadoutEditor({
         <div>
           <h3>装配</h3>
           <p>Mod ID 保持 Optimizer 原值；数字槽位编辑时保留数字类型。</p>
-          {config.galaxy >= 12 ? (
+          {config.galaxy === 12 || config.galaxy === 13 ? (
             <p>
-              {GALAXY_MOD_DEFINITIONS.filter(mod => mod.galaxy === config.galaxy)
+              {GALAXY_MOD_DEFINITIONS.filter(mod => mod.galaxy === config.galaxy && mod.slot === 'tertiary')
                 .map(mod => `${mod.label}：${common?.galaxy_mods?.includes(mod.id) ? '已解锁' : '未解锁'}`)
                 .join(' · ')}
-              。 在“公共配置 → Galaxy 公共”录入并保存。三级模组自动附加，TM 需要选择
-              Primary；推荐舰队策略固定装配只搜站位。旅行重置后手动关闭 TM。
+              。在“公共配置 → Galaxy 公共”录入并保存，三级模组会自动附加。 TM 本次旅行
+              {config.travel_mod_unlocked ? '已解锁，可在 Primary 中选择' : '未解锁'}，可在节点“环境”设置。
             </p>
           ) : (
             <>
@@ -2789,12 +2804,12 @@ function LoadoutEditor({
               <p>
                 TM（连发充能激光）：
                 {config.galaxy === 11
-                  ? hasTm(common, config.galaxy)
+                  ? config.travel_mod_unlocked
                     ? '本次旅行已解锁，可在护卫舰 Primary 中选择。'
                     : '本次旅行未解锁。'
                   : '仅 G11 可用。'}
                 与普通充能激光共用 Primary，二者互斥；可搭配护盾与 CRF。普通优化会自动将已解锁 TM
-                加入候选；推荐舰队策略只按当前装备搜索站位。 旅行重置后请在 Galaxy 公共手动关闭 TM 并保存。
+                加入候选；推荐舰队策略只按当前装备搜索站位。请在节点“环境”设置 TM，旅行重置后手动关闭并保存。
               </p>
             </>
           )}
@@ -2825,7 +2840,7 @@ function LoadoutEditor({
                       ship={canonicalShip}
                       slot="primary"
                       value={l.primary}
-                      options={nodeSlotOptions(optimizer, common, config.galaxy, canonicalShip, 'primary')}
+                      options={nodeSlotOptions(optimizer, config, canonicalShip, 'primary')}
                       selectorOptions={slotOptions(optimizer, canonicalShip, 'primary')}
                       onChange={value => load(ship, 'primary', value)}
                     />
@@ -2835,7 +2850,7 @@ function LoadoutEditor({
                       ship={canonicalShip}
                       slot="secondary"
                       value={l.secondary}
-                      options={nodeSlotOptions(optimizer, common, config.galaxy, canonicalShip, 'secondary')}
+                      options={nodeSlotOptions(optimizer, config, canonicalShip, 'secondary')}
                       selectorOptions={slotOptions(optimizer, canonicalShip, 'secondary')}
                       onChange={value => load(ship, 'secondary', value)}
                     />
@@ -2910,9 +2925,9 @@ function ModSlotControl({
           {resolved === TM_MOD
             ? slot !== 'primary' || ship !== 'Corvette'
               ? 'TM 只能装备在护卫舰 Primary；请清除当前错误槽位中的 TM。'
-              : '仍装备 TM，但本次旅行未解锁或当前 Galaxy 不适用；请开启 Galaxy Common 的 TM，或改选其他 Primary。'
+              : '仍装备 TM，但本次旅行未解锁或当前 Galaxy 不适用；请检查节点环境的 TM 开关，或改选其他 Primary。'
             : isGalaxyPrimary(resolved)
-              ? `仍装备 ${resolved}，但本次旅行未解锁或当前 Galaxy / 槽位不适用；请检查 Galaxy Common 或改选其他 Primary。`
+              ? `仍装备 ${resolved}，但本次旅行未解锁或当前 Galaxy / 槽位不适用；请检查节点环境的 TM 开关，或改选其他装配。`
               : `当前模组不在可选范围：${resolved}`}
         </p>
       ) : null}
@@ -2973,25 +2988,12 @@ function CommonEditor({
             仅在游戏已购买后勾选。保存 Galaxy 公共后，G11 的护卫舰（Corvette）在
             Baseline、搜索候选和最终重放中自动获得此三级 Mod，主副模组仍按装配设置。
           </p>
-          <label className="mod-toggle">
-            <input
-              type="checkbox"
-              aria-label="TM 本次旅行已解锁"
-              checked={hasTm(config, galaxy)}
-              onChange={event => onChange(setGalaxyMod(config, TM_MOD, event.target.checked))}
-            />
-            <span>TM 本次旅行已解锁 · 护卫舰连发充能激光</span>
-          </label>
-          <p>
-            仅 G11 生效；旅行重置后请手动关闭并保存。开启只解锁 Primary 选项，不会自动装备。普通优化会将 TM
-            加入候选；推荐舰队策略沿用节点所选 Primary。可与 CRF 同时开启。
-          </p>
         </fieldset>
       ) : null}
       {galaxy === 12 || galaxy === 13 ? (
         <fieldset className="galaxy-mods-fieldset">
           <legend>G{galaxy} 星系 Mod 解锁</legend>
-          {GALAXY_MOD_DEFINITIONS.filter(mod => mod.galaxy === galaxy).map(mod => (
+          {GALAXY_MOD_DEFINITIONS.filter(mod => mod.galaxy === galaxy && mod.slot === 'tertiary').map(mod => (
             <label key={mod.id} className="mod-toggle">
               <input
                 type="checkbox"
@@ -2999,15 +3001,10 @@ function CommonEditor({
                 checked={Boolean(config.galaxy_mods?.includes(mod.id))}
                 onChange={event => onChange(setGalaxyMod(config, mod.id, event.target.checked))}
               />
-              <span>
-                {mod.label} {mod.slot === 'primary' ? '本次旅行已解锁' : '已解锁'}
-              </span>
+              <span>{mod.label} 已解锁</span>
             </label>
           ))}
-          <p>
-            仅在游戏已获得后勾选并保存。FHB / FB 自动附加三级模组；TM 解锁 Primary
-            选项，普通搜索自动加入候选，推荐舰队策略沿用节点装配。旅行重置后手动关闭 TM。
-          </p>
+          <p>仅在游戏已获得后勾选并保存。已解锁的三级模组会自动附加。</p>
         </fieldset>
       ) : null}
       {(['permanent', 'temporary'] as const).map(group => (
@@ -3120,9 +3117,7 @@ function OptimizerConfigEditor({
         <div>
           <h3>Optimizer 公共配置</h3>
           <p>跨 Galaxy 的搜索空间与精炼规则。Node 搜索页覆盖 objective、时钟、workers 和日常总预算。</p>
-          <p>
-            G11–G13 的 TM 由各自 Galaxy Common 的本次旅行解锁开关控制，作为对应舰种 Primary 候选加入；不在此处统一开放。
-          </p>
+          <p>G11–G13 的 TM 由节点环境中的本次旅行解锁开关控制，作为对应舰种 Primary 候选加入。</p>
         </div>
         <span className="format-hint">
           {source === 'local' ? 'map/optimizer_v2_daily.json' : 'poc/optimizer_v2_daily.json（默认）'}

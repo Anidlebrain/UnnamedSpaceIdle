@@ -16,7 +16,7 @@ G12 的 B1–B21 / BB1、G13 的 B1–B18 / BB1 均从原版解析；G13 的第 
 | G12 | `FrigateHealthBoost`（FHB，2 倍生命与原版 Dampening Field） | `FrigateRapidMissileMod` |
 | G13 | `FighterBarrier`（FB） | `FighterJumpGatling` |
 
-例如 G12 两项已解锁时使用 `"galaxy_mods": ["FrigateHealthBoost", "FrigateRapidMissileMod"]`。Manager 的“公共配置 → Galaxy 公共”提供对应开关。TM 只解锁候选，不自动替换 Baseline；`advisor_seeded` 仍固定输入装配。旅行重置后手动关闭 TM。自动三级模组不占主副槽，具体能力交由原版执行。错误星系、舰种、槽位或未解锁的 TM 会拒绝；每场重新建立解锁状态。TXT / `--copy` 对所有 TM 使用稳定字符串 ID，原有数字装备索引不变。
+例如直接运行 BAT 时，G12 两项已解锁时使用 `"galaxy_mods": ["FrigateHealthBoost", "FrigateRapidMissileMod"]`。Manager 在“公共配置 → Galaxy 公共”设置三级模组，在“节点配置 → 环境”按节点版本设置 TM，运行时合并到暂存 Common。TM 只解锁候选，不自动替换 Baseline；`advisor_seeded` 仍固定输入装配。旅行重置后手动关闭 TM。自动三级模组不占主副槽，具体能力交由原版执行。错误星系、舰种、槽位或未解锁的 TM 会拒绝；每场重新建立解锁状态。TXT / `--copy` 对所有 TM 使用稳定字符串 ID，原有数字装备索引不变。
 
 恢复资源不提交 Git。需要在其他机器重建时，用已有完整 0.90.0.1 恢复工程运行：
 
@@ -114,7 +114,7 @@ G11 地图的 `CRF` 贡献升级解锁 `CorvetteRapidFire`，仅对 G11 的 Corv
 
 ### G11 TM：本次旅行的连发充能激光
 
-G11 的 `TM` 解锁 `CorvetteChargeLaserBurst`，这是 Corvette 的可选 **Primary**，与普通充能激光二选一，可同时使用 Shield 与 CRF。解锁有效期仅为本次旅行。Manager 在“公共配置 → Galaxy 公共 → G11”勾选 TM 并保存即可；直接 BAT 使用 `common.json` 顶层 `"galaxy_mods": ["CorvetteChargeLaserBurst"]`。同时解锁 CRF 时使用 `["CorvetteRapidFire", "CorvetteChargeLaserBurst"]`。新的旅行尚未取得 TM 时必须手动关闭；程序不会读取存档或推测旅行进度。
+G11 的 `TM` 解锁 `CorvetteChargeLaserBurst`，这是 Corvette 的可选 **Primary**，与普通充能激光二选一，可同时使用 Shield 与 CRF。解锁有效期仅为本次旅行。Manager 在 G11 的“节点配置 → 环境”勾选 TM 并保存节点，未勾选时默认为未解锁。直接 BAT 使用 `common.json` 顶层 `"galaxy_mods": ["CorvetteChargeLaserBurst"]`。同时解锁 CRF 时使用 `["CorvetteRapidFire", "CorvetteChargeLaserBurst"]`。新的旅行尚未取得 TM 时必须手动关闭；程序不会读取存档或推测旅行进度。
 
 开启后，本次普通搜索自动在原有 Corvette Primary 候选之外加入 TM，与允许的 Secondary 配对，不要求修改跨 Galaxy 的 `allowed_mod_slots`，也不会自动把 Baseline 装备换成 TM。“推荐舰队搜站位”仍固定 Baseline 装配；要使用 TM，先在节点装配的护卫舰 Primary 选择“连发充能激光”并保存。未解锁或非 G11 时不会生成 TM 候选，即使旧公共 JSON 曾手工加入 TM；Baseline / diagnostic 仍选了 TM 时会明确报错，要求修改装配或确认解锁。旧公共选项只有 TM 时，锁定后回退为无 Primary，保留 Secondary。
 

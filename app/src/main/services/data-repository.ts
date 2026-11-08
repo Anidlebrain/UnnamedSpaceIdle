@@ -1,4 +1,4 @@
-import { commonForGalaxy, validateGalaxyLoadouts } from '../../shared/galaxy-mods'
+import { commonForGalaxy, commonWithTravelMod, nodeForCopy, validateGalaxyLoadouts } from '../../shared/galaxy-mods'
 import { createHash, randomUUID } from 'node:crypto'
 import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
@@ -516,7 +516,7 @@ export class DataRepository {
       source = nodeConfigSchema.parse(await readJson(join(this.templateDir(), `${request.source.template}.json`)))
     }
     const version = 'default'
-    const config = { ...source, galaxy: Number(request.galaxy.slice(1)), node: request.node.replace(/_num$/i, '') }
+    const config = nodeForCopy(source, request.galaxy, request.node)
     await atomicJson(join(target, 'versions', `${version}.json`), nodeConfigSchema.parse(config))
     await atomicJson(join(target, 'meta.json'), {
       default_version: version,
@@ -540,11 +540,7 @@ export class DataRepository {
     if (existing.galaxies.some(galaxy => galaxy.id.toLowerCase() === request.galaxy.toLowerCase()))
       throw new Error(`Galaxy ${request.galaxy} already exists.`)
     const source = await this.load(request.source)
-    const config = nodeConfigSchema.parse({
-      ...source.node,
-      galaxy: Number(request.galaxy.slice(1)),
-      node: request.node.replace(/_num$/i, ''),
-    })
+    const config = nodeConfigSchema.parse(nodeForCopy(source.node, request.galaxy, request.node))
     const common = commonForGalaxy(source.common, request.galaxy)
     const parent = join(this.dataRoot, 'galaxies')
     const temporary = join(parent, `.${request.galaxy}-${randomUUID()}.tmp`)
@@ -590,7 +586,7 @@ export class DataRepository {
           player_state: { ...parsedNode.player_state, ships: effectiveShipCounts(parsedNode, parsedCommon) },
         }
       : parsedNode
-    const stagedCommon = { ...parsedCommon }
+    const stagedCommon = { ...commonWithTravelMod(parsedNode, parsedCommon) }
     if (hasShipReduction) delete stagedCommon.ships
     await atomicJson(join(target, `${selection.node}.json`), stagedNode)
     await atomicJson(join(target, 'common.json'), stagedCommon)

@@ -1,5 +1,5 @@
 import { createBrowserTitanApi } from './web-titan-api'
-import { commonForGalaxy, validateGalaxyLoadouts } from '../shared/galaxy-mods'
+import { commonForGalaxy, nodeForCopy, validateGalaxyLoadouts } from '../shared/galaxy-mods'
 import type {
   Catalog,
   FleetManagerApi,
@@ -12,7 +12,7 @@ import type {
   Selection,
 } from '../shared/contracts'
 import type { CommonConfig, NodeConfig, OptimizerConfig, SearchConfig } from '../shared/schemas'
-import { nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
+import { commonConfigSchema, nodeConfigSchema, optimizerConfigSchema } from '../shared/schemas'
 import { effectiveShipCounts } from '../shared/ship-counts'
 import { searchForNode, withoutNodeTarget } from '../shared/search-target'
 import { hasRerunChange } from '../shared/formation-diff'
@@ -165,12 +165,15 @@ function restoreWorkspace() {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return
     const snapshot = JSON.parse(raw) as BrowserWorkspaceSnapshot
+    const restoredCommons = snapshot.commons.map(
+      ([entryKey, common]) => [entryKey, commonConfigSchema.parse(common)] as const,
+    )
     catalog.galaxies = snapshot.catalog.galaxies
     catalog.templates = snapshot.catalog.templates
     nodes.clear()
     commons.clear()
     for (const [entryKey, node] of snapshot.nodes) nodes.set(entryKey, node)
-    for (const [entryKey, common] of snapshot.commons) commons.set(entryKey, common)
+    for (const [entryKey, common] of restoredCommons) commons.set(entryKey, common)
     if (snapshot.optimizerConfig) optimizerConfig = snapshot.optimizerConfig
     if (snapshot.searchConfig) searchConfig = withoutNodeTarget(snapshot.searchConfig)
   } catch {
@@ -392,9 +395,9 @@ export function createBrowserApi(): FleetManagerApi {
       })
       const source =
         request.source.type === 'selection' ? nodes.get(key(request.source.selection)) : nodes.values().next().value
-      const next = clone(source ?? makeNode(Number(request.galaxy.slice(1)), request.node))
-      next.galaxy = Number(request.galaxy.slice(1))
-      next.node = request.node
+      const next = source
+        ? nodeForCopy(clone(source), request.galaxy, request.node)
+        : makeNode(Number(request.galaxy.slice(1)), request.node)
       nodes.set(`${request.galaxy}/${request.node}/${version}`, next)
       persistWorkspace()
       return { node: request.node, version }
@@ -408,14 +411,10 @@ export function createBrowserApi(): FleetManagerApi {
       const source = nodes.get(key(request.source))
       const sourceCommon = commons.get(commonKey(request.source))
       if (!source || !sourceCommon) throw new Error('来源配置不存在。')
-      commonForGalaxy(sourceCommon, request.galaxy)
+      const nextCommon = commonForGalaxy(sourceCommon, request.galaxy)
       const version = 'default'
       const common = 'default'
-      const next = nodeConfigSchema.parse({
-        ...clone(source),
-        galaxy: Number(request.galaxy.slice(1)),
-        node: request.node.replace(/_num$/i, ''),
-      })
+      const next = nodeConfigSchema.parse(nodeForCopy(clone(source), request.galaxy, request.node))
       catalog.galaxies.push({
         id: request.galaxy,
         nodes: [
@@ -430,7 +429,7 @@ export function createBrowserApi(): FleetManagerApi {
       })
       catalog.galaxies.sort((a, b) => a.id.localeCompare(b.id, undefined, { numeric: true }))
       nodes.set(`${request.galaxy}/${request.node}/${version}`, next)
-      commons.set(`${request.galaxy}/${common}`, clone(sourceCommon))
+      commons.set(`${request.galaxy}/${common}`, nextCommon)
       persistWorkspace()
       return { node: request.node, version, common }
     },

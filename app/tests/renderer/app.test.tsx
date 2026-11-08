@@ -725,22 +725,20 @@ describe('Renderer preload contract', () => {
     render(<App />)
     await screen.findByText('当前节点')
     fireEvent.click(screen.getByRole('button', { name: /^公共配置/ }))
-    fireEvent.click(await screen.findByRole('checkbox', { name: 'TM 本次旅行已解锁' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'CRF 已解锁' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'CRF 已解锁' }))
-    expect((screen.getByRole('checkbox', { name: 'TM 本次旅行已解锁' }) as HTMLInputElement).checked).toBe(true)
-    fireEvent.click(screen.getByRole('checkbox', { name: 'CRF 已解锁' }))
-    fireEvent.click(screen.getByRole('checkbox', { name: 'TM 本次旅行已解锁' }))
-    expect((screen.getByRole('checkbox', { name: 'CRF 已解锁' }) as HTMLInputElement).checked).toBe(true)
-    fireEvent.click(screen.getByRole('checkbox', { name: 'TM 本次旅行已解锁' }))
+    fireEvent.click(await screen.findByRole('checkbox', { name: 'CRF 已解锁' }))
+    expect(screen.queryByRole('checkbox', { name: /本次旅行已解锁/ })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '保存 Galaxy 公共' }))
     await waitFor(() =>
       expect(api.saveCommon).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ galaxy_mods: ['CorvetteRapidFire', 'CorvetteChargeLaserBurst'] }),
+        expect.objectContaining({ galaxy_mods: ['CorvetteRapidFire'] }),
       ),
     )
     fireEvent.click(screen.getByRole('button', { name: '节点配置' }))
+    fireEvent.click(await screen.findByRole('tab', { name: '环境' }))
+    const travelToggle = (await screen.findByRole('checkbox', { name: /TM.*本次旅行已解锁/ })) as HTMLInputElement
+    expect(travelToggle.checked).toBe(false)
+    fireEvent.click(travelToggle)
     fireEvent.click(await screen.findByRole('tab', { name: '装配' }))
     const primary = await screen.findByRole('combobox', { name: 'Corvette primary' })
     expect(primary.textContent).toContain('充能激光')
@@ -752,6 +750,13 @@ describe('Renderer preload contract', () => {
       secondary: 'ShieldMod',
     })
     expect(await screen.findByText('CRF 已解锁 · 自动附加')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: '保存节点' }))
+    await waitFor(() =>
+      expect(api.save).toHaveBeenCalledWith(
+        expect.objectContaining({ galaxy: 'g11' }),
+        expect.objectContaining({ travel_mod_unlocked: true }),
+      ),
+    )
   })
 
   it('decodes old primary numbers before filtering TM and keeps locked TM visible with a warning', async () => {

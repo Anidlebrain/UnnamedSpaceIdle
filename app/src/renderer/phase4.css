@@ -719,7 +719,8 @@ th {
   grid-column: 1 / -1;
 }
 
-.common-form fieldset {
+.common-form fieldset,
+.node-basics .galaxy-mods-fieldset {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-content: start;
@@ -730,12 +731,13 @@ th {
   border-radius: var(--radius-sm);
 }
 
-.common-form fieldset.galaxy-mods-fieldset {
+.common-form fieldset.galaxy-mods-fieldset,
+.node-basics .galaxy-mods-fieldset {
   grid-column: 1 / -1;
   grid-template-columns: minmax(0, 1fr);
 }
 
-.common-form .galaxy-mods-fieldset > p {
+.galaxy-mods-fieldset > p {
   margin: 0;
 }
 

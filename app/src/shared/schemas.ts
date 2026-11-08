@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { GALAXY_MOD_IDS } from './galaxy-mod-catalog'
+import { GALAXY_MOD_IDS, isGalaxyPrimary } from './galaxy-mod-catalog'
 import { canonicalShipRecord, shipSelectorToId } from './ship-selectors'
 import { formationColumns, MAX_FORMATION_COLUMNS, validFormationPosition } from './formation-grid'
 
@@ -63,6 +63,7 @@ const rawNodeConfigSchema = jsonObject
     boss: jsonObject.optional(),
     hazards: z.array(z.unknown()).default([]),
     supports: z.array(z.unknown()).default([]),
+    travel_mod_unlocked: z.boolean().optional(),
     player_state: jsonObject.extend({
       fleet_resources: z.number(),
       ships: z.record(z.number().int()),
@@ -95,6 +96,8 @@ export const commonConfigSchema = z.preprocess(
     galaxy_mods: z
       .array(z.enum(GALAXY_MOD_IDS))
       .refine(mods => new Set(mods).size === mods.length, 'Galaxy Mods 不得重复')
+      // Discard legacy Common TM values. Travel unlocks are now set per Node Version.
+      .transform(mods => mods.filter(mod => !isGalaxyPrimary(mod)))
       .optional(),
     permanent: scaleSchema,
     temporary: scaleSchema,

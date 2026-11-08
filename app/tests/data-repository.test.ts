@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DataRepository } from '../src/main/services/data-repository'
-import { commonConfigSchema, type NodeConfig } from '../src/shared/schemas'
+import { type CommonConfig, type NodeConfig } from '../src/shared/schemas'
 
 const roots: string[] = []
 const node: NodeConfig = {
@@ -82,10 +82,10 @@ describe('DataRepository', () => {
     const source = { galaxy: 'g6', node: 'B1', version: 'default', common: 'default' }
     await repo.createGalaxy({ galaxy: 'g11', node: 'B1', versionName: '默认', source })
     const selection = { ...source, galaxy: 'g11' }
-    const unlocked = commonConfigSchema.parse({
+    const legacy: CommonConfig = {
       ...common,
       galaxy_mods: ['CorvetteRapidFire', 'CorvetteChargeLaserBurst'],
-    })
+    }
     const tmNode = {
       ...node,
       galaxy: 11,
@@ -94,14 +94,22 @@ describe('DataRepository', () => {
         loadouts: { Corvette: { primary: 'CorvetteChargeLaserBurst', secondary: 'ShieldMod' } },
       },
     }
-    await repo.saveCommon(selection, unlocked)
-    expect((await repo.load(selection)).common.galaxy_mods).toEqual(unlocked.galaxy_mods)
-    await repo.stageValues(selection, tmNode, unlocked)
+    await repo.saveCommon(selection, legacy)
+    expect((await repo.load(selection)).common.galaxy_mods).toEqual(['CorvetteRapidFire'])
+    await repo.save(selection, { ...tmNode, travel_mod_unlocked: true })
+    await repo.stage(selection)
+    const readStagedMods = async () => JSON.parse(await readFile(join(map, 'g11', 'common.json'), 'utf8')).galaxy_mods
+    expect(await readStagedMods()).toEqual(legacy.galaxy_mods)
     const staged = await readFile(join(map, 'g11', 'B1.json'), 'utf8')
     expect(JSON.parse(staged).baseline.loadouts.Corvette.primary).toBe('CorvetteChargeLaserBurst')
-    await repo.saveCommon(selection, { ...common, galaxy_mods: ['CorvetteRapidFire'] })
-    await expect(repo.stageValues(selection, tmNode, common)).rejects.toThrow('Baseline 仍选择 TM')
+    await expect(repo.stageValues(selection, tmNode, legacy)).rejects.toThrow('Baseline 仍选择 TM')
     expect(await readFile(join(map, 'g11', 'B1.json'), 'utf8')).toBe(staged)
+    await repo.createNode({ galaxy: 'g11', node: 'B2', versionName: '默认', source: { type: 'selection', selection } })
+    const locked = { ...selection, node: 'B2' }
+    await repo.save(locked, { ...tmNode, node: 'B2', travel_mod_unlocked: false, baseline: node.baseline })
+    await repo.stage(locked)
+    expect(await readStagedMods()).toEqual(['CorvetteRapidFire'])
+    expect((await repo.load(selection)).node.travel_mod_unlocked).toBe(true)
   })
 
   it('imports only after explicit call, validates and atomically saves a version', async () => {
